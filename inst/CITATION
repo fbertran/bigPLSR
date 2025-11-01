@@ -1,0 +1,63 @@
+citHeader("To cite the bigPLSR package in publications use:")
+
+titl <- meta$Title
+year <- sub(".*(2[[:digit:]]{3})-.*", "\\1", meta$Date)
+vers <- paste("R package version", meta$Version)
+doi <- paste0("10.32614/CRAN.package.", meta$Package)
+urldoi <- paste0("https://doi.org/", doi)
+
+bibentry(bibtype="Manual",
+         title = titl,
+         author = c(
+	person(given = "Frederic", family= "Bertrand"),
+	person(given = "Myriam", family= "Maumy")),
+   publisher = "manual",
+         year         = year,
+         note         = vers,
+         url          = "https://fbertran.github.io/bigPLSR/",
+    #    doi          = doi,  
+         textVersion = 
+         paste("Frederic Bertrand and Myriam Maumy (",year ,"). ", 
+               titl, ", ", vers, 
+               # ". doi:", doi, 
+               ".", sep=""
+               )
+)
+
+
+bibentry(
+  bibtype = "Misc",
+  title   = "PLS models and their extension for big data",
+  author  = c(person("Myriam", "Maumy"), person("Frédéric", "Bertrand")),
+  year    = "2023",
+  howpublished = "Conference presentation at the Joint Statistical Meetings (JSM 2023)",
+  address = "Toronto, Ontario, Canada",
+  note    = "Aug 5–10, 2023",
+  textVersion = paste(
+    "Maumy, M. and Bertrand, F. (2023).",
+    "PLS models and their extension for big data.",
+    "Conference presentation at the Joint Statistical Meetings (JSM 2023),",
+    "Toronto, Ontario, Canada, Aug 5–10, 2023."
+  )
+)
+
+## 3) BioC2023 poster
+bibentry(
+  bibtype = "Misc",
+  title   = "bigPLS: Fitting and cross-validating PLS-based Cox models to censored big data",
+  author  = c(person("Myriam", "Maumy"), person("Frédéric", "Bertrand")),
+  year    = "2023",
+  howpublished = "Conference presentation at BioC2023: The Bioconductor Annual Conference",
+  address = "Dana-Farber Cancer Institute, Boston, MA, USA",
+  note    = "Aug 2–4, 2023",
+  doi     = "10.7490/f1000research.1119546.1",
+  url     = "https://doi.org/10.7490/f1000research.1119546.1",
+  textVersion = paste(
+    "Maumy, M. and Bertrand, F. (2023).",
+    "bigPLS: Fitting and cross-validating PLS-based Cox models to censored big data.",
+    "Poster at BioC2023: The Bioconductor Annual Conference,",
+    "Dana-Farber Cancer Institute, Boston, MA, USA, Aug 2–4, 2023.",
+    "doi:10.7490/f1000research.1119546.1."
+  )
+)
+

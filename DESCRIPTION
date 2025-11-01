@@ -1,0 +1,39 @@
+Package: bigPLSR
+Version: 0.5.0
+Date: 2025-11-01
+Depends: R (>= 4.0.0)
+biocViews:
+Imports: 
+  bigalgebra,
+  bigmemory, 
+  Rcpp
+LinkingTo:
+  BH,
+  Rcpp,
+  RcppArmadillo,
+  bigmemory
+Suggests: 
+  plsRglm, 
+  testthat (>= 3.0.0)
+Title: Partial Least Squares Regression Models with Big Matrices 
+Authors@R: c(
+  person(given = "Frederic", family= "Bertrand", role = c("cre", "aut"), 
+  email = "frederic.bertrand@lecnam.net", comment = c(ORCID = "0000-0002-0837-8281")),
+  person(given = "Myriam", family= "Maumy", role = c("aut"), 
+  email = "myriam.maumy@ehesp.fr", comment = c(ORCID = "0000-0002-4615-1512")))
+Author: Frederic Bertrand [cre, aut] (<https://orcid.org/0000-0002-0837-8281>), Myriam Maumy [aut] (<https://orcid.org/0000-0002-4615-1512>)
+Maintainer: Frederic Bertrand <frederic.bertrand@lecnam.net>
+Description: Provides partial least squares regression and various regular or 
+  sparse techniques for fitting models to big data. Provides a Partial Least 
+  Squares (PLS) regression algorithm that works with bigmemory matrices without 
+  loading the entire dataset in memory. Also implements a gradient-descent based 
+  solver that works directly on 'bigmemory' matrices.
+License: GPL-3
+Encoding: UTF-8
+URL: https://fbertran.github.io/bigPLSR/, https://github.com/fbertran/bigPLSR/
+BugReports: https://github.com/fbertran/bigPLSR/issues/
+Classification/MSC: 62N01, 62N02, 62N03, 62N99
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.3
+Config/testthat/edition: 3
+SystemRequirements: C++17
