@@ -1,5 +1,7 @@
 add_data
 
+TODO_LIST
+
 .DS_Store
 src/*.o
 src/*.so
