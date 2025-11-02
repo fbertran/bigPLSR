@@ -4,13 +4,13 @@ Date: 2025-11-01
 Depends: R (>= 4.0.0)
 biocViews:
 Imports: 
-  bigalgebra,
-  bigmemory, 
-  Rcpp
+  Rcpp,
+  bigmemory,
+  bigalgebra
 LinkingTo:
-  BH,
   Rcpp,
   RcppArmadillo,
+  BH,
   bigmemory
 Suggests: 
   plsRglm, 
