@@ -12,9 +12,13 @@ LinkingTo:
   RcppArmadillo,
   BH,
   bigmemory
-Suggests: 
-  plsRglm, 
-  testthat (>= 3.0.0)
+Suggests:
+  plsRglm,
+  testthat (>= 3.0.0),
+  bench,
+  knitr,
+  rmarkdown
+VignetteBuilder: knitr
 Title: Partial Least Squares Regression Models with Big Matrices 
 Authors@R: c(
   person(given = "Frederic", family= "Bertrand", role = c("cre", "aut"), 

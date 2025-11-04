@@ -1,9 +1,15 @@
 #include <RcppArmadillo.h>
+// [[Rcpp::depends(RcppArmadillo, bigmemory)]]
+
+using namespace Rcpp;
+using namespace arma;
+
 #include <bigmemory/BigMatrix.h>
 #include <bigmemory/MatrixAccessor.hpp>
-#include <algorithm>
 
-// [[Rcpp::depends(RcppArmadillo, bigmemory)]]
+// [[Rcpp::plugins(cpp17)]]
+
+#include <algorithm>
 
 namespace {
 
@@ -103,7 +109,7 @@ inline arma::mat compute_simpls(const arma::mat& Xc,
     return weights * M * Q_used.t();
 }
 
-inline void ensure_double_matrix(const bigmemory::BigMatrix& mat, const char* name)
+inline void ensure_double_matrix(const BigMatrix& mat, const char* name)
 {
     if (mat.matrix_type() != 8) {
         std::string msg = std::string(name) + " must be a double precision big.matrix";
@@ -124,8 +130,8 @@ Rcpp::List big_plsr_fit(SEXP X_ptr,
         Rcpp::stop("ncomp must be positive");
     }
 
-    Rcpp::XPtr<bigmemory::BigMatrix> xMat(X_ptr);
-    Rcpp::XPtr<bigmemory::BigMatrix> yMat(Y_ptr);
+    Rcpp::XPtr<BigMatrix> xMat(X_ptr);
+    Rcpp::XPtr<BigMatrix> yMat(Y_ptr);
 
     ensure_double_matrix(*xMat, "X");
     ensure_double_matrix(*yMat, "Y");
@@ -250,8 +256,8 @@ Rcpp::List big_plsr_stream_fit(SEXP X_ptr,
         Rcpp::stop("block_size must be strictly positive");
     }
 
-    Rcpp::XPtr<bigmemory::BigMatrix> xMat(X_ptr);
-    Rcpp::XPtr<bigmemory::BigMatrix> yMat(Y_ptr);
+    Rcpp::XPtr<BigMatrix> xMat(X_ptr);
+    Rcpp::XPtr<BigMatrix> yMat(Y_ptr);
 
     ensure_double_matrix(*xMat, "X");
     ensure_double_matrix(*yMat, "Y");
@@ -269,8 +275,8 @@ Rcpp::List big_plsr_stream_fit(SEXP X_ptr,
 
     ncomp = std::min<int>(ncomp, static_cast<int>(px));
 
-    bigmemory::MatrixAccessor<double> Xacc(*xMat);
-    bigmemory::MatrixAccessor<double> Yacc(*yMat);
+    MatrixAccessor<double> Xacc(*xMat);
+    MatrixAccessor<double> Yacc(*yMat);
 
     std::vector<double> meanX(px, 0.0);
     std::vector<double> meanY(q, 0.0);

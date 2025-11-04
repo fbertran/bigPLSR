@@ -2,34 +2,38 @@
 # Generator token: 10BE3573-1514-4C36-9D1C-5A225CD40393
 
 big_pls_fit_cpp <- function(x_ptr, y, ncomp, center_x, scale_x, center_y, scale_y) {
-    .Call('_bigPLSR_big_pls_fit_cpp', PACKAGE = 'bigPLSR', x_ptr, y, ncomp, center_x, scale_x, center_y, scale_y)
+    .Call(`_bigPLSR_big_pls_fit_cpp`, x_ptr, y, ncomp, center_x, scale_x, center_y, scale_y)
 }
 
 big_pls_stream_cpp <- function(x_ptr, y, ncomp, center_x, scale_x, center_y, scale_y, chunk_size) {
-    .Call('_bigPLSR_big_pls_stream_cpp', PACKAGE = 'bigPLSR', x_ptr, y, ncomp, center_x, scale_x, center_y, scale_y, chunk_size)
+    .Call(`_bigPLSR_big_pls_stream_cpp`, x_ptr, y, ncomp, center_x, scale_x, center_y, scale_y, chunk_size)
 }
 
 cpp_big_pls_fit <- function(x_ptr, y_ptr, ncomp, tol) {
-    .Call('_bigPLSR_cpp_big_pls_fit', PACKAGE = 'bigPLSR', x_ptr, y_ptr, ncomp, tol)
+    .Call(`_bigPLSR_cpp_big_pls_fit`, x_ptr, y_ptr, ncomp, tol)
 }
 
 cpp_big_pls_stream_fit <- function(x_ptr, y_ptr, ncomp, chunk_size, tol) {
-    .Call('_bigPLSR_cpp_big_pls_stream_fit', PACKAGE = 'bigPLSR', x_ptr, y_ptr, ncomp, chunk_size, tol)
-}
-
-big_plsr_fit <- function(X_ptr, Y_ptr, ncomp, center = TRUE, scale = FALSE) {
-    .Call('_bigPLSR_big_plsr_fit', PACKAGE = 'bigPLSR', X_ptr, Y_ptr, ncomp, center, scale)
-}
-
-big_plsr_stream_fit <- function(X_ptr, Y_ptr, ncomp, center = TRUE, scale = FALSE, block_size = 1024L) {
-    .Call('_bigPLSR_big_plsr_stream_fit', PACKAGE = 'bigPLSR', X_ptr, Y_ptr, ncomp, center, scale, block_size)
+    .Call(`_bigPLSR_cpp_big_pls_stream_fit`, x_ptr, y_ptr, ncomp, chunk_size, tol)
 }
 
 pls_nipals_bigmemory <- function(X_ptrSEXP, y_ptrSEXP, ncomp, center, scale, tol, max_iter) {
-    .Call('_bigPLSR_pls_nipals_bigmemory', PACKAGE = 'bigPLSR', X_ptrSEXP, y_ptrSEXP, ncomp, center, scale, tol, max_iter)
+    .Call(`_bigPLSR_pls_nipals_bigmemory`, X_ptrSEXP, y_ptrSEXP, ncomp, center, scale, tol, max_iter)
 }
 
 pls_streaming_bigmemory <- function(X_ptrSEXP, y_ptrSEXP, ncomp, block_size, center, scale, tol) {
-    .Call('_bigPLSR_pls_streaming_bigmemory', PACKAGE = 'bigPLSR', X_ptrSEXP, y_ptrSEXP, ncomp, block_size, center, scale, tol)
+    .Call(`_bigPLSR_pls_streaming_bigmemory`, X_ptrSEXP, y_ptrSEXP, ncomp, block_size, center, scale, tol)
+}
+
+big_plsr_fit_nipals <- function(X_ptr, Y_ptr, ncomp, center = TRUE, scale = FALSE) {
+    .Call(`_bigPLSR_big_plsr_fit_nipals`, X_ptr, Y_ptr, ncomp, center, scale)
+}
+
+big_plsr_fit <- function(X_ptr, Y_ptr, ncomp, center = TRUE, scale = FALSE) {
+    .Call(`_bigPLSR_big_plsr_fit`, X_ptr, Y_ptr, ncomp, center, scale)
+}
+
+big_plsr_stream_fit <- function(X_ptr, Y_ptr, ncomp, center = TRUE, scale = FALSE, block_size = 1024L) {
+    .Call(`_bigPLSR_big_plsr_stream_fit`, X_ptr, Y_ptr, ncomp, center, scale, block_size)
 }
 

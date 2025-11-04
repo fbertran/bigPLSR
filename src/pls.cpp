@@ -11,6 +11,7 @@ using namespace arma;
 
 #include <algorithm>
 #include <stdexcept>
+#include <cmath>
 #include <vector>
 
 namespace {
@@ -41,8 +42,8 @@ inline void ensure_double_matrix(const BigMatrix& mat, const std::string& name) 
     if (ncomp <= 0) Rcpp::stop("ncomp must be positive");
     if (static_cast<std::size_t>(ncomp) > p) ncomp = static_cast<int>(p);
     
-    MatrixAcc<double> xAcc(const_cast<BigMatrix&>(xMat));  // accessor must be non-const
-    MatrixAcc<double> yAcc(const_cast<BigMatrix&>(yMat));
+    MatrixAccessor<double> xAcc(const_cast<BigMatrix&>(xMat));  // accessor must be non-const
+    MatrixAccessor<double> yAcc(const_cast<BigMatrix&>(yMat));
     
     arma::mat X(n, p);
     arma::vec y(n);
@@ -86,8 +87,8 @@ inline void ensure_double_matrix(const BigMatrix& mat, const std::string& name) 
     ncomp = static_cast<int>(p);
   }
   
-  MatrixAcc<double> xAcc(const_cast<BigMatrix&>(xMat));  // accessor must be non-const
-  MatrixAcc<double> yAcc(const_cast<BigMatrix&>(yMat));
+  MatrixAccessor<double> xAcc(const_cast<BigMatrix&>(xMat));  // accessor must be non-const
+  MatrixAccessor<double> yAcc(const_cast<BigMatrix&>(yMat));
 
   arma::vec sumX(p, arma::fill::zeros);
   arma::mat sumXX(p, p, arma::fill::zeros);
@@ -184,7 +185,7 @@ List solve_pls_from_cross(const arma::mat& XtX_center,
                         Named("intercept") = y_mean,
                         Named("x_weights") = arma::mat(p, 0),
                         Named("x_loadings") = arma::mat(p, 0),
-                        Named("y_loadings") = arma::vec(0),
+                        Named("y_loadings") = arma::mat(1, 0),
                         Named("x_means") = x_mean,
                         Named("y_mean") = y_mean,
                         Named("ncomp") = 0);

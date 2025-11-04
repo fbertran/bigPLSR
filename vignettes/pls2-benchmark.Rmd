@@ -1,0 +1,168 @@
+---
+title: "Benchmarking PLS2 Implementations"
+shorttitle: "Benchmarking PLS2 Implementations"
+author:
+- name: "Frédéric Bertrand"
+  affiliation:
+  - Cedric, Cnam, Paris
+  email: frederic.bertrand@lecnam.net
+date: "`r Sys.Date()`"
+output:
+  rmarkdown::html_vignette:
+    toc: true
+vignette: >
+  %\VignetteIndexEntry{Benchmarking PLS2 Implementations}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup_ops, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.path = "figures/benchmarking-",
+  fig.width = 7,
+  fig.height = 5,
+  dpi = 150,
+  message = FALSE,
+  warning = FALSE
+)
+
+LOCAL <- identical(Sys.getenv("LOCAL"), "TRUE")
+```
+
+```{r setup, message=FALSE}
+library(bigPLSR)
+library(bigmemory)
+library(bench)
+set.seed(456)
+```
+
+## Overview
+
+The package offers dense (`pls2_dense`) and streaming (`pls2_stream`)
+solvers for multi-response partial least squares regression (PLS2).
+This vignette demonstrates how to benchmark both variants on a synthetic
+dataset featuring three correlated response variables.
+
+## Simulated data
+
+```{r data-generation}
+n <- 3500
+p <- 40
+q <- 3
+ncomp <- 4
+
+X <- bigmemory::big.matrix(nrow = n, ncol = p, type = "double")
+X[,] <- matrix(rnorm(n * p), nrow = n)
+
+loading_matrix <- matrix(rnorm(p * q), nrow = p)
+latent_scores <- matrix(rnorm(n * q), nrow = n)
+Y_mat <- scale(latent_scores %*% t(loading_matrix[1:q, , drop = FALSE]) + matrix(rnorm(n * q, sd = 0.5), nrow = n))
+
+Y <- bigmemory::big.matrix(nrow = n, ncol = q, type = "double")
+Y[,] <- Y_mat
+
+X[1:6, 1:6]
+Y[1:6, 1:min(6,q)]
+```
+
+## Benchmark results
+
+We again rely on the `bench` package to compare the implementations. A
+block size of 1024 rows is used for the streaming solver, which balances
+throughput and memory requirements for the example dataset.
+
+```{r, eval=LOCAL, cache=TRUE}
+bench_res_q_5 <- press(
+  n = c(500, 1000, 5000),
+  p = c(100, 500, 1000),
+  {
+    ncomp = 5
+    rep = 1
+    q = 5
+    X <- bigmemory::big.matrix(nrow = n, ncol = p, type = "double")
+    X[,] <- matrix(rnorm(n * p), nrow = n)
+    
+    loading_matrix <- matrix(rnorm(p * q), nrow = p)
+    latent_scores <- matrix(rnorm(n * q), nrow = n)
+    Y_mat <- scale(latent_scores %*% t(loading_matrix[1:q, , drop = FALSE]) + matrix(rnorm(n * q, sd = 0.5), nrow = n))
+    
+    Y <- bigmemory::big.matrix(nrow = n, ncol = q, type = "double")
+    Y[,] <- Y_mat
+    
+    bench::mark(
+      dense_simpls = pls2_dense(X, Y, ncomp = ncomp, algorithm = "simpls"),
+      dense_nipals = pls2_dense(X, Y, ncomp = ncomp, algorithm = "nipals"),
+      streaming_simpls = pls2_stream(X, Y, ncomp = ncomp, block_size = 1024L, 
+                                     algorithm = "simpls"),
+      iterations = 10,
+      check = FALSE
+    )
+  }
+)
+```
+
+```{r, eval=LOCAL, cache=TRUE}
+bench_res_q_50 <- press(
+  n = c(500, 1000, 5000),
+  p = c(100, 500, 1000),
+  {
+    ncomp = 5
+    rep = 1
+    q = 50
+    X <- bigmemory::big.matrix(nrow = n, ncol = p, type = "double")
+    X[,] <- matrix(rnorm(n * p), nrow = n)
+    
+    loading_matrix <- matrix(rnorm(p * q), nrow = p)
+    latent_scores <- matrix(rnorm(n * q), nrow = n)
+    Y_mat <- scale(latent_scores %*% t(loading_matrix[1:q, , drop = FALSE]) + matrix(rnorm(n * q, sd = 0.5), nrow = n))
+    
+    Y <- bigmemory::big.matrix(nrow = n, ncol = q, type = "double")
+    Y[,] <- Y_mat
+    
+    bench::mark(
+      dense_simpls = pls2_dense(X, Y, ncomp = ncomp, algorithm = "simpls"),
+      dense_nipals = pls2_dense(X, Y, ncomp = ncomp, algorithm = "nipals"),
+      streaming_simpls = pls2_stream(X, Y, ncomp = ncomp, block_size = 1024L, 
+                                     algorithm = "simpls"),
+      iterations = 10,
+      check = FALSE
+    )
+  }
+)
+```
+
+## Interpreting the output
+
+The benchmark summary reports the average and worst-case execution time
+as well as memory allocations. Users working with file-backed matrices or
+very large datasets should prefer the streaming implementation, while
+the dense solver remains a strong choice when the data comfortably fits
+in RAM.
+
+```{r}
+bench_res_q_5
+```
+
+```{r}
+bench_res_q_50
+```
+
+```{r}
+plot(bench_res_q_5, type="jitter")
+```
+
+```{r}
+plot(bench_res_q_50, type="jitter")
+```
+
+```{r}
+plot(bench_res_q_5, type="boxplot")
+```
+
+```{r}
+plot(bench_res_q_50, type="boxplot")
+```
+
+

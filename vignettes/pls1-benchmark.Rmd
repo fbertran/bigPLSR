@@ -1,0 +1,139 @@
+---
+title: "Benchmarking PLS1 Implementations"
+shorttitle: "Benchmarking PLS1 Implementations"
+author:
+- name: "Frédéric Bertrand"
+  affiliation:
+  - Cedric, Cnam, Paris
+  email: frederic.bertrand@lecnam.net
+date: "`r Sys.Date()`"
+output:
+  rmarkdown::html_vignette:
+    toc: true
+vignette: >
+  %\VignetteIndexEntry{Benchmarking PLS1 Implementations}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup_ops, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.path = "figures/benchmarking-",
+  fig.width = 7,
+  fig.height = 5,
+  dpi = 150,
+  message = FALSE,
+  warning = FALSE
+)
+
+LOCAL <- identical(Sys.getenv("LOCAL"), "TRUE")
+```
+
+```{r setup, message=FALSE}
+library(bigPLSR)
+library(bigmemory)
+library(bench)
+set.seed(123)
+```
+
+## Overview
+
+This vignette illustrates how to benchmark the dense and streaming
+implementations provided for single-response partial least squares
+regression (PLS1). The dense implementation (`pls1_dense`) copies the
+predictor matrix in memory and should therefore be preferred when the
+whole dataset fits in RAM. The streaming implementation (`pls1_stream`)
+iterates over the data in blocks, enabling analyses of larger-than-memory
+workloads.
+
+## Simulated data
+
+We generate a moderately sized synthetic datasets with a low dimensional
+latent structure. The predictors are stored in a `bigmemory::big.matrix`
+so they can be reused without additional copies during the benchmarks.
+
+Here is an example with `n=4000` en `p=50`
+
+```{r data-generation}
+n <- 1000
+p <- 50
+ncomp <- 5
+
+X <- bigmemory::big.matrix(nrow = n, ncol = p, type = "double")
+X[,] <- matrix(rnorm(n * p), nrow = n)
+
+true_beta <- matrix(rnorm(p), ncol = 1)
+y_vec <- as.vector(scale(X[,] %*% true_beta + rnorm(n)))
+
+y <- bigmemory::big.matrix(nrow = n, ncol = 1, type = "double")
+y[,] <- y_vec
+
+X[1:6, 1:6]
+y[1:6,]
+```
+
+
+## Benchmark results
+
+The `bench` package provides a convenient framework to compare the
+runtime characteristics of both solvers. The following benchmark uses a
+chunk size of 1024 rows for the streaming variant, which offers a good
+trade-off between speed and memory usage for this dataset size.
+
+
+```{r, eval=LOCAL, cache=TRUE}
+bench_res <- press(
+  n = c(500, 1000, 5000),
+  p = c(100, 500, 1000),
+  {
+    ncomp = 5
+    rep = 1
+    X <- bigmemory::big.matrix(nrow = n, ncol = p, type = "double")
+    X[,] <- matrix(rnorm(n * p), nrow = n)
+
+    true_beta <- matrix(rnorm(p), ncol = 1)
+    y_vec <- as.vector(scale(X[,] %*% true_beta + rnorm(n)))
+
+    y <- bigmemory::big.matrix(nrow = n, ncol = 1, type = "double")
+    y[,] <- y_vec
+    bench::mark(
+      dense = pls1_dense(X, y_vec, ncomp = ncomp, algorithm = algorithm),
+      streaming = pls1_stream(X, y_vec, ncomp = ncomp, chunk_size = 1024L, 
+                              algorithm = algorithm),
+      dense_a = pls1_dense_a(X, y, ncomp = ncomp, algorithm = algorithm),
+      streaming_a = pls1_stream_a(X, y, ncomp = ncomp, chunk_size = 1024L, 
+                                  algorithm = algorithm),
+      dense_ya = pls1_dense_ya(X, y, ncomp = ncomp, algorithm = algorithm),
+      streaming_ya = pls1_stream_ya(X, y, ncomp = ncomp, chunk_size = 1024L, 
+                                    algorithm = algorithm),
+      iterations = 10,
+      check = FALSE
+    )  
+  }
+)
+```
+
+
+## Interpreting the output
+
+The table summarises the timing and memory footprint of each solver. In
+practice you can adjust the number of components, the chunk size or the
+data generation process to mimic your own workload. When working with
+file-backed matrices the streaming solver is often the only viable
+option, whereas the dense solver remains the fastest choice for datasets
+that comfortably fit in memory.
+
+```{r}
+bench_res
+```
+
+```{r}
+plot(bench_res, type="jitter")
+```
+
+```{r}
+plot(bench_res, type="boxplot")
+```
+

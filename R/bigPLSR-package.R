@@ -12,7 +12,7 @@
 #'   Annual Conference, Dana-Farber Cancer Institute, Boston, MA, USA. 
 #'   Poster. https://doi.org/10.7490/f1000research.1119546.1  
 #' 
-#' @seealso [big_plsR()] and [big_plsR_gd()]
+# #' @seealso [big_plsR()] and [big_plsR_gd()]
 #' 
 #' @examples
 #' set.seed(314)
@@ -26,6 +26,7 @@
 #' @importFrom graphics abline axis layout legend segments
 #' @importFrom grDevices dev.new
 #' @importFrom stats as.formula is.empty.model model.matrix model.response model.weights rexp runif var
+#' @importFrom utils read.csv
 #' @import bigmemory
 #' @useDynLib bigPLSR, .registration = TRUE
 #' @importFrom Rcpp evalCpp

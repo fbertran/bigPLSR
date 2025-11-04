@@ -127,17 +127,17 @@ inline void check_double_matrix(const BigMatrix& mat, const char* name) {
     return b;
   }
   
-  inline double column_dot(const std::vector<double>& mat,
-                           std::size_t rows,
-                           std::size_t cols,
-                           std::size_t col,
-                           const std::vector<double>& vec) {
-    double total = 0.0;
-    for (std::size_t i = 0; i < rows; ++i) {
-      total += mat[i * cols + col] * vec[i];
-    }
-    return total;
-  }
+  // inline double column_dot(const std::vector<double>& mat,
+  //                          std::size_t rows,
+  //                          std::size_t cols,
+  //                          std::size_t col,
+  //                          const std::vector<double>& vec) {
+  //   double total = 0.0;
+  //   for (std::size_t i = 0; i < rows; ++i) {
+  //     total += mat[i * cols + col] * vec[i];
+  //   }
+  //   return total;
+  // }
   
   inline void orthogonalize_against(std::vector<double>& vec,
                                     const std::vector<double>& basis,
@@ -155,17 +155,17 @@ inline void check_double_matrix(const BigMatrix& mat, const char* name) {
     }
   }
   
-  inline NumericMatrix to_numeric_matrix(const std::vector<double>& mat,
-                                         std::size_t rows,
-                                         std::size_t cols) {
-    NumericMatrix res(rows, cols);
-    for (std::size_t j = 0; j < cols; ++j) {
-      for (std::size_t i = 0; i < rows; ++i) {
-        res(i, j) = mat[i * cols + j];
-      }
-    }
-    return res;
-  }
+  // inline NumericMatrix to_numeric_matrix(const std::vector<double>& mat,
+  //                                        std::size_t rows,
+  //                                        std::size_t cols) {
+  //   NumericMatrix res(rows, cols);
+  //   for (std::size_t j = 0; j < cols; ++j) {
+  //     for (std::size_t i = 0; i < rows; ++i) {
+  //       res(i, j) = mat[i * cols + j];
+  //     }
+  //   }
+  //   return res;
+  // }
   
   inline NumericMatrix to_numeric_matrix(const std::vector<double>& mat,
                                          std::size_t rows,

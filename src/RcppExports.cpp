@@ -75,37 +75,6 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// big_plsr_fit
-Rcpp::List big_plsr_fit(SEXP X_ptr, SEXP Y_ptr, int ncomp, bool center, bool scale);
-RcppExport SEXP _bigPLSR_big_plsr_fit(SEXP X_ptrSEXP, SEXP Y_ptrSEXP, SEXP ncompSEXP, SEXP centerSEXP, SEXP scaleSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< SEXP >::type X_ptr(X_ptrSEXP);
-    Rcpp::traits::input_parameter< SEXP >::type Y_ptr(Y_ptrSEXP);
-    Rcpp::traits::input_parameter< int >::type ncomp(ncompSEXP);
-    Rcpp::traits::input_parameter< bool >::type center(centerSEXP);
-    Rcpp::traits::input_parameter< bool >::type scale(scaleSEXP);
-    rcpp_result_gen = Rcpp::wrap(big_plsr_fit(X_ptr, Y_ptr, ncomp, center, scale));
-    return rcpp_result_gen;
-END_RCPP
-}
-// big_plsr_stream_fit
-Rcpp::List big_plsr_stream_fit(SEXP X_ptr, SEXP Y_ptr, int ncomp, bool center, bool scale, std::size_t block_size);
-RcppExport SEXP _bigPLSR_big_plsr_stream_fit(SEXP X_ptrSEXP, SEXP Y_ptrSEXP, SEXP ncompSEXP, SEXP centerSEXP, SEXP scaleSEXP, SEXP block_sizeSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< SEXP >::type X_ptr(X_ptrSEXP);
-    Rcpp::traits::input_parameter< SEXP >::type Y_ptr(Y_ptrSEXP);
-    Rcpp::traits::input_parameter< int >::type ncomp(ncompSEXP);
-    Rcpp::traits::input_parameter< bool >::type center(centerSEXP);
-    Rcpp::traits::input_parameter< bool >::type scale(scaleSEXP);
-    Rcpp::traits::input_parameter< std::size_t >::type block_size(block_sizeSEXP);
-    rcpp_result_gen = Rcpp::wrap(big_plsr_stream_fit(X_ptr, Y_ptr, ncomp, center, scale, block_size));
-    return rcpp_result_gen;
-END_RCPP
-}
 // pls_nipals_bigmemory
 List pls_nipals_bigmemory(SEXP X_ptrSEXP, SEXP y_ptrSEXP, int ncomp, bool center, bool scale, double tol, int max_iter);
 RcppExport SEXP _bigPLSR_pls_nipals_bigmemory(SEXP X_ptrSEXPSEXP, SEXP y_ptrSEXPSEXP, SEXP ncompSEXP, SEXP centerSEXP, SEXP scaleSEXP, SEXP tolSEXP, SEXP max_iterSEXP) {
@@ -140,16 +109,63 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// big_plsr_fit_nipals
+Rcpp::List big_plsr_fit_nipals(SEXP X_ptr, SEXP Y_ptr, int ncomp, bool center, bool scale);
+RcppExport SEXP _bigPLSR_big_plsr_fit_nipals(SEXP X_ptrSEXP, SEXP Y_ptrSEXP, SEXP ncompSEXP, SEXP centerSEXP, SEXP scaleSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type X_ptr(X_ptrSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type Y_ptr(Y_ptrSEXP);
+    Rcpp::traits::input_parameter< int >::type ncomp(ncompSEXP);
+    Rcpp::traits::input_parameter< bool >::type center(centerSEXP);
+    Rcpp::traits::input_parameter< bool >::type scale(scaleSEXP);
+    rcpp_result_gen = Rcpp::wrap(big_plsr_fit_nipals(X_ptr, Y_ptr, ncomp, center, scale));
+    return rcpp_result_gen;
+END_RCPP
+}
+// big_plsr_fit
+Rcpp::List big_plsr_fit(SEXP X_ptr, SEXP Y_ptr, int ncomp, bool center, bool scale);
+RcppExport SEXP _bigPLSR_big_plsr_fit(SEXP X_ptrSEXP, SEXP Y_ptrSEXP, SEXP ncompSEXP, SEXP centerSEXP, SEXP scaleSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type X_ptr(X_ptrSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type Y_ptr(Y_ptrSEXP);
+    Rcpp::traits::input_parameter< int >::type ncomp(ncompSEXP);
+    Rcpp::traits::input_parameter< bool >::type center(centerSEXP);
+    Rcpp::traits::input_parameter< bool >::type scale(scaleSEXP);
+    rcpp_result_gen = Rcpp::wrap(big_plsr_fit(X_ptr, Y_ptr, ncomp, center, scale));
+    return rcpp_result_gen;
+END_RCPP
+}
+// big_plsr_stream_fit
+Rcpp::List big_plsr_stream_fit(SEXP X_ptr, SEXP Y_ptr, int ncomp, bool center, bool scale, std::size_t block_size);
+RcppExport SEXP _bigPLSR_big_plsr_stream_fit(SEXP X_ptrSEXP, SEXP Y_ptrSEXP, SEXP ncompSEXP, SEXP centerSEXP, SEXP scaleSEXP, SEXP block_sizeSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type X_ptr(X_ptrSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type Y_ptr(Y_ptrSEXP);
+    Rcpp::traits::input_parameter< int >::type ncomp(ncompSEXP);
+    Rcpp::traits::input_parameter< bool >::type center(centerSEXP);
+    Rcpp::traits::input_parameter< bool >::type scale(scaleSEXP);
+    Rcpp::traits::input_parameter< std::size_t >::type block_size(block_sizeSEXP);
+    rcpp_result_gen = Rcpp::wrap(big_plsr_stream_fit(X_ptr, Y_ptr, ncomp, center, scale, block_size));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_bigPLSR_big_pls_fit_cpp", (DL_FUNC) &_bigPLSR_big_pls_fit_cpp, 7},
     {"_bigPLSR_big_pls_stream_cpp", (DL_FUNC) &_bigPLSR_big_pls_stream_cpp, 8},
     {"_bigPLSR_cpp_big_pls_fit", (DL_FUNC) &_bigPLSR_cpp_big_pls_fit, 4},
     {"_bigPLSR_cpp_big_pls_stream_fit", (DL_FUNC) &_bigPLSR_cpp_big_pls_stream_fit, 5},
-    {"_bigPLSR_big_plsr_fit", (DL_FUNC) &_bigPLSR_big_plsr_fit, 5},
-    {"_bigPLSR_big_plsr_stream_fit", (DL_FUNC) &_bigPLSR_big_plsr_stream_fit, 6},
     {"_bigPLSR_pls_nipals_bigmemory", (DL_FUNC) &_bigPLSR_pls_nipals_bigmemory, 7},
     {"_bigPLSR_pls_streaming_bigmemory", (DL_FUNC) &_bigPLSR_pls_streaming_bigmemory, 7},
+    {"_bigPLSR_big_plsr_fit_nipals", (DL_FUNC) &_bigPLSR_big_plsr_fit_nipals, 5},
+    {"_bigPLSR_big_plsr_fit", (DL_FUNC) &_bigPLSR_big_plsr_fit, 5},
+    {"_bigPLSR_big_plsr_stream_fit", (DL_FUNC) &_bigPLSR_big_plsr_stream_fit, 6},
     {NULL, NULL, 0}
 };
 
