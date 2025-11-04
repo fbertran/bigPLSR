@@ -125,15 +125,15 @@ file-backed matrices the streaming solver is often the only viable
 option, whereas the dense solver remains the fastest choice for datasets
 that comfortably fit in memory.
 
-```{r}
+```{r, cache=TRUE, eval=LOCAL}
 bench_res
 ```
 
-```{r}
+```{r, cache=TRUE, eval=LOCAL}
 plot(bench_res, type="jitter")
 ```
 
-```{r}
+```{r, cache=TRUE, eval=LOCAL}
 plot(bench_res, type="boxplot")
 ```
 

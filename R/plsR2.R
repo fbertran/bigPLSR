@@ -45,7 +45,7 @@ pls2_stream <- function(X, Y, ncomp, center = TRUE, scale = FALSE,
   if (algorithm == "simpls") {
     big_plsr_stream_fit(X@address, Y@address, as.integer(ncomp), center, scale, as.integer(block_size))
   } else {
-    big_plsr_fit_nipals(X@address, Y@address, as.integer(ncomp), center, scale)
+    big_plsr_stream_fit_nipals(X@address, Y@address, as.integer(ncomp), center, scale, as.integer(block_size))
   }
 }
 

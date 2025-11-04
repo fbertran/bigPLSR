@@ -38,7 +38,7 @@ test_that("PLS solvers agree on synthetic data", {
   expect_equal(fit_direct_simpls$intercept, fit_stream_simpls$intercept,
                tolerance = 1e-6)
   
-  expect_equal(fit_direct_simpls$coefficients[,], fit_direct_nipals$coefficients,
+  expect_equal(fit_direct_simpls$coefficients, fit_direct_nipals$coefficients,
                tolerance = 1e-6)
   expect_equal(fit_direct_simpls$intercept, fit_direct_nipals$intercept,
                tolerance = 1e-6)

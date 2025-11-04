@@ -2,19 +2,11 @@
 % Please edit documentation in R/plsR1.R
 \name{pls1_dense}
 \alias{pls1_dense}
+\alias{.harmonize_pls_result}
 \alias{pls1_stream}
 \title{Single-response partial least squares regression (PLS1)}
 \usage{
-pls1_dense(
-  X,
-  y,
-  ncomp = 2L,
-  center = TRUE,
-  scale = FALSE,
-  center_y = TRUE,
-  scale_y = FALSE,
-  algorithm = c("simpls", "nipals")
-)
+.harmonize_pls_result(res)
 
 pls1_stream(
   X,
@@ -35,6 +27,10 @@ pls1_stream(
 
 \item{ncomp}{Number of latent components to compute.}
 
+\item{chunk_size}{Number of rows to process per chunk. Must be strictly
+positive. Smaller chunks reduce peak memory usage while larger chunks may
+improve speed.}
+
 \item{center}{Should the columns of \code{X} be centered? Defaults to \code{TRUE}.}
 
 \item{scale}{Should the columns of \code{X} be scaled to unit variance? Defaults to \code{FALSE}.}
@@ -46,10 +42,6 @@ pls1_stream(
 \item{algorithm}{Algorithm to use for the fit. Either "simpls" or "nipals".
 When choosing "simpls", preprocessing options must remain at their default
 values.}
-
-\item{chunk_size}{Number of rows to process per chunk. Must be strictly
-positive. Smaller chunks reduce peak memory usage while larger chunks may
-improve speed.}
 }
 \value{
 A list containing regression coefficients, intercept, latent scores,

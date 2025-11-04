@@ -448,7 +448,7 @@ List pls_nipals_bigmemory(SEXP X_ptrSEXP,
 List pls_streaming_bigmemory(SEXP X_ptrSEXP,
                              SEXP y_ptrSEXP,
                              int ncomp,
-                             int block_size,
+                             int chunk_size,
                              bool center,
                              bool scale,
                              double tol) {
@@ -471,11 +471,11 @@ List pls_streaming_bigmemory(SEXP X_ptrSEXP,
     Rcpp::stop("Dimensions of X and y do not match");
   }
   
-  std::size_t block = block_size > 0
-  ? static_cast<std::size_t>(block_size)
+  std::size_t chunk = chunk_size > 0
+  ? static_cast<std::size_t>(chunk_size)
     : std::min<std::size_t>(n, static_cast<std::size_t>(1024));
-  if (block == 0) {
-    block = 1;
+  if (chunk == 0) {
+    chunk = 1;
   }
   
   MatrixAccessor<double> X_acc(*X_ptr);
@@ -536,8 +536,8 @@ List pls_streaming_bigmemory(SEXP X_ptrSEXP,
   std::vector<double> row_buffer(p);
   const double* y_col = y_acc[0];
   
-  for (std::size_t start = 0; start < n; start += block) {
-    const std::size_t end = std::min<std::size_t>(n, start + block);
+  for (std::size_t start = 0; start < n; start += chunk) {
+    const std::size_t end = std::min<std::size_t>(n, start + chunk);
     for (std::size_t i = start; i < end; ++i) {
       const double y_centered = y_col[i] - (center ? y_mean : 0.0);
       const double y_scaled = y_centered / (scale ? y_scale : 1.0);
@@ -661,8 +661,8 @@ List pls_streaming_bigmemory(SEXP X_ptrSEXP,
   }
   
   std::vector<double> scores_mat_vec(n * used_comp, 0.0);
-  for (std::size_t start = 0; start < n; start += block) {
-    const std::size_t end = std::min<std::size_t>(n, start + block);
+  for (std::size_t start = 0; start < n; start += chunk) {
+    const std::size_t end = std::min<std::size_t>(n, start + chunk);
     for (std::size_t i = start; i < end; ++i) {
       for (std::size_t j = 0; j < p; ++j) {
         const double* col = X_acc[j];
@@ -718,6 +718,6 @@ List pls_streaming_bigmemory(SEXP X_ptrSEXP,
     Named("scores") = scores_out,
     Named("y_loadings") = q_out,
     Named("ncomp") = used_comp,
-    Named("block_size") = static_cast<int>(block)
+    Named("chunk_size") = static_cast<int>(chunk)
   );
 }

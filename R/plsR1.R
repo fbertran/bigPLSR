@@ -5,7 +5,8 @@
 #' single column. They wrap the high performance C++ routines shipped with the
 #' package and provide a user friendly entry point when benchmarking the
 #' available implementations.
-#'
+#' 
+#' @name pls1_dense
 #' @aliases pls1_dense pls1_stream
 #'
 #' @param X A `bigmemory::big.matrix` storing the design matrix.
@@ -34,6 +35,113 @@
 #' str(fit)
 #' }
 #' 
+# Internal helper to enforce a consistent structure across PLS backends
+.harmonize_pls_result <- function(res) {
+  if (!is.list(res)) {
+    return(res)
+  }
+  
+  if (!is.null(res$coefficients)) {
+    coef <- res$coefficients
+    coef_vec <- as.numeric(coef)
+    if (length(coef_vec) == 0L) {
+      res$coefficients <- matrix(numeric(0), nrow = 0L, ncol = 1L)
+    } else {
+      n_row <- if (is.matrix(coef)) nrow(coef) else length(coef_vec)
+      res$coefficients <- matrix(coef_vec, nrow = n_row, ncol = 1L)
+    }
+  }
+  
+  if (!is.null(res$y_loadings)) {
+    y_load_vec <- as.numeric(res$y_loadings)
+    if (length(y_load_vec) == 0L) {
+      res$y_loadings <- matrix(numeric(0), nrow = 0L, ncol = 1L)
+    } else {
+      res$y_loadings <- matrix(y_load_vec, nrow = length(y_load_vec), ncol = 1L)
+    }
+  }
+  
+  if (!is.null(res$weights) && is.null(res$x_weights)) {
+    res$x_weights <- res$weights
+  }
+  if (!is.null(res$loadings) && is.null(res$x_loadings)) {
+    res$x_loadings <- res$loadings
+  }
+  
+  if (!is.null(res$x_weights)) {
+    res$x_weights <- as.matrix(res$x_weights)
+    res$weights <- res$x_weights
+  } else if (!is.null(res$weights)) {
+    res$weights <- as.matrix(res$weights)
+    res$x_weights <- res$weights
+  }
+  
+  if (!is.null(res$x_loadings)) {
+    res$x_loadings <- as.matrix(res$x_loadings)
+    res$loadings <- res$x_loadings
+  } else if (!is.null(res$loadings)) {
+    res$loadings <- as.matrix(res$loadings)
+    res$x_loadings <- res$loadings
+  }
+  
+  if (!is.null(res$x_means)) {
+    res$x_means <- as.numeric(res$x_means)
+    res$x_center <- res$x_means
+  } else if (!is.null(res$x_center)) {
+    res$x_center <- as.numeric(res$x_center)
+    res$x_means <- res$x_center
+  }
+  
+  if (!is.null(res$y_mean)) {
+    res$y_mean <- as.numeric(res$y_mean)
+    res$y_center <- res$y_mean
+  } else if (!is.null(res$y_center)) {
+    res$y_center <- as.numeric(res$y_center)
+    res$y_mean <- res$y_center
+  }
+  
+  if (!is.null(res$x_scales)) {
+    res$x_scale <- res$x_scales
+    res$x_scales <- NULL
+  }
+  if (!is.null(res$x_scale)) {
+    x_scale <- as.numeric(res$x_scale)
+    if (length(x_scale) == 0L || all(x_scale == 1)) {
+      res$x_scale <- NULL
+    } else {
+      res$x_scale <- x_scale
+    }
+  }
+  if (!"x_scale" %in% names(res) || is.null(res$x_scale)) {
+    res["x_scale"] <- list(res$x_scale)
+  }
+  
+  if (!is.null(res$y_scales)) {
+    res$y_scale <- res$y_scales
+    res$y_scales <- NULL
+  }
+  if (!is.null(res$y_scale)) {
+    y_scale <- as.numeric(res$y_scale)
+    if (length(y_scale) == 0L || all(y_scale == 1)) {
+      res$y_scale <- NULL
+    } else {
+      res$y_scale <- y_scale
+    }
+  }
+  if (!"y_scale" %in% names(res) || is.null(res$y_scale)) {
+    res["y_scale"] <- list(res$y_scale)
+  }
+  
+  if (!is.null(res$scores)) {
+    res$scores <- as.matrix(res$scores)
+  }
+  if (!"scores" %in% names(res)) {
+    res["scores"] <- list(NULL)
+  }
+  
+  res
+}
+
 #' @export
 pls1_dense <- function(X, y, ncomp = 2L, center = TRUE, scale = FALSE,
                        center_y = TRUE, scale_y = FALSE,
@@ -47,7 +155,7 @@ pls1_dense <- function(X, y, ncomp = 2L, center = TRUE, scale = FALSE,
   if (length(y) != nrow(X)) {
     stop("Response length does not match the number of rows in X")
   }
-  if (identical(algorithm, "simpls")) {
+  res <- if (identical(algorithm, "simpls")) {
     if (!center || scale || !center_y || scale_y) {
       stop("SIMPLS backend only supports the default centering/scaling options")
     }
@@ -57,6 +165,7 @@ pls1_dense <- function(X, y, ncomp = 2L, center = TRUE, scale = FALSE,
   } else {
     big_pls_fit_cpp(X@address, y, ncomp, center, scale, center_y, scale_y)
   }
+  .harmonize_pls_result(res)
 }
 
 #' @rdname pls1_dense
@@ -89,7 +198,7 @@ pls1_stream <- function(X, y, ncomp = 2L, chunk_size = 1024L,
   if (chunk_size <= 0L) {
     stop("chunk_size must be a positive integer")
   }
-  if (identical(algorithm, "simpls")) {
+  res <- if (identical(algorithm, "simpls")) {
     if (!center || scale || !center_y || scale_y) {
       stop("SIMPLS backend only supports the default centering/scaling options")
     }
@@ -99,6 +208,7 @@ pls1_stream <- function(X, y, ncomp = 2L, chunk_size = 1024L,
   } else {
     big_pls_stream_cpp(X@address, y, ncomp, center, scale, center_y, scale_y, chunk_size)
   }
+  .harmonize_pls_result(res)
 }
 
 
@@ -181,6 +291,7 @@ pls1_dense_a <- function(X, y, ncomp = 2L, center = TRUE, scale = FALSE,
                          as.integer(ncomp), center, scale, tol,
                          as.integer(max_iter))
   }
+  res <- .harmonize_pls_result(res)
   res$call <- match.call()
   class(res) <- c("big_plsr", class(res))
   res
@@ -233,6 +344,10 @@ pls1_stream_a <- function(X, y, ncomp = 2L, chunk_size = 1024L,
     pls_streaming_bigmemory(X@address, y@address,
                             as.integer(ncomp), as.integer(chunk_size),
                             center, scale, tol)
+  }
+  res <- .harmonize_pls_result(res)
+  if(algorithm=="simpls"){
+    res$chunk_size <- chunk_size
   }
   res$call <- match.call()
   class(res) <- c("big_plsr", class(res))
@@ -314,7 +429,10 @@ pls1_dense_ya <- function(x, y, ncomp, tol = 1e-8,
                     center_x = TRUE, scale_x = FALSE,
                     center_y = TRUE, scale_y = FALSE)
   }
-  invisible(res)
+  res <- .harmonize_pls_result(res)
+  res$call <- match.call()
+  class(res) <- c("big_plsr", class(res))
+  res
 }
 
 #' @rdname pls1_dense_ya
@@ -365,5 +483,8 @@ pls1_stream_ya <- function(x, y, ncomp, chunk_size = 4096, tol = 1e-8,
                        center_y = TRUE, scale_y = FALSE,
                        chunk_size = as.integer(chunk_size))
   }
-  invisible(res)
+  res <- .harmonize_pls_result(res)
+  res$call <- match.call()
+  class(res) <- c("big_plsr", class(res))
+  res
 }

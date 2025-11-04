@@ -21,12 +21,16 @@ pls_nipals_bigmemory <- function(X_ptrSEXP, y_ptrSEXP, ncomp, center, scale, tol
     .Call(`_bigPLSR_pls_nipals_bigmemory`, X_ptrSEXP, y_ptrSEXP, ncomp, center, scale, tol, max_iter)
 }
 
-pls_streaming_bigmemory <- function(X_ptrSEXP, y_ptrSEXP, ncomp, block_size, center, scale, tol) {
-    .Call(`_bigPLSR_pls_streaming_bigmemory`, X_ptrSEXP, y_ptrSEXP, ncomp, block_size, center, scale, tol)
+pls_streaming_bigmemory <- function(X_ptrSEXP, y_ptrSEXP, ncomp, chunk_size, center, scale, tol) {
+    .Call(`_bigPLSR_pls_streaming_bigmemory`, X_ptrSEXP, y_ptrSEXP, ncomp, chunk_size, center, scale, tol)
 }
 
 big_plsr_fit_nipals <- function(X_ptr, Y_ptr, ncomp, center = TRUE, scale = FALSE) {
     .Call(`_bigPLSR_big_plsr_fit_nipals`, X_ptr, Y_ptr, ncomp, center, scale)
+}
+
+big_plsr_stream_fit_nipals <- function(X_ptr, Y_ptr, ncomp, center = TRUE, scale = FALSE, block_size = 1024L) {
+    .Call(`_bigPLSR_big_plsr_stream_fit_nipals`, X_ptr, Y_ptr, ncomp, center, scale, block_size)
 }
 
 big_plsr_fit <- function(X_ptr, Y_ptr, ncomp, center = TRUE, scale = FALSE) {

@@ -126,6 +126,8 @@ bench_res_q_50 <- press(
       dense_nipals = pls2_dense(X, Y, ncomp = ncomp, algorithm = "nipals"),
       streaming_simpls = pls2_stream(X, Y, ncomp = ncomp, block_size = 1024L, 
                                      algorithm = "simpls"),
+      streaming_nipals = pls2_stream(X, Y, ncomp = ncomp, block_size = 1024L, 
+                                     algorithm = "nipals"),
       iterations = 10,
       check = FALSE
     )
@@ -141,27 +143,27 @@ very large datasets should prefer the streaming implementation, while
 the dense solver remains a strong choice when the data comfortably fits
 in RAM.
 
-```{r}
+```{r, cache=TRUE, eval=LOCAL}
 bench_res_q_5
 ```
 
-```{r}
+```{r, cache=TRUE, eval=LOCAL}
 bench_res_q_50
 ```
 
-```{r}
+```{r, cache=TRUE, eval=LOCAL}
 plot(bench_res_q_5, type="jitter")
 ```
 
-```{r}
+```{r, cache=TRUE, eval=LOCAL}
 plot(bench_res_q_50, type="jitter")
 ```
 
-```{r}
+```{r, cache=TRUE, eval=LOCAL}
 plot(bench_res_q_5, type="boxplot")
 ```
 
-```{r}
+```{r, cache=TRUE, eval=LOCAL}
 plot(bench_res_q_50, type="boxplot")
 ```
 
