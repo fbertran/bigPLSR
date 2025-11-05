@@ -94,8 +94,10 @@ bench_res_q_5 <- press(
     bench::mark(
       dense_simpls = pls2_dense(X, Y, ncomp = ncomp, algorithm = "simpls"),
       dense_nipals = pls2_dense(X, Y, ncomp = ncomp, algorithm = "nipals"),
-      streaming_simpls = pls2_stream(X, Y, ncomp = ncomp, block_size = 1024L, 
+      streaming_simpls = pls2_stream(X, Y, ncomp = ncomp, chunk_size = 1024L, 
                                      algorithm = "simpls"),
+      streaming_nipals = pls2_stream(X, Y, ncomp = ncomp, chunk_size = 1024L, 
+                                     algorithm = "nipals"),
       iterations = 10,
       check = FALSE
     )
@@ -124,9 +126,9 @@ bench_res_q_50 <- press(
     bench::mark(
       dense_simpls = pls2_dense(X, Y, ncomp = ncomp, algorithm = "simpls"),
       dense_nipals = pls2_dense(X, Y, ncomp = ncomp, algorithm = "nipals"),
-      streaming_simpls = pls2_stream(X, Y, ncomp = ncomp, block_size = 1024L, 
+      streaming_simpls = pls2_stream(X, Y, ncomp = ncomp, chunk_size = 1024L, 
                                      algorithm = "simpls"),
-      streaming_nipals = pls2_stream(X, Y, ncomp = ncomp, block_size = 1024L, 
+      streaming_nipals = pls2_stream(X, Y, ncomp = ncomp, chunk_size = 1024L, 
                                      algorithm = "nipals"),
       iterations = 10,
       check = FALSE

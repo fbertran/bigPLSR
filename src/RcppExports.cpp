@@ -48,6 +48,23 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// cpp_dense_pls_fit
+SEXP cpp_dense_pls_fit(Rcpp::NumericMatrix X, Rcpp::NumericVector y, int ncomp, double tol, bool compute_scores, bool scores_big, std::string scores_name);
+RcppExport SEXP _bigPLSR_cpp_dense_pls_fit(SEXP XSEXP, SEXP ySEXP, SEXP ncompSEXP, SEXP tolSEXP, SEXP compute_scoresSEXP, SEXP scores_bigSEXP, SEXP scores_nameSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type X(XSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type y(ySEXP);
+    Rcpp::traits::input_parameter< int >::type ncomp(ncompSEXP);
+    Rcpp::traits::input_parameter< double >::type tol(tolSEXP);
+    Rcpp::traits::input_parameter< bool >::type compute_scores(compute_scoresSEXP);
+    Rcpp::traits::input_parameter< bool >::type scores_big(scores_bigSEXP);
+    Rcpp::traits::input_parameter< std::string >::type scores_name(scores_nameSEXP);
+    rcpp_result_gen = Rcpp::wrap(cpp_dense_pls_fit(X, y, ncomp, tol, compute_scores, scores_big, scores_name));
+    return rcpp_result_gen;
+END_RCPP
+}
 // cpp_big_pls_fit
 SEXP cpp_big_pls_fit(SEXP x_ptr, SEXP y_ptr, int ncomp, double tol, bool return_big);
 RcppExport SEXP _bigPLSR_cpp_big_pls_fit(SEXP x_ptrSEXP, SEXP y_ptrSEXP, SEXP ncompSEXP, SEXP tolSEXP, SEXP return_bigSEXP) {
@@ -185,6 +202,7 @@ END_RCPP
 static const R_CallMethodDef CallEntries[] = {
     {"_bigPLSR_big_pls_fit_cpp", (DL_FUNC) &_bigPLSR_big_pls_fit_cpp, 8},
     {"_bigPLSR_big_pls_stream_cpp", (DL_FUNC) &_bigPLSR_big_pls_stream_cpp, 9},
+    {"_bigPLSR_cpp_dense_pls_fit", (DL_FUNC) &_bigPLSR_cpp_dense_pls_fit, 7},
     {"_bigPLSR_cpp_big_pls_fit", (DL_FUNC) &_bigPLSR_cpp_big_pls_fit, 5},
     {"_bigPLSR_cpp_big_pls_stream_fit", (DL_FUNC) &_bigPLSR_cpp_big_pls_stream_fit, 6},
     {"_bigPLSR_pls_nipals_bigmemory", (DL_FUNC) &_bigPLSR_pls_nipals_bigmemory, 8},

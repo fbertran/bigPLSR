@@ -9,6 +9,10 @@ big_pls_stream_cpp <- function(x_ptr, y, ncomp, center_x, scale_x, center_y, sca
     .Call(`_bigPLSR_big_pls_stream_cpp`, x_ptr, y, ncomp, center_x, scale_x, center_y, scale_y, chunk_size, return_big)
 }
 
+cpp_dense_pls_fit <- function(X, y, ncomp, tol, compute_scores = FALSE, scores_big = FALSE, scores_name = "scores") {
+    .Call(`_bigPLSR_cpp_dense_pls_fit`, X, y, ncomp, tol, compute_scores, scores_big, scores_name)
+}
+
 cpp_big_pls_fit <- function(x_ptr, y_ptr, ncomp, tol, return_big) {
     .Call(`_bigPLSR_cpp_big_pls_fit`, x_ptr, y_ptr, ncomp, tol, return_big)
 }
