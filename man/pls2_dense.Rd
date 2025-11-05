@@ -21,7 +21,7 @@ pls2_stream(
   ncomp,
   center = TRUE,
   scale = FALSE,
-  block_size = 1024L,
+  chunk_size = 1024L,
   algorithm = c("simpls", "nipals"),
   return_big = FALSE
 )
@@ -42,7 +42,7 @@ pls2_stream(
 \item{return_big}{Logical; when \code{TRUE}, the coefficients, scores and loadings
 are returned as \code{\link[bigmemory:big.matrix]{bigmemory::big.matrix}} objects. Defaults to \code{FALSE}.}
 
-\item{block_size}{Number of rows processed per block by the streaming
+\item{chunk_size}{Number of rows processed per block by the streaming
 variant.}
 }
 \value{

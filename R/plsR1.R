@@ -295,7 +295,7 @@ pls1_dense_a <- function(X, y, ncomp = 2L, center = TRUE, scale = FALSE,
     if (!center || scale) {
       stop("SIMPLS backend only supports center = TRUE and scale = FALSE")
     }
-    cpp_big_pls_fit(X@address, y@address, as.integer(ncomp), to, return_bigl)
+    cpp_big_pls_fit(X@address, y@address, as.integer(ncomp), tol, return_big)
   } else {
     pls_nipals_bigmemory(X@address, y@address,
                          as.integer(ncomp), center, scale, tol,
