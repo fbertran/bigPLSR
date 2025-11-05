@@ -11,6 +11,8 @@ using namespace arma;
 
 #include <algorithm>
 
+#include "bigmatrix_utils.hpp"
+
 namespace {
 
 inline arma::mat compute_simpls(const arma::mat& Xc,
@@ -124,7 +126,8 @@ Rcpp::List big_plsr_fit(SEXP X_ptr,
                         SEXP Y_ptr,
                         int ncomp,
                         bool center = true,
-                        bool scale = false)
+                        bool scale = false,
+                        bool return_big = false)
 {
     if (ncomp <= 0) {
         Rcpp::stop("ncomp must be positive");
@@ -214,13 +217,20 @@ Rcpp::List big_plsr_fit(SEXP X_ptr,
         intercept = meanY - meanX * coef;
     }
 
+    Rcpp::RObject coefficients_out =
+      make_matrix_output(return_big, coef.memptr(), coef.n_rows, coef.n_cols, "coefficients");
+    Rcpp::RObject loadings_out =
+      make_matrix_output(return_big, loadings.memptr(), loadings.n_rows, loadings.n_cols, "loadings");
+    Rcpp::RObject scores_out =
+      make_matrix_output(return_big, scores.memptr(), scores.n_rows, scores.n_cols, "scores");
+    
     return Rcpp::List::create(
-        Rcpp::Named("coefficients") = coef,
+        Rcpp::Named("coefficients") = coefficients_out,
         Rcpp::Named("intercept") = intercept,
         Rcpp::Named("weights") = weights,
-        Rcpp::Named("loadings") = loadings,
+        Rcpp::Named("loadings") = loadings_out,
         Rcpp::Named("y_loadings") = y_loadings,
-        Rcpp::Named("scores") = scores,
+        Rcpp::Named("scores") = scores_out,
         Rcpp::Named("x_means") = meanX,
         Rcpp::Named("y_means") = meanY,
         Rcpp::Named("x_scales") = scaleX,
@@ -247,13 +257,14 @@ Rcpp::List big_plsr_stream_fit(SEXP X_ptr,
                                int ncomp,
                                bool center = true,
                                bool scale = false,
-                               std::size_t block_size = 1024)
+                               std::size_t chunk_size = 1024,
+                               bool return_big = false)
 {
     if (ncomp <= 0) {
         Rcpp::stop("ncomp must be positive");
     }
-    if (block_size == 0) {
-        Rcpp::stop("block_size must be strictly positive");
+    if (chunk_size == 0) {
+        Rcpp::stop("chunk_size must be strictly positive");
     }
 
     Rcpp::XPtr<BigMatrix> xMat(X_ptr);
@@ -341,8 +352,8 @@ Rcpp::List big_plsr_stream_fit(SEXP X_ptr,
     std::vector<double> x_row(px);
     std::vector<double> y_row(q);
 
-    for (std::size_t start = 0; start < n; start += block_size) {
-        std::size_t end = std::min<std::size_t>(n, start + block_size);
+    for (std::size_t start = 0; start < n; start += chunk_size) {
+        std::size_t end = std::min<std::size_t>(n, start + chunk_size);
         for (std::size_t i = start; i < end; ++i) {
             for (std::size_t j = 0; j < px; ++j) {
                 double val = Xacc[j][i];
@@ -406,8 +417,8 @@ Rcpp::List big_plsr_stream_fit(SEXP X_ptr,
         arma::vec qvec(q, arma::fill::zeros);
         double tnorm_sq = 0.0;
 
-        for (std::size_t start = 0; start < n; start += block_size) {
-            std::size_t end = std::min<std::size_t>(n, start + block_size);
+        for (std::size_t start = 0; start < n; start += chunk_size) {
+            std::size_t end = std::min<std::size_t>(n, start + chunk_size);
             for (std::size_t i = start; i < end; ++i) {
                 for (std::size_t j = 0; j < px; ++j) {
                     double val = Xacc[j][i];
@@ -527,11 +538,16 @@ Rcpp::List big_plsr_stream_fit(SEXP X_ptr,
         intercept = meanY_row - meanX_row * coef;
     }
 
+    Rcpp::RObject coefficients_out =
+      make_matrix_output(return_big, coef.memptr(), coef.n_rows, coef.n_cols, "coefficients");
+    Rcpp::RObject loadings_out =
+      make_matrix_output(return_big, P_used.memptr(), P_used.n_rows, P_used.n_cols, "loadings");
+    
     return Rcpp::List::create(
-        Rcpp::Named("coefficients") = coef,
+        Rcpp::Named("coefficients") = coefficients_out,
         Rcpp::Named("intercept") = intercept,
         Rcpp::Named("weights") = R_used,
-        Rcpp::Named("loadings") = P_used,
+        Rcpp::Named("loadings") = loadings_out,
         Rcpp::Named("y_loadings") = Q_used,
         Rcpp::Named("x_means") = Rcpp::NumericVector(meanX.begin(), meanX.end()),
         Rcpp::Named("y_means") = Rcpp::NumericVector(meanY.begin(), meanY.end()),

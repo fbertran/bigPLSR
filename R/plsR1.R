@@ -22,6 +22,8 @@
 #' @param chunk_size Number of rows to process per chunk. Must be strictly
 #'   positive. Smaller chunks reduce peak memory usage while larger chunks may
 #'   improve speed.
+#' @param return_big Logical; when `TRUE`, the coefficients, scores and loadings
+#'   are returned as [`bigmemory::big.matrix`] objects. Defaults to `FALSE`.
 #'
 #' @return A list containing regression coefficients, intercept, latent scores,
 #'   loadings and weights.
@@ -59,6 +61,9 @@
     } else {
       res$y_loadings <- matrix(y_load_vec, nrow = length(y_load_vec), ncol = 1L)
     }
+  }
+  if (!"y_loadings" %in% names(res)) {
+    res["y_loadings"] <- list(NULL)
   }
   
   if (!is.null(res$weights) && is.null(res$x_weights)) {
@@ -145,7 +150,8 @@
 #' @export
 pls1_dense <- function(X, y, ncomp = 2L, center = TRUE, scale = FALSE,
                        center_y = TRUE, scale_y = FALSE,
-                       algorithm = c("simpls", "nipals")) {
+                       algorithm = c("simpls", "nipals"),
+                       return_big = FALSE) {
   algorithm <- match.arg(algorithm)
   if (!inherits(X, "big.matrix")) {
     stop("X must be a big.matrix")
@@ -161,9 +167,9 @@ pls1_dense <- function(X, y, ncomp = 2L, center = TRUE, scale = FALSE,
     }
     y_mat <- bigmemory::big.matrix(nrow = length(y), ncol = 1L, type = "double")
     y_mat[, 1] <- y
-    cpp_big_pls_fit(X@address, y_mat@address, ncomp, 1e-8)
+    cpp_big_pls_fit(X@address, y_mat@address, ncomp, 1e-8, return_big)
   } else {
-    big_pls_fit_cpp(X@address, y, ncomp, center, scale, center_y, scale_y)
+    big_pls_fit_cpp(X@address, y, ncomp, center, scale, center_y, scale_y, return_big)
   }
   .harmonize_pls_result(res)
 }
@@ -184,7 +190,8 @@ pls1_dense <- function(X, y, ncomp = 2L, center = TRUE, scale = FALSE,
 pls1_stream <- function(X, y, ncomp = 2L, chunk_size = 1024L,
                                center = TRUE, scale = FALSE,
                         center_y = TRUE, scale_y = FALSE,
-                        algorithm = c("simpls", "nipals")) {
+                        algorithm = c("simpls", "nipals"),
+                        return_big = FALSE) {
   algorithm <- match.arg(algorithm)
   if (!inherits(X, "big.matrix")) {
     stop("X must be a big.matrix")
@@ -204,9 +211,9 @@ pls1_stream <- function(X, y, ncomp = 2L, chunk_size = 1024L,
     }
     y_mat <- bigmemory::big.matrix(nrow = length(y), ncol = 1L, type = "double")
     y_mat[, 1] <- y
-    cpp_big_pls_stream_fit(X@address, y_mat@address, ncomp, chunk_size, 1e-8)
+    cpp_big_pls_stream_fit(X@address, y_mat@address, ncomp, chunk_size, 1e-8, return_big)
   } else {
-    big_pls_stream_cpp(X@address, y, ncomp, center, scale, center_y, scale_y, chunk_size)
+    big_pls_stream_cpp(X@address, y, ncomp, center, scale, center_y, scale_y, chunk_size, return_big)
   }
   .harmonize_pls_result(res)
 }
@@ -245,6 +252,8 @@ pls1_stream <- function(X, y, ncomp = 2L, chunk_size = 1024L,
 #' @param algorithm Algorithm used to compute the PLS fit. Either "simpls" or
 #'   "nipals". The SIMPLS backend only supports the default centering and
 #'   scaling configuration.
+#' @param return_big Logical; when `TRUE`, the coefficients, scores and loadings
+#'   are returned as [`bigmemory::big.matrix`] objects. Defaults to `FALSE`.
 #'
 #' @return A list with regression coefficients, intercept, latent scores,
 #'   weights and additional metadata.
@@ -261,7 +270,8 @@ pls1_stream <- function(X, y, ncomp = 2L, chunk_size = 1024L,
 #' @export
 pls1_dense_a <- function(X, y, ncomp = 2L, center = TRUE, scale = FALSE,
                          tol = 1e-8, max_iter = 100L,
-                         algorithm = c("simpls", "nipals")) {
+                         algorithm = c("simpls", "nipals"),
+                         return_big = FALSE) {
   algorithm <- match.arg(algorithm)
   if (!inherits(X, "big.matrix")) {
     stop("`X` must be a big.matrix")
@@ -285,11 +295,11 @@ pls1_dense_a <- function(X, y, ncomp = 2L, center = TRUE, scale = FALSE,
     if (!center || scale) {
       stop("SIMPLS backend only supports center = TRUE and scale = FALSE")
     }
-    cpp_big_pls_fit(X@address, y@address, as.integer(ncomp), tol)
+    cpp_big_pls_fit(X@address, y@address, as.integer(ncomp), to, return_bigl)
   } else {
     pls_nipals_bigmemory(X@address, y@address,
                          as.integer(ncomp), center, scale, tol,
-                         as.integer(max_iter))
+                         as.integer(max_iter), return_big)
   }
   res <- .harmonize_pls_result(res)
   res$call <- match.call()
@@ -311,7 +321,8 @@ pls1_dense_a <- function(X, y, ncomp = 2L, center = TRUE, scale = FALSE,
 #' 
 pls1_stream_a <- function(X, y, ncomp = 2L, chunk_size = 1024L,
                           center = TRUE, scale = FALSE, tol = 1e-8,
-                          algorithm = c("simpls", "nipals")) {
+                          algorithm = c("simpls", "nipals"),
+                          return_big = FALSE) {
   algorithm <- match.arg(algorithm)
   if (!inherits(X, "big.matrix")) {
     stop("`X` must be a big.matrix")
@@ -339,11 +350,11 @@ pls1_stream_a <- function(X, y, ncomp = 2L, chunk_size = 1024L,
       stop("SIMPLS backend only supports center = TRUE and scale = FALSE")
     }
     cpp_big_pls_stream_fit(X@address, y@address, as.integer(ncomp),
-                           as.integer(chunk_size), tol)
+                           as.integer(chunk_size), tol, return_big)
   } else {
     pls_streaming_bigmemory(X@address, y@address,
                             as.integer(ncomp), as.integer(chunk_size),
-                            center, scale, tol)
+                            center, scale, tol, return_big)
   }
   res <- .harmonize_pls_result(res)
   if(algorithm=="simpls"){
@@ -381,6 +392,8 @@ pls1_stream_a <- function(X, y, ncomp = 2L, chunk_size = 1024L,
 #'   memory.
 #' @param chunk_size Number of rows processed per block by the streaming
 #'   variant.
+#' @param return_big Logical; when `TRUE`, the coefficients, scores and loadings
+#'   are returned as [`bigmemory::big.matrix`] objects. Defaults to `FALSE`.
 #'   
 #' @examples
 #' \donttest{
@@ -397,7 +410,8 @@ pls1_stream_a <- function(X, y, ncomp = 2L, chunk_size = 1024L,
 #'   
 #' @export
 pls1_dense_ya <- function(x, y, ncomp, tol = 1e-8,
-                          algorithm = c("simpls", "nipals")) {
+                          algorithm = c("simpls", "nipals"),
+                          return_big = FALSE) {
   algorithm <- match.arg(algorithm)
   if (!bigmemory::is.big.matrix(x)) {
     stop("x must be a big.matrix")
@@ -422,12 +436,13 @@ pls1_dense_ya <- function(x, y, ncomp, tol = 1e-8,
     stop("x must have at least one column")
   }
   res <- if (identical(algorithm, "simpls")) {
-    cpp_big_pls_fit(x@address, y@address, as.integer(ncomp), tol)
+    cpp_big_pls_fit(x@address, y@address, as.integer(ncomp), tol, return_big)
   } else {
     y_vec <- if (!is.null(original_y)) original_y else as.numeric(y[, 1])
     big_pls_fit_cpp(x@address, y_vec, as.integer(ncomp),
                     center_x = TRUE, scale_x = FALSE,
-                    center_y = TRUE, scale_y = FALSE)
+                    center_y = TRUE, scale_y = FALSE,
+                    return_big = return_big)
   }
   res <- .harmonize_pls_result(res)
   res$call <- match.call()
@@ -449,7 +464,8 @@ pls1_dense_ya <- function(x, y, ncomp, tol = 1e-8,
 #' }
 #' 
 pls1_stream_ya <- function(x, y, ncomp, chunk_size = 4096, tol = 1e-8,
-                           algorithm = c("simpls", "nipals")) {
+                           algorithm = c("simpls", "nipals"),
+                           return_big = FALSE) {
   algorithm <- match.arg(algorithm)
   if (!bigmemory::is.big.matrix(x)) {
     stop("x must be a big.matrix")
@@ -475,13 +491,14 @@ pls1_stream_ya <- function(x, y, ncomp, chunk_size = 4096, tol = 1e-8,
   }
   res <- if (identical(algorithm, "simpls")) {
     cpp_big_pls_stream_fit(x@address, y@address, as.integer(ncomp),
-                           as.integer(chunk_size), tol)
+                           as.integer(chunk_size), tol, return_big)
   } else {
     y_vec <- if (!is.null(original_y)) original_y else as.numeric(y[, 1])
     big_pls_stream_cpp(x@address, y_vec, as.integer(ncomp),
                        center_x = TRUE, scale_x = FALSE,
                        center_y = TRUE, scale_y = FALSE,
-                       chunk_size = as.integer(chunk_size))
+                       chunk_size = as.integer(chunk_size),
+                       return_big = return_big)
   }
   res <- .harmonize_pls_result(res)
   res$call <- match.call()

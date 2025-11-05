@@ -11,7 +11,8 @@ pls2_dense(
   ncomp,
   center = TRUE,
   scale = FALSE,
-  algorithm = c("simpls", "nipals")
+  algorithm = c("simpls", "nipals"),
+  return_big = FALSE
 )
 
 pls2_stream(
@@ -21,7 +22,8 @@ pls2_stream(
   center = TRUE,
   scale = FALSE,
   block_size = 1024L,
-  algorithm = c("simpls", "nipals")
+  algorithm = c("simpls", "nipals"),
+  return_big = FALSE
 )
 }
 \arguments{
@@ -36,6 +38,9 @@ pls2_stream(
 \item{scale}{Should the inputs be scaled to unit variance prior to fitting?}
 
 \item{algorithm}{PLS backend to use. Either "simpls" (default) or "nipals".}
+
+\item{return_big}{Logical; when \code{TRUE}, the coefficients, scores and loadings
+are returned as \code{\link[bigmemory:big.matrix]{bigmemory::big.matrix}} objects. Defaults to \code{FALSE}.}
 
 \item{block_size}{Number of rows processed per block by the streaming
 variant.}

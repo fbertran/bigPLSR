@@ -13,7 +13,8 @@ pls1_dense_a(
   scale = FALSE,
   tol = 1e-08,
   max_iter = 100L,
-  algorithm = c("simpls", "nipals")
+  algorithm = c("simpls", "nipals"),
+  return_big = FALSE
 )
 
 pls1_stream_a(
@@ -24,7 +25,8 @@ pls1_stream_a(
   center = TRUE,
   scale = FALSE,
   tol = 1e-08,
-  algorithm = c("simpls", "nipals")
+  algorithm = c("simpls", "nipals"),
+  return_big = FALSE
 )
 }
 \arguments{
@@ -49,6 +51,9 @@ are detected).}
 \item{algorithm}{Algorithm used to compute the PLS fit. Either "simpls" or
 "nipals". The SIMPLS backend only supports the default centering and
 scaling configuration.}
+
+\item{return_big}{Logical; when \code{TRUE}, the coefficients, scores and loadings
+are returned as \code{\link[bigmemory:big.matrix]{bigmemory::big.matrix}} objects. Defaults to \code{FALSE}.}
 
 \item{chunk_size}{Number of rows processed at a time by the streaming
 backend.}

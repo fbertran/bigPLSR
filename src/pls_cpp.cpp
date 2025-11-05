@@ -15,6 +15,8 @@ using Rcpp::NumericVector;
 using Rcpp::Named;
 using Rcpp::XPtr;
 
+#include "bigmatrix_utils.hpp"
+
 namespace {
 
 inline void check_double_matrix(const BigMatrix& mat, const char* name) {
@@ -189,7 +191,8 @@ List pls_nipals_bigmemory(SEXP X_ptrSEXP,
                           bool center,
                           bool scale,
                           double tol,
-                          int max_iter) {
+                          int max_iter,
+                          bool return_big) {
   if (ncomp <= 0) {
     Rcpp::stop("ncomp must be positive");
   }
@@ -383,7 +386,7 @@ List pls_nipals_bigmemory(SEXP X_ptrSEXP,
   }
   std::vector<double> temp = solve_linear_system(PTW, q_vec, used_comp, tol);
   
-  NumericVector coefficients(p);
+  std::vector<double> coefficients(p);
   for (std::size_t j = 0; j < p; ++j) {
     double beta = 0.0;
     for (int h = 0; h < used_comp; ++h) {
@@ -393,7 +396,7 @@ List pls_nipals_bigmemory(SEXP X_ptrSEXP,
     beta *= (scale ? y_scale : 1.0) / scale_factor;
     coefficients[j] = beta;
   }
-  
+
   double intercept = center ? y_mean : 0.0;
   if (center) {
     double adj = 0.0;
@@ -403,14 +406,15 @@ List pls_nipals_bigmemory(SEXP X_ptrSEXP,
     intercept -= adj;
   }
   
+  Rcpp::RObject coefficients_out =
+    make_vector_output(return_big, coefficients.data(), p, "coefficients");
+  Rcpp::RObject loadings_out =
+    make_matrix_output(return_big, loadings.data(), p, used_comp, "loadings");
+  Rcpp::RObject scores_out =
+    make_matrix_output(return_big, scores.data(), n, used_comp, "scores");
+  
   NumericMatrix weights_mat = to_numeric_matrix(weights, p, ncomp, used_comp);
-  NumericMatrix loadings_mat = to_numeric_matrix(loadings, p, ncomp, used_comp);
-  NumericMatrix scores_mat(n, used_comp);
-  for (int h = 0; h < used_comp; ++h) {
-    for (std::size_t i = 0; i < n; ++i) {
-      scores_mat(i, h) = scores[h * n + i];
-    }
-  }
+
   NumericVector y_loadings_vec(used_comp);
   for (int h = 0; h < used_comp; ++h) {
     y_loadings_vec[h] = y_loadings[h];
@@ -430,15 +434,15 @@ List pls_nipals_bigmemory(SEXP X_ptrSEXP,
   }
   
   return List::create(
-    Named("coefficients") = coefficients,
+    Named("coefficients") = coefficients_out,
     Named("intercept") = intercept,
     Named("x_center") = x_mean_vec,
     Named("x_scale") = x_scale_vec,
     Named("y_center") = center ? Rcpp::wrap(y_mean) : R_NilValue,
     Named("y_scale") = scale ? Rcpp::wrap(y_scale) : R_NilValue,
     Named("weights") = weights_mat,
-    Named("loadings") = loadings_mat,
-    Named("scores") = scores_mat,
+    Named("loadings") = loadings_out,
+    Named("scores") = scores_out,
     Named("y_loadings") = y_loadings_vec,
     Named("ncomp") = used_comp
   );
@@ -451,7 +455,8 @@ List pls_streaming_bigmemory(SEXP X_ptrSEXP,
                              int chunk_size,
                              bool center,
                              bool scale,
-                             double tol) {
+                             double tol,
+                             bool return_big) {
   if (ncomp <= 0) {
     Rcpp::stop("ncomp must be positive");
   }
@@ -640,7 +645,7 @@ List pls_streaming_bigmemory(SEXP X_ptrSEXP,
   std::vector<double> q_used(q_vec.begin(), q_vec.begin() + used_comp);
   std::vector<double> temp = solve_linear_system(PTW, q_used, used_comp, tol);
   
-  NumericVector coefficients(p);
+  std::vector<double> coefficients(p);
   for (std::size_t j = 0; j < p; ++j) {
     double beta = 0.0;
     for (int h = 0; h < used_comp; ++h) {
@@ -680,14 +685,15 @@ List pls_streaming_bigmemory(SEXP X_ptrSEXP,
     }
   }
   
+  Rcpp::RObject coefficients_out =
+    make_vector_output(return_big, coefficients.data(), p, "coefficients");
+  Rcpp::RObject loadings_out =
+    make_matrix_output(return_big, P.data(), p, used_comp, "loadings");
+  Rcpp::RObject scores_out =
+    make_matrix_output(return_big, scores_mat_vec.data(), n, used_comp, "scores");
+  
   NumericMatrix weights_mat = to_numeric_matrix(W, p, ncomp, used_comp);
-  NumericMatrix loadings_mat = to_numeric_matrix(P, p, ncomp, used_comp);
-  NumericMatrix scores_out(n, used_comp);
-  for (std::size_t i = 0; i < n; ++i) {
-    for (int h = 0; h < used_comp; ++h) {
-      scores_out(i, h) = scores_mat_vec[i * used_comp + h];
-    }
-  }
+
   NumericVector q_out(used_comp);
   for (int h = 0; h < used_comp; ++h) {
     q_out[h] = q_vec[h];
@@ -707,14 +713,14 @@ List pls_streaming_bigmemory(SEXP X_ptrSEXP,
   }
   
   return List::create(
-    Named("coefficients") = coefficients,
+    Named("coefficients") = coefficients_out,
     Named("intercept") = intercept,
     Named("x_center") = x_mean_vec,
     Named("x_scale") = x_scale_vec,
     Named("y_center") = center ? Rcpp::wrap(y_mean) : R_NilValue,
     Named("y_scale") = scale ? Rcpp::wrap(y_scale) : R_NilValue,
     Named("weights") = weights_mat,
-    Named("loadings") = loadings_mat,
+    Named("loadings") = loadings_out,
     Named("scores") = scores_out,
     Named("y_loadings") = q_out,
     Named("ncomp") = used_comp,

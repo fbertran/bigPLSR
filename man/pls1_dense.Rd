@@ -17,7 +17,8 @@ pls1_stream(
   scale = FALSE,
   center_y = TRUE,
   scale_y = FALSE,
-  algorithm = c("simpls", "nipals")
+  algorithm = c("simpls", "nipals"),
+  return_big = FALSE
 )
 }
 \arguments{
@@ -42,6 +43,9 @@ improve speed.}
 \item{algorithm}{Algorithm to use for the fit. Either "simpls" or "nipals".
 When choosing "simpls", preprocessing options must remain at their default
 values.}
+
+\item{return_big}{Logical; when \code{TRUE}, the coefficients, scores and loadings
+are returned as \code{\link[bigmemory:big.matrix]{bigmemory::big.matrix}} objects. Defaults to \code{FALSE}.}
 }
 \value{
 A list containing regression coefficients, intercept, latent scores,

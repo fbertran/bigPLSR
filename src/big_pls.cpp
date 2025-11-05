@@ -5,6 +5,8 @@
 #include <cmath>
 #include <vector>
 
+#include "bigmatrix_utils.hpp"
+
 using namespace Rcpp;
 
 // [[Rcpp::depends(RcppArmadillo, bigmemory)]]
@@ -101,7 +103,8 @@ std::vector<double> initialize_y(const NumericVector& y,
 List big_pls_core(SEXP x_ptr, const NumericVector& y, int ncomp,
                   bool center_x, bool scale_x,
                   bool center_y, bool scale_y,
-                  int chunk_size) {
+                  int chunk_size,
+                  bool return_big) {
   XPtr<BigMatrix> xp(x_ptr);
   BigMatrix* bm = xp.get();
   ensure_double_matrix(*bm);
@@ -276,7 +279,7 @@ List big_pls_core(SEXP x_ptr, const NumericVector& y, int ncomp,
     coeff_full = coeff_scaled;
   }
   
-  NumericVector coefficients(p);
+  std::vector<double> coefficients(p);
   for (std::size_t j = 0; j < p; ++j) {
     double scale_factor = x_scales[j];
     if (scale_factor == 0.0 || !std::isfinite(scale_factor)) {
@@ -293,26 +296,22 @@ List big_pls_core(SEXP x_ptr, const NumericVector& y, int ncomp,
     intercept -= coefficients[j] * x_means[j];
   }
   
-  NumericMatrix scores(n, used_comp);
-  NumericMatrix loadings(p, used_comp);
-  NumericMatrix weights(p, used_comp);
+  Rcpp::RObject coefficients_out =
+    make_vector_output(return_big, coefficients.data(), p, "coefficients");
+  Rcpp::RObject scores_out =
+    make_matrix_output(return_big, T_scores.data(), n, used_comp, "scores");
+  Rcpp::RObject loadings_out =
+    make_matrix_output(return_big, P_loadings.data(), p, used_comp, "loadings");
+  Rcpp::RObject weights_out =
+    make_matrix_output(false, W_weights.data(), p, used_comp, "weights");
   
-  for (std::size_t comp = 0; comp < used_comp; ++comp) {
-    for (std::size_t i = 0; i < n; ++i) {
-      scores(i, comp) = T_scores[i + comp * n];
-    }
-    for (std::size_t j = 0; j < p; ++j) {
-      loadings(j, comp) = P_loadings[j + comp * p];
-      weights(j, comp) = W_weights[j + comp * p];
-    }
-  }
   
   return List::create(
-    Named("coefficients") = coefficients,
+    Named("coefficients") = coefficients_out,
     Named("intercept") = intercept,
-    Named("scores") = scores,
-    Named("loadings") = loadings,
-    Named("weights") = weights,
+    Named("scores") = scores_out,
+    Named("loadings") = loadings_out,
+    Named("weights") = weights_out,
     Named("y_mean") = y_mean,
     Named("y_scale") = y_scale,
     Named("x_means") = NumericVector(x_means.begin(), x_means.end()),
@@ -326,17 +325,19 @@ List big_pls_core(SEXP x_ptr, const NumericVector& y, int ncomp,
 // [[Rcpp::export]]
 SEXP big_pls_fit_cpp(SEXP x_ptr, NumericVector y, int ncomp,
                      bool center_x, bool scale_x,
-                     bool center_y, bool scale_y) {
-  return big_pls_core(x_ptr, y, ncomp, center_x, scale_x, center_y, scale_y, -1);
+                     bool center_y, bool scale_y,
+                     bool return_big) {
+  return big_pls_core(x_ptr, y, ncomp, center_x, scale_x, center_y, scale_y, -1, return_big);
 }
 
 // [[Rcpp::export]]
 SEXP big_pls_stream_cpp(SEXP x_ptr, NumericVector y, int ncomp,
                         bool center_x, bool scale_x,
                         bool center_y, bool scale_y,
-                        int chunk_size) {
+                        int chunk_size,
+                        bool return_big) {
   if (chunk_size <= 0) {
     stop("chunk_size must be positive for streaming fits");
   }
-  return big_pls_core(x_ptr, y, ncomp, center_x, scale_x, center_y, scale_y, chunk_size);
+  return big_pls_core(x_ptr, y, ncomp, center_x, scale_x, center_y, scale_y, chunk_size, return_big);
 }

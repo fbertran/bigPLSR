@@ -14,6 +14,8 @@ using namespace arma;
 #include <cmath>
 #include <vector>
 
+#include "bigmatrix_utils.hpp"
+
 namespace {
 
 // use BigMatrix directly now
@@ -26,13 +28,15 @@ inline void ensure_double_matrix(const BigMatrix& mat, const std::string& name) 
                             const arma::vec& x_mean,
                             double y_mean,
                             int ncomp,
-                            double tol);
+                            double tol,
+                            bool return_big);
   
   // signatures no longer mention bigmemory::
   List pls_fit_dense(const BigMatrix& xMat,
                      const BigMatrix& yMat,
                      int ncomp,
-                     double tol) {
+                     double tol,
+                     bool return_big) {
     ensure_double_matrix(xMat, "x");
     ensure_double_matrix(yMat, "y");
     
@@ -62,14 +66,15 @@ inline void ensure_double_matrix(const BigMatrix& mat, const std::string& name) 
     arma::mat XtX = X.t() * X;
     arma::vec XtY = X.t() * y_center;
     
-    return solve_pls_from_cross(XtX, XtY, x_mean, y_mean, ncomp, tol);
+    return solve_pls_from_cross(XtX, XtY, x_mean, y_mean, ncomp, tol, return_big);
   }
-  
+
   List pls_fit_streaming(const BigMatrix& xMat,
                          const BigMatrix& yMat,
                          int ncomp,
                          std::size_t chunk_size,
-                         double tol) {
+                         double tol,
+                         bool return_big) {
   ensure_double_matrix(xMat, "x");
   ensure_double_matrix(yMat, "y");
   const std::size_t n = xMat.nrow();
@@ -132,7 +137,7 @@ inline void ensure_double_matrix(const BigMatrix& mat, const std::string& name) 
   arma::mat XtX = sumXX - n_obs * (x_mean * x_mean.t());
   arma::vec XtY = sumXY - n_obs * x_mean * y_mean;
   
-  return solve_pls_from_cross(XtX, XtY, x_mean, y_mean, ncomp, tol);
+  return solve_pls_from_cross(XtX, XtY, x_mean, y_mean, ncomp, tol, return_big);
 }
 
 // Core solver that consumes centered cross-products.
@@ -141,7 +146,8 @@ List solve_pls_from_cross(const arma::mat& XtX_center,
                           const arma::vec& x_mean,
                           double y_mean,
                           int ncomp,
-                          double tol) {
+                          double tol,
+                          bool return_big) {
   const std::size_t p = XtX_center.n_rows;
   arma::mat XtX_curr = XtX_center;
   arma::vec XtY_curr = XtY_center;
@@ -198,10 +204,15 @@ List solve_pls_from_cross(const arma::mat& XtX_center,
   arma::vec beta = W_sub * arma::solve(R, C_sub);
   const double intercept = y_mean - arma::dot(beta, x_mean);
   
-  return List::create(Named("coefficients") = beta,
+  Rcpp::RObject coefficients_out =
+    make_vector_output(return_big, beta.memptr(), beta.n_elem, "coefficients");
+  Rcpp::RObject loadings_out =
+    make_matrix_output(return_big, P_sub.memptr(), P_sub.n_rows, P_sub.n_cols, "loadings");
+  
+  return List::create(Named("coefficients") = coefficients_out,
                       Named("intercept") = intercept,
                       Named("x_weights") = W_sub,
-                      Named("x_loadings") = P_sub,
+                      Named("x_loadings") = loadings_out,
                       Named("y_loadings") = C_sub,
                       Named("x_means") = x_mean,
                       Named("y_mean") = y_mean,
@@ -211,16 +222,16 @@ List solve_pls_from_cross(const arma::mat& XtX_center,
 } // namespace
 
 // [[Rcpp::export]]
-SEXP cpp_big_pls_fit(SEXP x_ptr, SEXP y_ptr, int ncomp, double tol) {
+SEXP cpp_big_pls_fit(SEXP x_ptr, SEXP y_ptr, int ncomp, double tol, bool return_big) {
   Rcpp::XPtr<BigMatrix> xMat(x_ptr);
   Rcpp::XPtr<BigMatrix> yMat(y_ptr);
-  return pls_fit_dense(*xMat, *yMat, ncomp, tol);
+  return pls_fit_dense(*xMat, *yMat, ncomp, tol, return_big);
 }
 
 // [[Rcpp::export]]
 
-SEXP cpp_big_pls_stream_fit(SEXP x_ptr, SEXP y_ptr, int ncomp, std::size_t chunk_size, double tol) {
+SEXP cpp_big_pls_stream_fit(SEXP x_ptr, SEXP y_ptr, int ncomp, std::size_t chunk_size, double tol, bool return_big) {
   Rcpp::XPtr<BigMatrix> xMat(x_ptr);
   Rcpp::XPtr<BigMatrix> yMat(y_ptr);
-  return pls_fit_streaming(*xMat, *yMat, ncomp, chunk_size, tol);
+  return pls_fit_streaming(*xMat, *yMat, ncomp, chunk_size, tol, return_big);
 }

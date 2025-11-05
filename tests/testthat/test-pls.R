@@ -96,10 +96,10 @@ test_that("SIMPLS and NIPALS agree for multivariate responses", {
   expect_equal(fit_simpls$intercept, fit_nipals$intercept, tolerance = 1e-6)
   
   fit_stream_simpls <- pls2_stream(X_bm, Y_bm, ncomp = 3, center = TRUE,
-                                       scale = TRUE, block_size = 16,
+                                       scale = TRUE, chunck_size = 16,
                                        algorithm = "simpls")
   fit_stream_nipals <- pls2_stream(X_bm, Y_bm, ncomp = 3, center = TRUE,
-                                       scale = TRUE, block_size = 16,
+                                       scale = TRUE, chunck_size = 16,
                                        algorithm = "nipals")
   
   expect_equal(fit_stream_simpls$coefficients, fit_simpls$coefficients, tolerance = 1e-6)

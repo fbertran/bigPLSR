@@ -11,6 +11,8 @@ using namespace Rcpp;
 
 // [[Rcpp::plugins(cpp17)]]
 
+#include "bigmatrix_utils.hpp"
+
 namespace {
 
 inline void ensure_double_matrix(const BigMatrix& mat, const char* name) {
@@ -109,7 +111,8 @@ Rcpp::List big_plsr_fit_nipals(SEXP X_ptr,
                                SEXP Y_ptr,
                                int ncomp,
                                bool center = true,
-                               bool scale = false) {
+                               bool scale = false,
+                               bool return_big = false) {
   if (ncomp <= 0) {
     Rcpp::stop("ncomp must be positive");
   }
@@ -294,13 +297,20 @@ Rcpp::List big_plsr_fit_nipals(SEXP X_ptr,
     intercept = meanY - meanX * coef_internal;
   }
   
+  Rcpp::RObject coefficients_out =
+    make_matrix_output(return_big, coef_internal.memptr(), coef_internal.n_rows, coef_internal.n_cols, "coefficients");
+  Rcpp::RObject loadings_out =
+    make_matrix_output(return_big, P_used.memptr(), P_used.n_rows, P_used.n_cols, "loadings");
+  Rcpp::RObject scores_out =
+    make_matrix_output(return_big, scores.memptr(), scores.n_rows, scores.n_cols, "scores");
+  
   return Rcpp::List::create(
-    Rcpp::Named("coefficients") = coef_internal,
+    Rcpp::Named("coefficients") = coefficients_out,
     Rcpp::Named("intercept") = intercept,
     Rcpp::Named("weights") = W_used,
-    Rcpp::Named("loadings") = P_used,
+    Rcpp::Named("loadings") = loadings_out,
     Rcpp::Named("y_loadings") = Q_used,
-    Rcpp::Named("scores") = scores,
+    Rcpp::Named("scores") = scores_out,
     Rcpp::Named("x_means") = meanX,
     Rcpp::Named("y_means") = meanY,
     Rcpp::Named("x_scales") = scaleX,
@@ -315,12 +325,13 @@ Rcpp::List big_plsr_stream_fit_nipals(SEXP X_ptr,
                                       int ncomp,
                                       bool center = true,
                                       bool scale = false,
-                                      std::size_t block_size = 1024) {
+                                      std::size_t chunk_size = 1024,
+                                      bool return_big = false) {
   if (ncomp <= 0) {
     Rcpp::stop("ncomp must be positive");
   }
-  if (block_size == 0) {
-    Rcpp::stop("block_size must be strictly positive");
+  if (chunk_size == 0) {
+    Rcpp::stop("chunk_size must be strictly positive");
   }
   
   Rcpp::XPtr<BigMatrix> xMat(X_ptr);
@@ -424,8 +435,8 @@ Rcpp::List big_plsr_stream_fit_nipals(SEXP X_ptr,
   for (int a = 0; a < ncomp; ++a) {
     // Determine initial u vector using column of deflated Y with largest variance.
     std::vector<double> sumsqY(q, 0.0);
-    for (std::size_t start = 0; start < n; start += block_size) {
-      std::size_t end = std::min<std::size_t>(n, start + block_size);
+    for (std::size_t start = 0; start < n; start += chunk_size) {
+      std::size_t end = std::min<std::size_t>(n, start + chunk_size);
       for (std::size_t i = start; i < end; ++i) {
         load_deflated_y_row(i, y_buffer, Yacc, meanY, scaleY, center, scale,
                             scores, Q, B, actual_comp);
@@ -450,8 +461,8 @@ Rcpp::List big_plsr_stream_fit_nipals(SEXP X_ptr,
     }
     
     arma::vec u(n, arma::fill::zeros);
-    for (std::size_t start = 0; start < n; start += block_size) {
-      std::size_t end = std::min<std::size_t>(n, start + block_size);
+    for (std::size_t start = 0; start < n; start += chunk_size) {
+      std::size_t end = std::min<std::size_t>(n, start + chunk_size);
       for (std::size_t i = start; i < end; ++i) {
         load_deflated_y_row(i, y_buffer, Yacc, meanY, scaleY, center, scale,
                             scores, Q, B, actual_comp);
@@ -473,8 +484,8 @@ Rcpp::List big_plsr_stream_fit_nipals(SEXP X_ptr,
       }
       
       w.zeros();
-      for (std::size_t start = 0; start < n; start += block_size) {
-        std::size_t end = std::min<std::size_t>(n, start + block_size);
+      for (std::size_t start = 0; start < n; start += chunk_size) {
+        std::size_t end = std::min<std::size_t>(n, start + chunk_size);
         for (std::size_t i = start; i < end; ++i) {
           load_deflated_x_row(i, x_buffer, Xacc, meanX, scaleX, center, scale,
                               scores, P, actual_comp);
@@ -496,8 +507,8 @@ Rcpp::List big_plsr_stream_fit_nipals(SEXP X_ptr,
       t.zeros();
       arma::vec q_acc(q, arma::fill::zeros);
       double t_norm_sq = 0.0;
-      for (std::size_t start = 0; start < n; start += block_size) {
-        std::size_t end = std::min<std::size_t>(n, start + block_size);
+      for (std::size_t start = 0; start < n; start += chunk_size) {
+        std::size_t end = std::min<std::size_t>(n, start + chunk_size);
         for (std::size_t i = start; i < end; ++i) {
           load_deflated_x_row(i, x_buffer, Xacc, meanX, scaleX, center, scale,
                               scores, P, actual_comp);
@@ -530,8 +541,8 @@ Rcpp::List big_plsr_stream_fit_nipals(SEXP X_ptr,
       
       arma::vec u_new(n, arma::fill::zeros);
       double u_new_norm_sq = 0.0;
-      for (std::size_t start = 0; start < n; start += block_size) {
-        std::size_t end = std::min<std::size_t>(n, start + block_size);
+      for (std::size_t start = 0; start < n; start += chunk_size) {
+        std::size_t end = std::min<std::size_t>(n, start + chunk_size);
         for (std::size_t i = start; i < end; ++i) {
           load_deflated_y_row(i, y_buffer, Yacc, meanY, scaleY, center, scale,
                               scores, Q, B, actual_comp);
@@ -572,8 +583,8 @@ Rcpp::List big_plsr_stream_fit_nipals(SEXP X_ptr,
     }
     
     arma::vec pvec(px, arma::fill::zeros);
-    for (std::size_t start = 0; start < n; start += block_size) {
-      std::size_t end = std::min<std::size_t>(n, start + block_size);
+    for (std::size_t start = 0; start < n; start += chunk_size) {
+      std::size_t end = std::min<std::size_t>(n, start + chunk_size);
       for (std::size_t i = start; i < end; ++i) {
         load_deflated_x_row(i, x_buffer, Xacc, meanX, scaleX, center, scale,
                             scores, P, actual_comp);
@@ -661,16 +672,24 @@ Rcpp::List big_plsr_stream_fit_nipals(SEXP X_ptr,
     scores_mat.col(comp) = scores[comp];
   }
   
+  Rcpp::RObject coefficients_out =
+    make_matrix_output(return_big, coef_internal.memptr(), coef_internal.n_rows, coef_internal.n_cols, "coefficients");
+  Rcpp::RObject loadings_out =
+    make_matrix_output(return_big, P_used.memptr(), P_used.n_rows, P_used.n_cols, "loadings");
+  Rcpp::RObject scores_out =
+    make_matrix_output(return_big, scores_mat.memptr(), scores_mat.n_rows, scores_mat.n_cols, "scores");
+  
   return Rcpp::List::create(
     Rcpp::Named("coefficients") = coef_internal,
     Rcpp::Named("intercept") = intercept,
     Rcpp::Named("weights") = W_used,
     Rcpp::Named("loadings") = P_used,
     Rcpp::Named("y_loadings") = Q_used,
-    Rcpp::Named("scores") = scores_mat,
+    Rcpp::Named("scores") = scores_out,
     Rcpp::Named("x_means") = Rcpp::NumericVector(meanX.begin(), meanX.end()),
     Rcpp::Named("y_means") = Rcpp::NumericVector(meanY.begin(), meanY.end()),
     Rcpp::Named("x_scales") = Rcpp::NumericVector(scaleX.begin(), scaleX.end()),
-    Rcpp::Named("y_scales") = Rcpp::NumericVector(scaleY.begin(), scaleY.end())
+    Rcpp::Named("y_scales") = Rcpp::NumericVector(scaleY.begin(), scaleY.end()),
+    Rcpp::Named("chunk_size") = static_cast<int>(chunk_size)
   );
 }

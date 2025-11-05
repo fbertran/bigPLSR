@@ -5,7 +5,14 @@
 \alias{pls1_stream_ya}
 \title{Single-response partial least squares regression (PLS1) yet another implementation}
 \usage{
-pls1_dense_ya(x, y, ncomp, tol = 1e-08, algorithm = c("simpls", "nipals"))
+pls1_dense_ya(
+  x,
+  y,
+  ncomp,
+  tol = 1e-08,
+  algorithm = c("simpls", "nipals"),
+  return_big = FALSE
+)
 
 pls1_stream_ya(
   x,
@@ -13,7 +20,8 @@ pls1_stream_ya(
   ncomp,
   chunk_size = 4096,
   tol = 1e-08,
-  algorithm = c("simpls", "nipals")
+  algorithm = c("simpls", "nipals"),
+  return_big = FALSE
 )
 }
 \arguments{
@@ -31,6 +39,9 @@ relevant for the dense variant.}
 \item{algorithm}{Algorithm used to compute the PLS fit. Either "simpls" or
 "nipals". The SIMPLS backend is generally faster when the data fits in
 memory.}
+
+\item{return_big}{Logical; when \code{TRUE}, the coefficients, scores and loadings
+are returned as \code{\link[bigmemory:big.matrix]{bigmemory::big.matrix}} objects. Defaults to \code{FALSE}.}
 
 \item{chunk_size}{Number of rows processed per block by the streaming
 variant.}
