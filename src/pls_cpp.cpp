@@ -1,4 +1,8 @@
-#include <Rcpp.h>
+#include <RcppArmadillo.h>
+// [[Rcpp::depends(RcppArmadillo, bigmemory)]]
+
+using namespace Rcpp;
+
 #include <bigmemory/BigMatrix.h>
 #include <bigmemory/MatrixAccessor.hpp>
 #include <cmath>
@@ -536,39 +540,53 @@ List pls_streaming_bigmemory(SEXP X_ptrSEXP,
     }
   }
   
-  std::vector<double> XtX(p * p, 0.0);
-  std::vector<double> Xty(p, 0.0);
-  std::vector<double> row_buffer(p);
-  const double* y_col = y_acc[0];
   
+  arma::mat XtX_mat(p, p, arma::fill::zeros);
+  arma::vec Xty_vec(p, arma::fill::zeros);
+
+  std::vector<double> row_buffer(p);
+
+// Chunked accumulation using BLAS: XtX += B.t() * B; Xty += B.t() * y_chunk
   for (std::size_t start = 0; start < n; start += chunk) {
     const std::size_t end = std::min<std::size_t>(n, start + chunk);
-    for (std::size_t i = start; i < end; ++i) {
-      const double y_centered = y_col[i] - (center ? y_mean : 0.0);
-      const double y_scaled = y_centered / (scale ? y_scale : 1.0);
-      for (std::size_t j = 0; j < p; ++j) {
-        const double* col = X_acc[j];
-        const double centered = col[i] - (center ? x_means[j] : 0.0);
-        const double scaled_val = centered / (scale ? x_scales[j] : 1.0);
-        row_buffer[j] = scaled_val;
-      }
-      for (std::size_t j = 0; j < p; ++j) {
-        Xty[j] += row_buffer[j] * y_scaled;
-      }
-      for (std::size_t j = 0; j < p; ++j) {
-        const double xj = row_buffer[j];
-        const std::size_t offset = j * p;
-        for (std::size_t k = j; k < p; ++k) {
-          const double val = xj * row_buffer[k];
-          XtX[offset + k] += val;
-          if (k != j) {
-            XtX[k * p + j] += val;
-          }
-        }
-      }
-    }
-  }
+    const std::size_t m = end - start;
   
+    // Build B (m x p) from big.matrix columns
+    arma::mat B(m, p);
+    for (std::size_t j = 0; j < p; ++j) {
+      const double* col = X_acc[j];
+      // copy slice [start, end)
+      std::memcpy(B.colptr(j), col + start, m * sizeof(double));
+  }
+
+  // Center/scale
+  if (center) {
+    arma::rowvec mu(p);
+    for (std::size_t j = 0; j < p; ++j) mu[j] = x_means[j];
+    B.each_row() -= mu;
+  }
+  if (scale) {
+    arma::rowvec invs(p);
+    for (std::size_t j = 0; j < p; ++j) invs[j] = 1.0 / x_scales[j];
+    B.each_row() %= invs;
+  }
+
+  // y chunk
+  arma::vec y_chunk(m);
+  const double* ycol = y_acc[0];
+  std::memcpy(y_chunk.memptr(), ycol + start, m * sizeof(double));
+  if (center) y_chunk -= y_mean;
+  if (scale)  y_chunk /= y_scale;
+
+  // Accumulate
+  XtX_mat += B.t() * B;
+  Xty_vec += B.t() * y_chunk;
+}
+
+  std::vector<double> Xty(p); std::memcpy(Xty.data(), Xty_vec.memptr(), p*sizeof(double));
+  std::vector<double> XtX(p*p);
+  std::memcpy(XtX.data(), XtX_mat.memptr(), p*p*sizeof(double));
+
   std::vector<double> S = Xty;
   std::vector<double> W(p * ncomp, 0.0);
   std::vector<double> P(p * ncomp, 0.0);
@@ -666,31 +684,81 @@ List pls_streaming_bigmemory(SEXP X_ptrSEXP,
   }
   
   std::vector<double> scores_mat_vec(n * used_comp, 0.0);
-  for (std::size_t start = 0; start < n; start += chunk) {
-    const std::size_t end = std::min<std::size_t>(n, start + chunk);
-    for (std::size_t i = start; i < end; ++i) {
-      for (std::size_t j = 0; j < p; ++j) {
-        const double* col = X_acc[j];
-        const double centered = col[i] - (center ? x_means[j] : 0.0);
-        const double scaled_val = centered / (scale ? x_scales[j] : 1.0);
-        row_buffer[j] = scaled_val;
-      }
-      for (int h = 0; h < used_comp; ++h) {
-        double val = 0.0;
-        for (std::size_t j = 0; j < p; ++j) {
-          val += row_buffer[j] * W[j * ncomp + h];
-        }
-        scores_mat_vec[i * used_comp + h] = val;
+  
+// Streamed scores: optionally write to big.matrix when return_big is true
+arma::mat Wmat(p, used_comp);
+for (int h = 0; h < used_comp; ++h) {
+  for (std::size_t j = 0; j < p; ++j) Wmat(j, h) = W[j * ncomp + h];
+}
+
+// Prepare big.matrix accessor if needed
+Rcpp::S4 scores_bm;
+MatrixAccessor<double> scores_acc_dummy(*X_ptr); // placeholder
+bool use_big_scores = return_big;
+if (use_big_scores) {
+  scores_bm = allocate_big_matrix(n, used_comp, "scores");
+}
+
+for (std::size_t start = 0; start < n; start += chunk) {
+  const std::size_t end = std::min<std::size_t>(n, start + chunk);
+  const std::size_t m = end - start;
+
+  arma::mat B(m, p);
+  for (std::size_t j = 0; j < p; ++j) {
+    const double* col = X_acc[j];
+    std::memcpy(B.colptr(j), col + start, m * sizeof(double));
+  }
+  if (center) {
+    arma::rowvec mu(p);
+    for (std::size_t j = 0; j < p; ++j) mu[j] = x_means[j];
+    B.each_row() -= mu;
+  }
+  if (scale) {
+    arma::rowvec invs(p);
+    for (std::size_t j = 0; j < p; ++j) invs[j] = 1.0 / x_scales[j];
+    B.each_row() %= invs;
+  }
+
+  arma::mat S = B * Wmat; // (m x used_comp)
+
+  if (use_big_scores) {
+    // Lazy-init accessor to allocated big.matrix
+    if (start == 0) {
+      // extract BigMatrix* from S4
+      Rcpp::XPtr<BigMatrix> sbm(scores_bm.slot("address"));
+      scores_acc_dummy = MatrixAccessor<double>(*sbm);
+    }
+    for (int h = 0; h < used_comp; ++h) {
+      std::memcpy(scores_acc_dummy[h] + start, S.colptr(h), m * sizeof(double));
+    }
+  } else {
+    // Write into in-memory scores vector
+    for (int h = 0; h < used_comp; ++h) {
+      std::memcpy(&scores_mat_vec[start * used_comp + h], S.colptr(h), m * sizeof(double));
+      // The above memcpy writes interleaved; safer to loop rows:
+      for (std::size_t i = 0; i < m; ++i) {
+        scores_mat_vec[(start + i) * used_comp + h] = S(i, h);
       }
     }
   }
+}
+
+Rcpp::RObject scores_out;
+if (use_big_scores) {
+  scores_out = scores_bm;
+} else {
+  scores_out = make_matrix_output(false, scores_mat_vec.data(), n, used_comp, "scores");
+}
+
   
   Rcpp::RObject coefficients_out =
     make_vector_output(return_big, coefficients.data(), p, "coefficients");
   Rcpp::RObject loadings_out =
     make_matrix_output(return_big, P.data(), p, used_comp, "loadings");
-  Rcpp::RObject scores_out =
-    make_matrix_output(return_big, scores_mat_vec.data(), n, used_comp, "scores");
+
+  scores_out = use_big_scores ? Rcpp::RObject(scores_bm)
+    : make_matrix_output(false, scores_mat_vec.data(),
+      n, used_comp, "scores");
   
   NumericMatrix weights_mat = to_numeric_matrix(W, p, ncomp, used_comp);
 

@@ -1,0 +1,28 @@
+
+---
+title: "Auto backend usage"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Auto backend usage}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+This vignette shows how `pls_fit()` dispatches automatically.
+
+```r
+library(bigPLSR)
+set.seed(1)
+n <- 200; p <- 50
+X <- matrix(rnorm(n*p), n, p)
+y <- X[,1]*2 - X[,2] + rnorm(n)
+
+# Dense path
+fit1 <- pls_fit(X, y, ncomp = 3, scores = "r")
+
+# Big-memory path
+bmX <- bigmemory::as.big.matrix(X)
+bmy <- bigmemory::as.big.matrix(matrix(y, n, 1))
+fit2 <- pls_fit(bmX, bmy, ncomp = 3, backend = "bigmem", scores = "big")
+```
+
