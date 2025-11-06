@@ -132,6 +132,23 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// cpp_big_pls_stream_fit_sink
+SEXP cpp_big_pls_stream_fit_sink(SEXP X_ptrSEXP, SEXP y_ptrSEXP, SEXP scores_sinkSEXP, int ncomp, std::size_t chunk_size, double tol, bool return_big);
+RcppExport SEXP _bigPLSR_cpp_big_pls_stream_fit_sink(SEXP X_ptrSEXPSEXP, SEXP y_ptrSEXPSEXP, SEXP scores_sinkSEXPSEXP, SEXP ncompSEXP, SEXP chunk_sizeSEXP, SEXP tolSEXP, SEXP return_bigSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type X_ptrSEXP(X_ptrSEXPSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type y_ptrSEXP(y_ptrSEXPSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type scores_sinkSEXP(scores_sinkSEXPSEXP);
+    Rcpp::traits::input_parameter< int >::type ncomp(ncompSEXP);
+    Rcpp::traits::input_parameter< std::size_t >::type chunk_size(chunk_sizeSEXP);
+    Rcpp::traits::input_parameter< double >::type tol(tolSEXP);
+    Rcpp::traits::input_parameter< bool >::type return_big(return_bigSEXP);
+    rcpp_result_gen = Rcpp::wrap(cpp_big_pls_stream_fit_sink(X_ptrSEXP, y_ptrSEXP, scores_sinkSEXP, ncomp, chunk_size, tol, return_big));
+    return rcpp_result_gen;
+END_RCPP
+}
 // big_plsr_fit_nipals
 Rcpp::List big_plsr_fit_nipals(SEXP X_ptr, SEXP Y_ptr, int ncomp, bool center, bool scale, bool return_big);
 RcppExport SEXP _bigPLSR_big_plsr_fit_nipals(SEXP X_ptrSEXP, SEXP Y_ptrSEXP, SEXP ncompSEXP, SEXP centerSEXP, SEXP scaleSEXP, SEXP return_bigSEXP) {
@@ -207,6 +224,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_bigPLSR_cpp_big_pls_stream_fit", (DL_FUNC) &_bigPLSR_cpp_big_pls_stream_fit, 6},
     {"_bigPLSR_pls_nipals_bigmemory", (DL_FUNC) &_bigPLSR_pls_nipals_bigmemory, 8},
     {"_bigPLSR_pls_streaming_bigmemory", (DL_FUNC) &_bigPLSR_pls_streaming_bigmemory, 8},
+    {"_bigPLSR_cpp_big_pls_stream_fit_sink", (DL_FUNC) &_bigPLSR_cpp_big_pls_stream_fit_sink, 7},
     {"_bigPLSR_big_plsr_fit_nipals", (DL_FUNC) &_bigPLSR_big_plsr_fit_nipals, 6},
     {"_bigPLSR_big_plsr_stream_fit_nipals", (DL_FUNC) &_bigPLSR_big_plsr_stream_fit_nipals, 7},
     {"_bigPLSR_big_plsr_fit", (DL_FUNC) &_bigPLSR_big_plsr_fit, 6},

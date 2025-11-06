@@ -1,7 +1,15 @@
-
 ---
 title: "Auto backend usage"
-output: rmarkdown::html_vignette
+shorttitle: "Auto backend usage"
+author:
+- name: "Frédéric Bertrand"
+  affiliation:
+  - Cedric, Cnam, Paris
+  email: frederic.bertrand@lecnam.net
+date: "`r Sys.Date()`"
+output:
+  rmarkdown::html_vignette:
+    toc: true
 vignette: >
   %\VignetteIndexEntry{Auto backend usage}
   %\VignetteEngine{knitr::rmarkdown}
@@ -10,7 +18,7 @@ vignette: >
 
 This vignette shows how `pls_fit()` dispatches automatically.
 
-```r
+```{r, eval=FALSE}
 library(bigPLSR)
 set.seed(1)
 n <- 200; p <- 50

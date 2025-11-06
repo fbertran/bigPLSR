@@ -40,3 +40,17 @@ and optionally \code{$scores}.
 Dispatches to a dense (Arm/BLAS) backend for in-memory matrices
 or to a streaming big.matrix backend when X (or Y) is a big.matrix.
 }
+\examples{
+bmX <- bigmemory::as.big.matrix(X)
+bmy <- bigmemory::as.big.matrix(matrix(y, nrow(X), 1))
+sink_bm <- bigmemory::filebacked.big.matrix(
+  nrow = nrow(bmX), ncol = 3, type = "double",
+  backingfile = "scores.bin", backingpath = tempdir(),
+  descriptorfile = "scores.desc"
+)
+
+fit <- pls_fit(bmX, bmy, ncomp = 3, backend = "bigmem", scores = "big",
+              scores_target = "existing", scores_bm = sink_bm)
+
+
+}

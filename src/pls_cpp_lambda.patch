@@ -1,0 +1,117 @@
+--- pls_cpp.cpp (before)
++++ pls_cpp.cpp (after)
+@@ -819,30 +819,34 @@
+                                  SEXP scores_sinkSEXP, // NULL or big.matrix S4
+                                  int ncomp, std::size_t chunk_size, double tol,
+                                  bool return_big) {
++  using namespace Rcpp;
++  using bigmemory::BigMatrix;
++  using bigmemory::MatrixAccessor;
++
+   // ---- Attach X/Y ----
+   XPtr<BigMatrix> X_ptr(X_ptrSEXP);
+   XPtr<BigMatrix> y_ptr(y_ptrSEXP);
+   MatrixAccessor<double> X_acc(*X_ptr);
+   MatrixAccessor<double> y_acc(*y_ptr);
+-  
++
+   const std::size_t n = static_cast<std::size_t>(X_ptr->nrow());
+   const std::size_t p = static_cast<std::size_t>(X_ptr->ncol());
+   if (y_ptr->ncol() != 1 || static_cast<std::size_t>(y_ptr->nrow()) != n)
+     stop("y must be (n x 1)");
+-  
++
+   // ---- Get the model (no scores) via the package R wrapper ----
+   Environment ns = Environment::namespace_env("bigPLSR");
+-  Function fit_fun = ns["cpp_big_pls_stream_fit"];  // R wrapper that calls _bigPLSR_cpp_big_pls_stream_fit
++  Function fit_fun = ns["cpp_big_pls_stream_fit"];  // R wrapper for _bigPLSR_cpp_big_pls_stream_fit
+   RObject fit_obj  = fit_fun(X_ptrSEXP, y_ptrSEXP, wrap(ncomp), wrap(chunk_size), wrap(tol), wrap(false));
+   List fit = as<List>(fit_obj);
+-  
++
+   const int used_comp = as<int>(fit["ncomp"]);
+   if (used_comp <= 0) return fit;
+-  
++
+   arma::mat W = fit.containsElementNamed("x_weights") ? as<arma::mat>(fit["x_weights"])
+-    : as<arma::mat>(fit["weights"]);
+-  
+-  // Optional center/scale (if provided by your fit)
++                                                      : as<arma::mat>(fit["weights"]);
++
++  // Optional center/scale (if provided by the fit)
+   arma::rowvec mu, invs;
+   bool do_center = false, do_scale = false;
+   if (fit.containsElementNamed("x_means")) {
+@@ -857,16 +861,16 @@
+     for (std::size_t j = 0; j < p; ++j) invs[j] = 1.0 / xs[j];
+     do_scale = true;
+   }
+-  
++
+   // ---- Decide sink + build a single writer lambda ----
+   const std::size_t chunk = (chunk_size > 0) ? chunk_size
+-  : std::min<std::size_t>(n, (std::size_t)4096);
+-  
++                                             : std::min<std::size_t>(n, (std::size_t)4096);
++
+   std::function<void(std::size_t /*start*/, const arma::mat& /*S*/)> write_scores;
+-  RObject scores_out;           // set for big.matrix cases
++  RObject scores_out;           // for big.matrix cases
+   bool to_inmemory_matrix = false;
+-  std::unique_ptr<arma::mat> T; // only used if writing to in-memory scores
+-  
++  std::unique_ptr<arma::mat> T; // used only for in-memory sink
++
+   if (!Rf_isNull(scores_sinkSEXP)) {
+     // External file-backed sink provided from R
+     S4 sink_s4(scores_sinkSEXP);
+@@ -874,8 +878,7 @@
+     if ((std::size_t)sink_ptr->nrow() != n ||
+         (std::size_t)sink_ptr->ncol() != (std::size_t)used_comp)
+       stop("scores sink dimension mismatch");
+-    
+-    // Capture a shared accessor by value in the lambda
++
+     auto acc = std::make_shared<MatrixAccessor<double>>(*sink_ptr);
+     write_scores = [acc, used_comp](std::size_t start, const arma::mat& S) {
+       const std::size_t m = S.n_rows;
+@@ -889,7 +892,7 @@
+     S4 alloc_s4 = allocate_big_matrix(n, used_comp, "scores");
+     XPtr<BigMatrix> alloc_ptr(alloc_s4.slot("address"));
+     auto acc = std::make_shared<MatrixAccessor<double>>(*alloc_ptr);
+-    
++
+     write_scores = [acc, used_comp](std::size_t start, const arma::mat& S) {
+       const std::size_t m = S.n_rows;
+       for (int h = 0; h < used_comp; ++h) {
+@@ -906,12 +909,12 @@
+     };
+     to_inmemory_matrix = true;
+   }
+-  
+-  // ---- Single chunk loop, same for all sinks ----
++
++  // ---- Single chunk loop shared by all sinks ----
+   for (std::size_t start = 0; start < n; start += chunk) {
+     const std::size_t end = std::min<std::size_t>(n, start + chunk);
+     const std::size_t m   = end - start;
+-    
++
+     arma::mat B(m, p);
+     for (std::size_t j = 0; j < p; ++j) {
+       const double* col = X_acc[j];
+@@ -919,11 +922,11 @@
+     }
+     if (do_center) B.each_row() -= mu;
+     if (do_scale)  B.each_row() %= invs;
+-    
++
+     arma::mat S = B * W;           // (m x used_comp), BLAS-backed
+     write_scores(start, S);        // write to the chosen sink
+   }
+-  
++
+   // ---- Finalize return ----
+   if (to_inmemory_matrix) {
+     fit["scores"] = *T;

@@ -29,6 +29,10 @@ pls_streaming_bigmemory <- function(X_ptrSEXP, y_ptrSEXP, ncomp, chunk_size, cen
     .Call(`_bigPLSR_pls_streaming_bigmemory`, X_ptrSEXP, y_ptrSEXP, ncomp, chunk_size, center, scale, tol, return_big)
 }
 
+cpp_big_pls_stream_fit_sink <- function(X_ptrSEXP, y_ptrSEXP, scores_sinkSEXP, ncomp, chunk_size, tol, return_big) {
+    .Call(`_bigPLSR_cpp_big_pls_stream_fit_sink`, X_ptrSEXP, y_ptrSEXP, scores_sinkSEXP, ncomp, chunk_size, tol, return_big)
+}
+
 big_plsr_fit_nipals <- function(X_ptr, Y_ptr, ncomp, center = TRUE, scale = FALSE, return_big = FALSE) {
     .Call(`_bigPLSR_big_plsr_fit_nipals`, X_ptr, Y_ptr, ncomp, center, scale, return_big)
 }
