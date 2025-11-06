@@ -17,7 +17,8 @@ Suggests:
   testthat (>= 3.0.0),
   bench,
   knitr,
-  rmarkdown
+  rmarkdown,
+  RhpcBLASctl
 VignetteBuilder: knitr
 Title: Partial Least Squares Regression Models with Big Matrices 
 Authors@R: c(

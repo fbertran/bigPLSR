@@ -18,6 +18,8 @@ test_that("dense vs bigmem parity is tight under deterministic settings", {
 
 test_that("file-backed scores sink works and matches dense scores on small data", {
   skip_on_cran()
+  options_val_before <- options("bigmemory.allow.dimnames")
+  options(bigmemory.allow.dimnames=TRUE)
   set.seed(321)
   n <- 120; p <- 25; k <- 2
   X <- matrix(rnorm(n*p), n, p)
@@ -29,6 +31,8 @@ test_that("file-backed scores sink works and matches dense scores on small data"
   fit_dense <- pls_fit(X, y, ncomp = k, backend = "arma", scores = "r")
 
   tmp <- tempdir()
+  if(file.exists(paste(tmp,"scores.desc",sep="/"))){unlink(paste(tmp,"scores.desc",sep="/"))}
+  if(file.exists(paste(tmp,"scores.bin",sep="/"))){unlink(paste(tmp,"scores.bin",sep="/"))}
   sink_bm <- bigmemory::filebacked.big.matrix(nrow=n, ncol=k, type="double",
                                               backingfile="scores.bin", backingpath=tmp,
                                               descriptorfile="scores.desc")
@@ -41,4 +45,5 @@ test_that("file-backed scores sink works and matches dense scores on small data"
 
   scores_from_file <- as.matrix(fit_big$scores[])
   expect_equal(scores_from_file, fit_dense$scores, tolerance = 1e-6)
+  options(bigmemory.allow.dimnames=options_val_before)
 })
