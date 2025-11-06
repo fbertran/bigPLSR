@@ -1,3 +1,5 @@
+`%||%` <- function(a,b) if (is.null(a)) b else a 
+
 maybe_convert_to_bigmatrix <- function(result, components, return_big) {
   if (!isTRUE(return_big) || !is.list(result)) {
     return(result)

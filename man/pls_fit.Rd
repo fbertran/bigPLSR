@@ -12,7 +12,14 @@ pls_fit(
   backend = c("auto", "arma", "bigmem"),
   scores = c("none", "r", "big"),
   chunk_size = 10000L,
-  scores_name = "scores"
+  scores_name = "scores",
+  scores_target = c("auto", "new", "existing"),
+  scores_bm = NULL,
+  scores_backingfile = NULL,
+  scores_backingpath = NULL,
+  scores_descriptorfile = NULL,
+  scores_colnames = NULL,
+  return_scores_descriptor = FALSE
 )
 }
 \arguments{
@@ -41,6 +48,9 @@ Dispatches to a dense (Arm/BLAS) backend for in-memory matrices
 or to a streaming big.matrix backend when X (or Y) is a big.matrix.
 }
 \examples{
+set.seed(1)
+X <- matrix(rnorm(200*50), 200, 50)
+y <- X[,1]*2 - X[,2] + rnorm(200)
 bmX <- bigmemory::as.big.matrix(X)
 bmy <- bigmemory::as.big.matrix(matrix(y, nrow(X), 1))
 sink_bm <- bigmemory::filebacked.big.matrix(
@@ -51,6 +61,28 @@ sink_bm <- bigmemory::filebacked.big.matrix(
 
 fit <- pls_fit(bmX, bmy, ncomp = 3, backend = "bigmem", scores = "big",
               scores_target = "existing", scores_bm = sink_bm)
+
+Dense, named scores (no descriptor here; scores are base matrix)
+fit1 <- pls_fit(X, y, ncomp = 3,
+                backend = "arma", scores = "r",
+                scores_colnames = c("t1","t2","t3"),
+                return_scores_descriptor = TRUE)
+colnames(fit1$scores)              # "t1" "t2" "t3"
+"scores_descriptor" \%in\% names(fit1)  # FALSE (dense scores aren't big.matrix)
+
+# Big-matrix with external file-backed sink, named + descriptor
+sink_bm <- bigmemory::filebacked.big.matrix(
+  nrow=nrow(bmX), ncol=3, type="double",
+  backingfile="scores.bin", backingpath=tempdir(),
+  descriptorfile="scores.desc"
+)
+fit2 <- pls_fit(bmX, bmy, ncomp = 3,
+                backend = "bigmem", scores = "big",
+                scores_target = "existing", scores_bm = sink_bm,
+                scores_colnames = c("t1","t2","t3"),
+                return_scores_descriptor = TRUE)
+colnames(fit2$scores)               # "t1" "t2" "t3"
+fit2$scores_descriptor              # big.matrix.descriptor
 
 
 }
