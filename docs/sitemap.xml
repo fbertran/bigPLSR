@@ -1,11 +1,21 @@
 <urlset xmlns = 'http://www.sitemaps.org/schemas/sitemap/0.9'>
 <url><loc>https://fbertran.github.io/bigPLSR/404.html</loc></url>
+<url><loc>https://fbertran.github.io/bigPLSR/articles/auto-backend.html</loc></url>
+<url><loc>https://fbertran.github.io/bigPLSR/articles/index.html</loc></url>
+<url><loc>https://fbertran.github.io/bigPLSR/articles/pls1-benchmark.html</loc></url>
+<url><loc>https://fbertran.github.io/bigPLSR/articles/pls2-benchmark.html</loc></url>
 <url><loc>https://fbertran.github.io/bigPLSR/authors.html</loc></url>
 <url><loc>https://fbertran.github.io/bigPLSR/index.html</loc></url>
 <url><loc>https://fbertran.github.io/bigPLSR/news/index.html</loc></url>
 <url><loc>https://fbertran.github.io/bigPLSR/reference/bigPLSR-package.html</loc></url>
+<url><loc>https://fbertran.github.io/bigPLSR/reference/bigmatrix-operations.html</loc></url>
 <url><loc>https://fbertran.github.io/bigPLSR/reference/bigscale.html</loc></url>
 <url><loc>https://fbertran.github.io/bigPLSR/reference/index.html</loc></url>
+<url><loc>https://fbertran.github.io/bigPLSR/reference/pls1_dense.html</loc></url>
+<url><loc>https://fbertran.github.io/bigPLSR/reference/pls1_dense_a.html</loc></url>
+<url><loc>https://fbertran.github.io/bigPLSR/reference/pls1_dense_ya.html</loc></url>
+<url><loc>https://fbertran.github.io/bigPLSR/reference/pls2_dense.html</loc></url>
+<url><loc>https://fbertran.github.io/bigPLSR/reference/pls_fit.html</loc></url>
 <url><loc>https://fbertran.github.io/bigPLSR/reference/sim_data.html</loc></url>
 </urlset>
 

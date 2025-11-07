@@ -22,10 +22,9 @@
 #' 
 "_PACKAGE"
 
-
-#' @importFrom graphics abline axis layout legend segments
+#' @importFrom graphics abline arrows axis layout legend plot segments text 
 #' @importFrom grDevices dev.new
-#' @importFrom stats as.formula is.empty.model model.matrix model.response model.weights rexp runif var
+#' @importFrom stats as.formula is.empty.model model.matrix model.response model.weights quantile rexp runif var
 #' @importFrom utils read.csv
 #' @import bigmemory
 #' @useDynLib bigPLSR, .registration = TRUE

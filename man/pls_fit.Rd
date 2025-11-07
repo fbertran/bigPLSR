@@ -2,7 +2,7 @@
 % Please edit documentation in R/pls_fit.R
 \name{pls_fit}
 \alias{pls_fit}
-\title{Unified PLS fit with auto backend}
+\title{Unified PLS fit with auto backend and selectable algorithm}
 \usage{
 pls_fit(
   X,
@@ -10,10 +10,11 @@ pls_fit(
   ncomp,
   tol = 1e-08,
   backend = c("auto", "arma", "bigmem"),
+  mode = c("auto", "pls1", "pls2"),
+  algorithm = c("auto", "simpls", "nipals"),
   scores = c("none", "r", "big"),
   chunk_size = 10000L,
   scores_name = "scores",
-  mode = c("auto", "pls1", "pls2"),
   scores_target = c("auto", "new", "existing"),
   scores_bm = NULL,
   scores_backingfile = NULL,
@@ -26,7 +27,7 @@ pls_fit(
 \arguments{
 \item{X}{numeric matrix or \code{bigmemory::big.matrix}}
 
-\item{y}{numeric vector or single-column \code{big.matrix}}
+\item{y}{numeric vector/matrix or \code{big.matrix}}
 
 \item{ncomp}{number of latent components}
 
@@ -34,11 +35,25 @@ pls_fit(
 
 \item{backend}{one of \code{"auto"}, \code{"arma"}, \code{"bigmem"}}
 
+\item{mode}{one of \code{"auto"}, \code{"pls1"}, \code{"pls2"}}
+
+\item{algorithm}{one of \code{"auto"}, \code{"simpls"}, \code{"nipals"}}
+
 \item{scores}{one of \code{"none"}, \code{"r"}, \code{"big"}}
 
 \item{chunk_size}{chunk size for the bigmem backend}
 
-\item{scores_name}{name for the scores big.matrix (when \code{scores="big"})}
+\item{scores_name}{name for dense scores (or output big.matrix)}
+
+\item{scores_target}{one of \code{"auto"}, \code{"new"}, \code{"existing"}}
+
+\item{scores_bm}{optional existing big.matrix or descriptor for scores}
+
+\item{scores_colnames}{optional character vector for score column names}
+
+\item{return_scores_descriptor}{logical; if TRUE and scores is big.matrix, add \code{$scores_descriptor}}
+
+\item{scores_backingfile/backingpath/descriptorfile}{file-backed sink args}
 }
 \value{
 a list with coefficients, intercept, weights, loadings, means,
@@ -47,43 +62,5 @@ and optionally \code{$scores}.
 \description{
 Dispatches to a dense (Arm/BLAS) backend for in-memory matrices
 or to a streaming big.matrix backend when X (or Y) is a big.matrix.
-}
-\examples{
-set.seed(1)
-X <- matrix(rnorm(200*50), 200, 50)
-y <- X[,1]*2 - X[,2] + rnorm(200)
-bmX <- bigmemory::as.big.matrix(X)
-bmy <- bigmemory::as.big.matrix(matrix(y, nrow(X), 1))
-sink_bm <- bigmemory::filebacked.big.matrix(
-  nrow = nrow(bmX), ncol = 3, type = "double",
-  backingfile = "scores.bin", backingpath = tempdir(),
-  descriptorfile = "scores.desc"
-)
-
-fit <- pls_fit(bmX, bmy, ncomp = 3, backend = "bigmem", scores = "big",
-              scores_target = "existing", scores_bm = sink_bm)
-
-Dense, named scores (no descriptor here; scores are base matrix)
-fit1 <- pls_fit(X, y, ncomp = 3,
-                backend = "arma", scores = "r",
-                scores_colnames = c("t1","t2","t3"),
-                return_scores_descriptor = TRUE)
-colnames(fit1$scores)              # "t1" "t2" "t3"
-"scores_descriptor" \%in\% names(fit1)  # FALSE (dense scores aren't big.matrix)
-
-# Big-matrix with external file-backed sink, named + descriptor
-sink_bm <- bigmemory::filebacked.big.matrix(
-  nrow=nrow(bmX), ncol=3, type="double",
-  backingfile="scores.bin", backingpath=tempdir(),
-  descriptorfile="scores.desc"
-)
-fit2 <- pls_fit(bmX, bmy, ncomp = 3,
-                backend = "bigmem", scores = "big",
-                scores_target = "existing", scores_bm = sink_bm,
-                scores_colnames = c("t1","t2","t3"),
-                return_scores_descriptor = TRUE)
-colnames(fit2$scores)               # "t1" "t2" "t3"
-fit2$scores_descriptor              # big.matrix.descriptor
-
-
+Algorithm can be chosen between "simpls" (default) and "nipals".
 }

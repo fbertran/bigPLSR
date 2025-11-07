@@ -107,6 +107,214 @@ inline void ensure_double_matrix(const BigMatrix& mat, const char* name) {
 } // namespace
 
 // [[Rcpp::export]]
+SEXP cpp_dense_plsr_nipals(Rcpp::NumericMatrix X,
+                           Rcpp::RObject Y,
+                           int ncomp,
+                           double tol,
+                           bool compute_scores = false,
+                           bool scores_big = false,
+                           std::string scores_name = "scores") {
+  if (ncomp <= 0) {
+    Rcpp::stop("ncomp must be positive");
+  }
+
+  const arma::uword n = X.nrow();
+  const arma::uword px = X.ncol();
+  if (n == 0) {
+    Rcpp::stop("X must have at least one row");
+  }
+  if (static_cast<arma::uword>(ncomp) > px) {
+    ncomp = static_cast<int>(px);
+  }
+
+  arma::mat Xa(X.begin(), n, px, false, true);
+
+  arma::mat Ya;
+  if (Y.isNULL()) {
+    Rcpp::stop("Y must not be NULL");
+  }
+  if (Rf_isMatrix(Y)) {
+    Rcpp::NumericMatrix Ym(Y);
+    if (Ym.nrow() != static_cast<int>(n)) {
+      Rcpp::stop("Y must have the same number of rows as X");
+    }
+    Ya = arma::mat(Ym.begin(), Ym.nrow(), Ym.ncol(), false, true);
+  } else {
+    Rcpp::NumericVector yv(Y);
+    if (yv.size() != static_cast<int>(n)) {
+      Rcpp::stop("Length of y must match nrow(X)");
+    }
+    Ya = arma::mat(yv.begin(), n, 1, false, true);
+  }
+
+  const arma::uword q = Ya.n_cols;
+
+  arma::mat Xc = Xa;
+  arma::mat Yc = Ya;
+
+  arma::rowvec meanX = arma::mean(Xc, 0);
+  arma::rowvec meanY = arma::mean(Yc, 0);
+
+  Xc.each_row() -= meanX;
+  Yc.each_row() -= meanY;
+
+  arma::mat W(px, ncomp, arma::fill::zeros);
+  arma::mat P(px, ncomp, arma::fill::zeros);
+  arma::mat Q(q, ncomp, arma::fill::zeros);
+  arma::mat T(n, ncomp, arma::fill::zeros);
+  arma::vec B(ncomp, arma::fill::zeros);
+
+  arma::mat Xdef = Xc;
+  arma::mat Ydef = Yc;
+
+  int actual_comp = 0;
+
+  for (int a = 0; a < ncomp; ++a) {
+    arma::vec u = select_initial_u(Ydef);
+    arma::vec u_prev;
+
+    if (arma::norm(u, 2) <= 1e-12) {
+      break;
+    }
+
+    arma::vec w(px, arma::fill::zeros);
+    arma::vec t(n, arma::fill::zeros);
+    arma::vec c(q, arma::fill::zeros);
+
+    bool converged = false;
+    for (int iter = 0; iter < 500; ++iter) {
+      double u_norm_sq = arma::dot(u, u);
+      if (u_norm_sq <= tol) {
+        break;
+      }
+
+      w = Xdef.t() * u / u_norm_sq;
+      double w_norm = arma::norm(w, 2);
+      if (w_norm <= tol) {
+        break;
+      }
+      w /= w_norm;
+
+      t = Xdef * w;
+      double t_norm_sq = arma::dot(t, t);
+      if (t_norm_sq <= tol) {
+        break;
+      }
+
+      c = Ydef.t() * t / t_norm_sq;
+      double c_norm_sq = arma::dot(c, c);
+      if (c_norm_sq <= tol) {
+        break;
+      }
+
+      u_prev = u;
+      u = Ydef * c / c_norm_sq;
+
+      if (is_converged(u, u_prev, tol)) {
+        converged = true;
+        break;
+      }
+    }
+
+    if (!converged) {
+      double u_norm = arma::norm(u, 2);
+      if (u_norm <= tol) {
+        break;
+      }
+    }
+
+    double t_norm_sq = arma::dot(t, t);
+    if (t_norm_sq <= tol) {
+      break;
+    }
+
+    arma::vec p = Xdef.t() * t / t_norm_sq;
+    arma::vec qvec = c;
+
+    double b = arma::dot(t, u) / t_norm_sq;
+
+    Xdef -= t * p.t();
+    Ydef -= b * t * qvec.t();
+
+    W.col(a) = w;
+    P.col(a) = p;
+    Q.col(a) = qvec;
+    T.col(a) = t;
+    B[a] = b;
+    ++actual_comp;
+  }
+
+  if (actual_comp == 0) {
+    return Rcpp::List::create(
+      Rcpp::Named("coefficients") = R_NilValue,
+      Rcpp::Named("intercept") = R_NilValue,
+      Rcpp::Named("x_weights") = R_NilValue,
+      Rcpp::Named("x_loadings") = R_NilValue,
+      Rcpp::Named("y_loadings") = R_NilValue,
+      Rcpp::Named("scores") = R_NilValue,
+      Rcpp::Named("x_means") = meanX,
+      Rcpp::Named("y_means") = meanY,
+      Rcpp::Named("x_scales") = arma::rowvec(px, arma::fill::ones),
+      Rcpp::Named("y_scales") = arma::rowvec(q, arma::fill::ones),
+      Rcpp::Named("B") = Rcpp::NumericVector(),
+      Rcpp::Named("ncomp") = 0
+    );
+  }
+
+  arma::mat W_used = W.cols(0, actual_comp - 1);
+  arma::mat P_used = P.cols(0, actual_comp - 1);
+  arma::mat Q_used = Q.cols(0, actual_comp - 1);
+  arma::mat T_used = T.cols(0, actual_comp - 1);
+  arma::vec B_used = B.subvec(0, actual_comp - 1);
+
+  arma::mat PtW = P_used.t() * W_used;
+  arma::mat PtW_inv;
+  bool status = arma::inv(PtW_inv, PtW);
+  if (!status) {
+    Rcpp::stop("Failed to invert P'W matrix in dense NIPALS solver");
+  }
+
+  arma::mat coef_internal = W_used * PtW_inv * arma::diagmat(B_used) * Q_used.t();
+
+  arma::rowvec intercept = meanY - meanX * coef_internal;
+
+  Rcpp::NumericVector intercept_out(q);
+  for (arma::uword j = 0; j < q; ++j) {
+    intercept_out[j] = intercept[j];
+  }
+
+  Rcpp::RObject coefficients_out =
+    make_matrix_output(false, coef_internal.memptr(), coef_internal.n_rows, coef_internal.n_cols, "coefficients");
+
+  Rcpp::RObject scores_out = R_NilValue;
+  if (compute_scores) {
+    if (scores_big) {
+      Rcpp::S4 bm = allocate_big_matrix(n, actual_comp, scores_name.c_str());
+      arma::mat Tcopy = T_used;
+      copy_column_major(bm, Tcopy.memptr(), n, actual_comp);
+      scores_out = bm;
+    } else {
+      scores_out = make_matrix_output(false, T_used.memptr(), T_used.n_rows, T_used.n_cols, "scores");
+    }
+  }
+
+  return Rcpp::List::create(
+    Rcpp::Named("coefficients") = coefficients_out,
+    Rcpp::Named("intercept") = intercept_out,
+    Rcpp::Named("x_weights") = W_used,
+    Rcpp::Named("x_loadings") = P_used,
+    Rcpp::Named("y_loadings") = Q_used,
+    Rcpp::Named("scores") = scores_out,
+    Rcpp::Named("x_means") = meanX,
+    Rcpp::Named("y_means") = meanY,
+    Rcpp::Named("x_scales") = arma::rowvec(px, arma::fill::ones),
+    Rcpp::Named("y_scales") = arma::rowvec(q, arma::fill::ones),
+    Rcpp::Named("B") = B_used,
+    Rcpp::Named("ncomp") = actual_comp
+  );
+}
+
+// [[Rcpp::export]]
 Rcpp::List big_plsr_fit_nipals(SEXP X_ptr,
                                SEXP Y_ptr,
                                int ncomp,

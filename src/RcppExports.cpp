@@ -194,6 +194,23 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// cpp_dense_plsr_nipals
+SEXP cpp_dense_plsr_nipals(Rcpp::NumericMatrix X, Rcpp::RObject Y, int ncomp, double tol, bool compute_scores, bool scores_big, std::string scores_name);
+RcppExport SEXP _bigPLSR_cpp_dense_plsr_nipals(SEXP XSEXP, SEXP YSEXP, SEXP ncompSEXP, SEXP tolSEXP, SEXP compute_scoresSEXP, SEXP scores_bigSEXP, SEXP scores_nameSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type X(XSEXP);
+    Rcpp::traits::input_parameter< Rcpp::RObject >::type Y(YSEXP);
+    Rcpp::traits::input_parameter< int >::type ncomp(ncompSEXP);
+    Rcpp::traits::input_parameter< double >::type tol(tolSEXP);
+    Rcpp::traits::input_parameter< bool >::type compute_scores(compute_scoresSEXP);
+    Rcpp::traits::input_parameter< bool >::type scores_big(scores_bigSEXP);
+    Rcpp::traits::input_parameter< std::string >::type scores_name(scores_nameSEXP);
+    rcpp_result_gen = Rcpp::wrap(cpp_dense_plsr_nipals(X, Y, ncomp, tol, compute_scores, scores_big, scores_name));
+    return rcpp_result_gen;
+END_RCPP
+}
 // big_plsr_fit_nipals
 Rcpp::List big_plsr_fit_nipals(SEXP X_ptr, SEXP Y_ptr, int ncomp, bool center, bool scale, bool return_big);
 RcppExport SEXP _bigPLSR_big_plsr_fit_nipals(SEXP X_ptrSEXP, SEXP Y_ptrSEXP, SEXP ncompSEXP, SEXP centerSEXP, SEXP scaleSEXP, SEXP return_bigSEXP) {
@@ -273,6 +290,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_bigPLSR_pls_nipals_bigmemory", (DL_FUNC) &_bigPLSR_pls_nipals_bigmemory, 8},
     {"_bigPLSR_pls_streaming_bigmemory", (DL_FUNC) &_bigPLSR_pls_streaming_bigmemory, 8},
     {"_bigPLSR_cpp_big_pls_stream_fit_sink", (DL_FUNC) &_bigPLSR_cpp_big_pls_stream_fit_sink, 7},
+    {"_bigPLSR_cpp_dense_plsr_nipals", (DL_FUNC) &_bigPLSR_cpp_dense_plsr_nipals, 7},
     {"_bigPLSR_big_plsr_fit_nipals", (DL_FUNC) &_bigPLSR_big_plsr_fit_nipals, 6},
     {"_bigPLSR_big_plsr_stream_fit_nipals", (DL_FUNC) &_bigPLSR_big_plsr_stream_fit_nipals, 7},
     {"_bigPLSR_big_plsr_fit", (DL_FUNC) &_bigPLSR_big_plsr_fit, 6},
