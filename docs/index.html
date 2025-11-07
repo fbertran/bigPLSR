@@ -22,7 +22,7 @@
 
     <a class="navbar-brand me-2" href="index.html">bigPLSR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.6.3</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -32,6 +32,14 @@
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto">
 <li class="nav-item"><a class="nav-link" href="reference/index.html">Reference</a></li>
+<li class="nav-item dropdown">
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
+<li><a class="dropdown-item" href="articles/auto-backend.html">Auto backend usage</a></li>
+    <li><a class="dropdown-item" href="articles/pls1-benchmark.html">Benchmarking PLS1 Implementations</a></li>
+    <li><a class="dropdown-item" href="articles/pls2-benchmark.html">Benchmarking PLS2 Implementations</a></li>
+  </ul>
+</li>
 <li class="nav-item"><a class="nav-link" href="news/index.html">Changelog</a></li>
       </ul>
 <ul class="navbar-nav">
@@ -58,7 +66,17 @@
 </h2>
 <!-- badges: start -->
 
-<p>The goal of bigPLSR is provide Partial Least Squares Regression models in a high dimensional setting in R.</p>
+<p><strong>bigPLSR</strong> provides <strong>fast, scalable Partial Least Squares (PLS)</strong> with two execution backends:</p>
+<ul>
+<li>
+<strong>Dense</strong> (<code>backend = "arma"</code>): in-memory Armadillo/BLAS for speed.</li>
+<li>
+<strong>Big-matrix</strong> (<code>backend = "bigmem"</code>): chunked streaming over <code><a href="https://rdrr.io/pkg/bigmemory/man/big.matrix.html" class="external-link">bigmemory::big.matrix</a></code> for large data.</li>
+</ul>
+<p>Both <strong>PLS1</strong> (single response) and <strong>PLS2</strong> (multi-response) are supported. PLS2 uses <strong>SIMPLS on cross-products</strong> in both backends for numerical parity.</p>
+<blockquote>
+<p>The package is set up to be CRAN-friendly: the optional CBLAS fast path is <strong>off</strong> by default.</p>
+</blockquote>
 <p>Support for parallel computation and GPU is being developed.</p>
 <p>This website and these examples were created by F. Bertrand and M. Maumy.</p>
 </div>
@@ -71,11 +89,236 @@
 <p>You can install the development version of bigPLSR from <a href="https://github.com" class="external-link">github</a> with:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">devtools</span><span class="fu">::</span><span class="fu"><a href="https://remotes.r-lib.org/reference/install_github.html" class="external-link">install_github</a></span><span class="op">(</span><span class="st">"fbertran/bigPLSR"</span><span class="op">)</span></span></code></pre></div>
+<hr>
+</div>
+<div class="section level2">
+<h2 id="quick-start">Quick start<a class="anchor" aria-label="anchor" href="#quick-start"></a>
+</h2>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://fbertran.github.io/bigPLSR/">bigPLSR</a></span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span>
+<span><span class="va">n</span> <span class="op">&lt;-</span> <span class="fl">200</span>; <span class="va">p</span> <span class="op">&lt;-</span> <span class="fl">50</span></span>
+<span><span class="va">X</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="va">n</span><span class="op">*</span><span class="va">p</span><span class="op">)</span>, <span class="va">n</span>, <span class="va">p</span><span class="op">)</span></span>
+<span><span class="va">y</span> <span class="op">&lt;-</span> <span class="va">X</span><span class="op">[</span>,<span class="fl">1</span><span class="op">]</span><span class="op">*</span><span class="fl">2</span> <span class="op">-</span> <span class="va">X</span><span class="op">[</span>,<span class="fl">2</span><span class="op">]</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="va">n</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Dense PLS1 (fast)</span></span>
+<span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/pls_fit.html">pls_fit</a></span><span class="op">(</span><span class="va">X</span>, <span class="va">y</span>, ncomp <span class="op">=</span> <span class="fl">3</span>, backend <span class="op">=</span> <span class="st">"arma"</span>, scores <span class="op">=</span> <span class="st">"r"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/utils/str.html" class="external-link">str</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>  coef<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/dim.html" class="external-link">dim</a></span><span class="op">(</span><span class="va">fit</span><span class="op">$</span><span class="va">coefficients</span><span class="op">)</span>,</span>
+<span>  scores<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/dim.html" class="external-link">dim</a></span><span class="op">(</span><span class="va">fit</span><span class="op">$</span><span class="va">scores</span><span class="op">)</span>,</span>
+<span>  ncomp<span class="op">=</span><span class="va">fit</span><span class="op">$</span><span class="va">ncomp</span></span>
+<span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<div class="section level3">
+<h3 id="big-matrix-pls1-with-file-backed-scores">Big-matrix PLS1 with file-backed scores<a class="anchor" aria-label="anchor" href="#big-matrix-pls1-with-file-backed-scores"></a>
+</h3>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">options_val_before</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">options</a></span><span class="op">(</span><span class="st">"bigmemory.allow.dimnames"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">options</a></span><span class="op">(</span>bigmemory.allow.dimnames<span class="op">=</span><span class="cn">TRUE</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">bmX</span> <span class="op">&lt;-</span> <span class="fu">bigmemory</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/bigmemory/man/big.matrix.html" class="external-link">as.big.matrix</a></span><span class="op">(</span><span class="va">X</span><span class="op">)</span></span>
+<span><span class="va">bmy</span> <span class="op">&lt;-</span> <span class="fu">bigmemory</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/bigmemory/man/big.matrix.html" class="external-link">as.big.matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="va">y</span>, <span class="va">n</span>, <span class="fl">1</span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">tmp</span><span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="kw">if</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/files.html" class="external-link">file.exists</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="va">tmp</span>,<span class="st">"scores.desc"</span>,sep<span class="op">=</span><span class="st">"/"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span><span class="op">{</span><span class="fu"><a href="https://rdrr.io/r/base/unlink.html" class="external-link">unlink</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="va">tmp</span>,<span class="st">"scores.desc"</span>,sep<span class="op">=</span><span class="st">"/"</span><span class="op">)</span><span class="op">)</span><span class="op">}</span></span>
+<span><span class="kw">if</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/files.html" class="external-link">file.exists</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="va">tmp</span>,<span class="st">"scores.bin"</span>,sep<span class="op">=</span><span class="st">"/"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span><span class="op">{</span><span class="fu"><a href="https://rdrr.io/r/base/unlink.html" class="external-link">unlink</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="va">tmp</span>,<span class="st">"scores.bin"</span>,sep<span class="op">=</span><span class="st">"/"</span><span class="op">)</span><span class="op">)</span><span class="op">}</span></span>
+<span><span class="va">sink</span> <span class="op">&lt;-</span> <span class="fu">bigmemory</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/bigmemory/man/big.matrix.html" class="external-link">filebacked.big.matrix</a></span><span class="op">(</span></span>
+<span>  nrow<span class="op">=</span><span class="va">n</span>, ncol<span class="op">=</span><span class="fl">3</span>, type<span class="op">=</span><span class="st">"double"</span>,</span>
+<span>  backingfile<span class="op">=</span><span class="st">"scores.bin"</span>,</span>
+<span>  backingpath<span class="op">=</span><span class="va">tmp</span>,</span>
+<span>  descriptorfile<span class="op">=</span><span class="st">"scores.desc"</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">fit_b</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/pls_fit.html">pls_fit</a></span><span class="op">(</span></span>
+<span>  <span class="va">bmX</span>, <span class="va">bmy</span>, ncomp<span class="op">=</span><span class="fl">3</span>, backend<span class="op">=</span><span class="st">"bigmem"</span>, scores<span class="op">=</span><span class="st">"big"</span>,</span>
+<span>  scores_target<span class="op">=</span><span class="st">"existing"</span>, scores_bm<span class="op">=</span><span class="va">sink</span>,</span>
+<span>  scores_colnames <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"t1"</span>,<span class="st">"t2"</span>,<span class="st">"t3"</span><span class="op">)</span>,</span>
+<span>  return_scores_descriptor <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">fit_b</span><span class="op">$</span><span class="va">scores_descriptor</span>  <span class="co"># big.matrix.descriptor</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">options</a></span><span class="op">(</span>bigmemory.allow.dimnames<span class="op">=</span><span class="va">options_val_before</span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="pls2-multi-response">PLS2 (multi-response)<a class="anchor" aria-label="anchor" href="#pls2-multi-response"></a>
+</h3>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">2</span><span class="op">)</span></span>
+<span><span class="va">m</span> <span class="op">&lt;-</span> <span class="fl">3</span></span>
+<span><span class="va">B</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="va">p</span><span class="op">*</span><span class="va">m</span><span class="op">)</span>, <span class="va">p</span>, <span class="va">m</span><span class="op">)</span></span>
+<span><span class="va">Y</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/scale.html" class="external-link">scale</a></span><span class="op">(</span><span class="va">X</span>, scale <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span> <span class="op"><a href="https://rdrr.io/r/base/matmult.html" class="external-link">%*%</a></span> <span class="va">B</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="va">n</span><span class="op">*</span><span class="va">m</span>, sd <span class="op">=</span> <span class="fl">0.1</span><span class="op">)</span>, <span class="va">n</span>, <span class="va">m</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Dense PLS2 – SIMPLS on cross-products (parity with bigmem)</span></span>
+<span><span class="va">fit2</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/pls_fit.html">pls_fit</a></span><span class="op">(</span><span class="va">X</span>, <span class="va">Y</span>, ncomp <span class="op">=</span> <span class="fl">2</span>, backend <span class="op">=</span> <span class="st">"arma"</span>, mode <span class="op">=</span> <span class="st">"pls2"</span>, scores <span class="op">=</span> <span class="st">"none"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/utils/str.html" class="external-link">str</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>coef<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/dim.html" class="external-link">dim</a></span><span class="op">(</span><span class="va">fit2</span><span class="op">$</span><span class="va">coefficients</span><span class="op">)</span>, ncomp<span class="op">=</span><span class="va">fit2</span><span class="op">$</span><span class="va">ncomp</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<hr>
 </div>
 </div>
-<div class="section level1">
-<h1 id="example">Example<a class="anchor" aria-label="anchor" href="#example"></a>
-</h1>
+<div class="section level2">
+<h2 id="api">API<a class="anchor" aria-label="anchor" href="#api"></a>
+</h2>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="reference/pls_fit.html">pls_fit</a></span><span class="op">(</span></span>
+<span>  <span class="va">X</span>, <span class="va">y</span>, <span class="va">ncomp</span>,</span>
+<span>  tol <span class="op">=</span> <span class="fl">1e-8</span>,</span>
+<span>  backend <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"auto"</span>, <span class="st">"arma"</span>, <span class="st">"bigmem"</span><span class="op">)</span>,</span>
+<span>  scores  <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"none"</span>, <span class="st">"r"</span>, <span class="st">"big"</span><span class="op">)</span>,</span>
+<span>  chunk_size <span class="op">=</span> <span class="fl">10000L</span>,</span>
+<span>  scores_name <span class="op">=</span> <span class="st">"scores"</span>,</span>
+<span>  mode <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"auto"</span>,<span class="st">"pls1"</span>,<span class="st">"pls2"</span><span class="op">)</span>,</span>
+<span>  scores_target <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"auto"</span>,<span class="st">"new"</span>,<span class="st">"existing"</span><span class="op">)</span>,</span>
+<span>  scores_bm <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  scores_backingfile <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  scores_backingpath <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  scores_descriptorfile <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  scores_colnames <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  return_scores_descriptor <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p><strong>Auto selection</strong></p>
+<ul>
+<li>
+<code>backend = "auto"</code> → <code>"bigmem"</code> when <code>X</code> is a <code>big.matrix</code> (or descriptor), else <code>"arma"</code>.</li>
+<li>
+<code>mode = "auto"</code> → <code>"pls1"</code> when <code>y</code> is one column, else <code>"pls2"</code>.</li>
+</ul>
+<p><strong>Return values</strong></p>
+<ul>
+<li>
+<strong>PLS1:</strong> <code>coefficients</code> (p), <code>intercept</code> (scalar), <code>x_weights</code>, <code>x_loadings</code>, <code>y_loadings</code>, <code>scores</code> (optional), <code>x_means</code>, <code>y_mean</code>, <code>ncomp</code>.</li>
+<li>
+<strong>PLS2:</strong> <code>coefficients</code> (p×m), <code>intercept</code> (length m), <code>x_weights</code> (p×ncomp), <code>x_loadings</code> (p×ncomp), <code>y_loadings</code> (m×ncomp), <code>scores</code> (optional), <code>x_means</code>, <code>y_means</code>, <code>ncomp</code>.</li>
+</ul>
+<hr>
+</div>
+<div class="section level2">
+<h2 id="backends--algorithms">Backends &amp; algorithms<a class="anchor" aria-label="anchor" href="#backends--algorithms"></a>
+</h2>
+<div class="section level3">
+<h3 id="dense-path-backend--arma">Dense path (<code>backend = "arma"</code>)<a class="anchor" aria-label="anchor" href="#dense-path-backend--arma"></a>
+</h3>
+<ul>
+<li>
+<strong>PLS1</strong>: fast dense solver (BLAS).</li>
+<li>
+<strong>PLS2</strong>: <strong>SIMPLS on cross-products</strong>
+<ol style="list-style-type: decimal">
+<li>Center <code>X</code>, <code>Y</code>, build <code>XtX = XcᵀXc</code>, <code>XtY = XcᵀYc</code>.<br>
+</li>
+<li>Cholesky-whitened symmetric eigen solve; enforce symmetry and add tiny ridge to stabilize.<br>
+</li>
+<li>Optional scores: <code>T = Xc %*% W</code>.</li>
+</ol>
+</li>
+</ul>
+</div>
+<div class="section level3">
+<h3 id="big-matrix-path-backend--bigmem">Big-matrix path (<code>backend = "bigmem"</code>)<a class="anchor" aria-label="anchor" href="#big-matrix-path-backend--bigmem"></a>
+</h3>
+<ul>
+<li>Chunked I/O from <code>big.matrix</code> with <strong>preallocated buffers</strong>.</li>
+<li>
+<strong>PLS1</strong>: streaming cross-products and deflation; optional scores streamed chunk-wise into a sink.</li>
+<li>
+<strong>PLS2</strong>: chunked <strong>cross-products</strong> (<code>XtX += BᵀB</code>, <code>XtY += BᵀY</code>) + the same <strong>SIMPLS</strong> solver for parity; optional score streaming: <code>T = (X − μ) %*% W</code>.</li>
+</ul>
+<blockquote>
+<p>Both paths enforce symmetry (<code>0.5*(M+Mᵀ)</code>) before eigen and use a small ridge on <code>XtX</code> for stability.</p>
+</blockquote>
+<hr>
+</div>
+</div>
+<div class="section level2">
+<h2 id="scores-sinks-and-descriptors">Scores, sinks, and descriptors<a class="anchor" aria-label="anchor" href="#scores-sinks-and-descriptors"></a>
+</h2>
+<ul>
+<li>
+<code>scores = "none"</code> – don’t compute scores.<br>
+</li>
+<li>
+<code>scores = "r"</code> – return an in-memory matrix.<br>
+</li>
+<li>
+<code>scores = "big"</code> – write to a <code>big.matrix</code>:
+<ul>
+<li>Provide a sink via <code>scores_target = "existing"</code> + <code>scores_bm</code> (big.matrix or descriptor), <strong>or</strong>
+</li>
+<li>Let the function create file-backed storage via <code>scores_backingfile</code> (+ optional <code>scores_backingpath</code>, <code>scores_descriptorfile</code>).</li>
+</ul>
+</li>
+<li>
+<code>scores_colnames</code> – set column names of the scores.</li>
+<li>
+<code>return_scores_descriptor = TRUE</code> – adds <code>fit$scores_descriptor</code> when <code>scores</code> is a <code>big.matrix</code>.</li>
+</ul>
+<hr>
+</div>
+<div class="section level2">
+<h2 id="determinism-tests--reproducibility">Determinism (tests &amp; reproducibility)<a class="anchor" aria-label="anchor" href="#determinism-tests--reproducibility"></a>
+</h2>
+<p>For tight parity tests, force <strong>1 BLAS thread</strong> and fix RNG:</p>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span>
+<span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/ns-load.html" class="external-link">requireNamespace</a></span><span class="op">(</span><span class="st">"RhpcBLASctl"</span>, quietly <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="fu">RhpcBLASctl</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/RhpcBLASctl/man/RhpcBLASctl-package.html" class="external-link">blas_set_num_threads</a></span><span class="op">(</span><span class="fl">1L</span><span class="op">)</span></span>
+<span><span class="op">}</span> <span class="kw">else</span> <span class="op">{</span></span>
+<span>  <span class="co"># Use env vars before BLAS loads in the session</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/Sys.setenv.html" class="external-link">Sys.setenv</a></span><span class="op">(</span></span>
+<span>    OMP_NUM_THREADS<span class="op">=</span><span class="st">"1"</span>,</span>
+<span>    OPENBLAS_NUM_THREADS<span class="op">=</span><span class="st">"1"</span>,</span>
+<span>    MKL_NUM_THREADS<span class="op">=</span><span class="st">"1"</span>,</span>
+<span>    VECLIB_MAXIMUM_THREADS<span class="op">=</span><span class="st">"1"</span>,</span>
+<span>    BLIS_NUM_THREADS<span class="op">=</span><span class="st">"1"</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">}</span></span></code></pre></div>
+<hr>
+</div>
+<div class="section level2">
+<h2 id="performance-tuning">Performance tuning<a class="anchor" aria-label="anchor" href="#performance-tuning"></a>
+</h2>
+<ul>
+<li>
+<strong>chunk_size</strong>: default <code>10000L</code>. On Apple Silicon, internal default is larger (e.g., <code>16384</code>) when <code>chunk_size == 0</code>. Tune per dataset for best GEMM throughput.</li>
+<li>
+<strong>Scores streaming</strong>: with <code>scores="big"</code>, streaming avoids holding <code>T</code> fully in RAM.</li>
+<li>
+<strong>Multi-thread BLAS</strong>: for production, allow multi-thread BLAS; for tests, use 1 thread.</li>
+</ul>
+<hr>
+</div>
+<div class="section level2">
+<h2 id="optional-cblas-fast-path-in-place-gemm">Optional CBLAS fast path (in-place GEMM)<a class="anchor" aria-label="anchor" href="#optional-cblas-fast-path-in-place-gemm"></a>
+</h2>
+<p><strong>Default: OFF (CRAN-safe).</strong><br>
+An optional in-place accumulation (true <code>beta = 1</code> <strong>CBLAS</strong> <code>dgemm</code>) is available and <strong>guarded</strong> by compile-time checks. When not available or not enabled, the package <strong>falls back automatically</strong> to the portable Armadillo path.</p>
+<p><strong>Enable locally (Unix/macOS):</strong></p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a><span class="ex">R</span> CMD INSTALL .   <span class="at">--configure-vars</span><span class="op">=</span><span class="st">"PKG_CPPFLAGS='-DBIGPLSR_USE_CBLAS'"</span></span></code></pre></div>
+<p>In <code>src/Makevars</code>, link to the <strong>same BLAS/LAPACK that R uses</strong>:</p>
+<pre class="make"><code>PKG_LIBS += $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS)</code></pre>
+<ul>
+<li>macOS: the code attempts <code>&lt;vecLib/cblas.h&gt;</code>; on Linux/others: <code>&lt;cblas.h&gt;</code>.<br>
+</li>
+<li>If headers aren’t present, the build <strong>silently falls back</strong> to the portable GEMM path.</li>
+<li>
+<strong>Do not</strong> hardcode <code>-lopenblas</code> or <code>-framework Accelerate</code>; use R’s variables.</li>
+</ul>
+<p><strong>Windows:</strong> leave the macro off unless you’ve explicitly provided CBLAS headers/libs.</p>
+<hr>
+</div>
+<div class="section level2">
+<h2 id="development">Development<a class="anchor" aria-label="anchor" href="#development"></a>
+</h2>
+<ul>
+<li>Unit tests compare dense vs big-matrix backends for both PLS1/PLS2 with tight tolerances.</li>
+<li>Vignettes and examples keep datasets small; file-backed output uses <code><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir()</a></code>.</li>
+</ul>
+<hr>
+</div>
+<div class="section level2">
+<h2 id="citation">Citation<a class="anchor" aria-label="anchor" href="#citation"></a>
+</h2>
+<p>If you use <strong>bigPLSR</strong> in academic work, please cite this package and the SIMPLS method by de Jong (1993).</p>
+<hr>
+</div>
 </div>
 
   </main><aside class="col-md-3"><div class="links">

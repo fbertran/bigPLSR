@@ -21,6 +21,18 @@ cpp_big_pls_stream_fit <- function(x_ptr, y_ptr, ncomp, chunk_size, tol, return_
     .Call(`_bigPLSR_cpp_big_pls_stream_fit`, x_ptr, y_ptr, ncomp, chunk_size, tol, return_big)
 }
 
+cpp_bigmem_cross <- function(X_ptrSEXP, Y_ptrSEXP, chunk_size) {
+    .Call(`_bigPLSR_cpp_bigmem_cross`, X_ptrSEXP, Y_ptrSEXP, chunk_size)
+}
+
+cpp_simpls_from_cross <- function(XtX, XtY, x_mean, y_mean, ncomp, tol) {
+    .Call(`_bigPLSR_cpp_simpls_from_cross`, XtX, XtY, x_mean, y_mean, ncomp, tol)
+}
+
+cpp_stream_scores_given_W <- function(X_ptrSEXP, W, x_mean, chunk_size, scores_sinkSEXP, return_big) {
+    .Call(`_bigPLSR_cpp_stream_scores_given_W`, X_ptrSEXP, W, x_mean, chunk_size, scores_sinkSEXP, return_big)
+}
+
 pls_nipals_bigmemory <- function(X_ptrSEXP, y_ptrSEXP, ncomp, center, scale, tol, max_iter, return_big) {
     .Call(`_bigPLSR_pls_nipals_bigmemory`, X_ptrSEXP, y_ptrSEXP, ncomp, center, scale, tol, max_iter, return_big)
 }

@@ -13,6 +13,7 @@ pls_fit(
   scores = c("none", "r", "big"),
   chunk_size = 10000L,
   scores_name = "scores",
+  mode = c("auto", "pls1", "pls2"),
   scores_target = c("auto", "new", "existing"),
   scores_bm = NULL,
   scores_backingfile = NULL,

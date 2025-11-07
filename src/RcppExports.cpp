@@ -96,6 +96,51 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// cpp_bigmem_cross
+SEXP cpp_bigmem_cross(SEXP X_ptrSEXP, SEXP Y_ptrSEXP, std::size_t chunk_size);
+RcppExport SEXP _bigPLSR_cpp_bigmem_cross(SEXP X_ptrSEXPSEXP, SEXP Y_ptrSEXPSEXP, SEXP chunk_sizeSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type X_ptrSEXP(X_ptrSEXPSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type Y_ptrSEXP(Y_ptrSEXPSEXP);
+    Rcpp::traits::input_parameter< std::size_t >::type chunk_size(chunk_sizeSEXP);
+    rcpp_result_gen = Rcpp::wrap(cpp_bigmem_cross(X_ptrSEXP, Y_ptrSEXP, chunk_size));
+    return rcpp_result_gen;
+END_RCPP
+}
+// cpp_simpls_from_cross
+SEXP cpp_simpls_from_cross(const arma::mat& XtX, const arma::mat& XtY, const arma::vec& x_mean, const arma::rowvec& y_mean, int ncomp, double tol);
+RcppExport SEXP _bigPLSR_cpp_simpls_from_cross(SEXP XtXSEXP, SEXP XtYSEXP, SEXP x_meanSEXP, SEXP y_meanSEXP, SEXP ncompSEXP, SEXP tolSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type XtX(XtXSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type XtY(XtYSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type x_mean(x_meanSEXP);
+    Rcpp::traits::input_parameter< const arma::rowvec& >::type y_mean(y_meanSEXP);
+    Rcpp::traits::input_parameter< int >::type ncomp(ncompSEXP);
+    Rcpp::traits::input_parameter< double >::type tol(tolSEXP);
+    rcpp_result_gen = Rcpp::wrap(cpp_simpls_from_cross(XtX, XtY, x_mean, y_mean, ncomp, tol));
+    return rcpp_result_gen;
+END_RCPP
+}
+// cpp_stream_scores_given_W
+SEXP cpp_stream_scores_given_W(SEXP X_ptrSEXP, const arma::mat& W, const arma::vec& x_mean, std::size_t chunk_size, SEXP scores_sinkSEXP, bool return_big);
+RcppExport SEXP _bigPLSR_cpp_stream_scores_given_W(SEXP X_ptrSEXPSEXP, SEXP WSEXP, SEXP x_meanSEXP, SEXP chunk_sizeSEXP, SEXP scores_sinkSEXPSEXP, SEXP return_bigSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type X_ptrSEXP(X_ptrSEXPSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type W(WSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type x_mean(x_meanSEXP);
+    Rcpp::traits::input_parameter< std::size_t >::type chunk_size(chunk_sizeSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type scores_sinkSEXP(scores_sinkSEXPSEXP);
+    Rcpp::traits::input_parameter< bool >::type return_big(return_bigSEXP);
+    rcpp_result_gen = Rcpp::wrap(cpp_stream_scores_given_W(X_ptrSEXP, W, x_mean, chunk_size, scores_sinkSEXP, return_big));
+    return rcpp_result_gen;
+END_RCPP
+}
 // pls_nipals_bigmemory
 List pls_nipals_bigmemory(SEXP X_ptrSEXP, SEXP y_ptrSEXP, int ncomp, bool center, bool scale, double tol, int max_iter, bool return_big);
 RcppExport SEXP _bigPLSR_pls_nipals_bigmemory(SEXP X_ptrSEXPSEXP, SEXP y_ptrSEXPSEXP, SEXP ncompSEXP, SEXP centerSEXP, SEXP scaleSEXP, SEXP tolSEXP, SEXP max_iterSEXP, SEXP return_bigSEXP) {
@@ -222,6 +267,9 @@ static const R_CallMethodDef CallEntries[] = {
     {"_bigPLSR_cpp_dense_pls_fit", (DL_FUNC) &_bigPLSR_cpp_dense_pls_fit, 7},
     {"_bigPLSR_cpp_big_pls_fit", (DL_FUNC) &_bigPLSR_cpp_big_pls_fit, 5},
     {"_bigPLSR_cpp_big_pls_stream_fit", (DL_FUNC) &_bigPLSR_cpp_big_pls_stream_fit, 6},
+    {"_bigPLSR_cpp_bigmem_cross", (DL_FUNC) &_bigPLSR_cpp_bigmem_cross, 3},
+    {"_bigPLSR_cpp_simpls_from_cross", (DL_FUNC) &_bigPLSR_cpp_simpls_from_cross, 6},
+    {"_bigPLSR_cpp_stream_scores_given_W", (DL_FUNC) &_bigPLSR_cpp_stream_scores_given_W, 6},
     {"_bigPLSR_pls_nipals_bigmemory", (DL_FUNC) &_bigPLSR_pls_nipals_bigmemory, 8},
     {"_bigPLSR_pls_streaming_bigmemory", (DL_FUNC) &_bigPLSR_pls_streaming_bigmemory, 8},
     {"_bigPLSR_cpp_big_pls_stream_fit_sink", (DL_FUNC) &_bigPLSR_cpp_big_pls_stream_fit_sink, 7},

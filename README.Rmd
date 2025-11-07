@@ -24,9 +24,14 @@ knitr::opts_chunk$set(
 <!-- badges: end -->
 
 
-The goal of bigPLSR is provide Partial Least Squares Regression models in a high dimensional setting in R.
+**bigPLSR** provides **fast, scalable Partial Least Squares (PLS)** with two execution backends:
 
+- **Dense** (`backend = "arma"`): in-memory Armadillo/BLAS for speed.
+- **Big-matrix** (`backend = "bigmem"`): chunked streaming over `bigmemory::big.matrix` for large data.
 
+Both **PLS1** (single response) and **PLS2** (multi-response) are supported. PLS2 uses **SIMPLS on cross-products** in both backends for numerical parity.
+
+> The package is set up to be CRAN-friendly: the optional CBLAS fast path is **off** by default.
 
 Support for parallel computation and GPU is being developed.
 
@@ -47,6 +52,200 @@ You can install the development version of bigPLSR from [github](https://github.
 devtools::install_github("fbertran/bigPLSR")
 ```
 
-# Example
+---
 
+## Quick start
+
+```{r quickstart, message=FALSE, warning=FALSE}
+library(bigPLSR)
+
+set.seed(1)
+n <- 200; p <- 50
+X <- matrix(rnorm(n*p), n, p)
+y <- X[,1]*2 - X[,2] + rnorm(n)
+
+# Dense PLS1 (fast)
+fit <- pls_fit(X, y, ncomp = 3, backend = "arma", scores = "r")
+str(list(
+  coef=dim(fit$coefficients),
+  scores=dim(fit$scores),
+  ncomp=fit$ncomp
+))
+```
+
+### Big-matrix PLS1 with file-backed scores
+
+```{r bigmem-quick}
+options_val_before <- options("bigmemory.allow.dimnames")
+options(bigmemory.allow.dimnames=TRUE)
+
+bmX <- bigmemory::as.big.matrix(X)
+bmy <- bigmemory::as.big.matrix(matrix(y, n, 1))
+
+tmp=tempdir()
+if(file.exists(paste(tmp,"scores.desc",sep="/"))){unlink(paste(tmp,"scores.desc",sep="/"))}
+if(file.exists(paste(tmp,"scores.bin",sep="/"))){unlink(paste(tmp,"scores.bin",sep="/"))}
+sink <- bigmemory::filebacked.big.matrix(
+  nrow=n, ncol=3, type="double",
+  backingfile="scores.bin",
+  backingpath=tmp,
+  descriptorfile="scores.desc"
+)
+
+fit_b <- pls_fit(
+  bmX, bmy, ncomp=3, backend="bigmem", scores="big",
+  scores_target="existing", scores_bm=sink,
+  scores_colnames = c("t1","t2","t3"),
+  return_scores_descriptor = TRUE
+)
+
+fit_b$scores_descriptor  # big.matrix.descriptor
+options(bigmemory.allow.dimnames=options_val_before)
+```
+
+### PLS2 (multi-response)
+
+```{r pls2, message=FALSE, warning=FALSE}
+set.seed(2)
+m <- 3
+B <- matrix(rnorm(p*m), p, m)
+Y <- scale(X, scale = FALSE) %*% B + matrix(rnorm(n*m, sd = 0.1), n, m)
+
+# Dense PLS2 – SIMPLS on cross-products (parity with bigmem)
+fit2 <- pls_fit(X, Y, ncomp = 2, backend = "arma", mode = "pls2", scores = "none")
+str(list(coef=dim(fit2$coefficients), ncomp=fit2$ncomp))
+```
+
+---
+
+## API
+
+```r
+pls_fit(
+  X, y, ncomp,
+  tol = 1e-8,
+  backend = c("auto", "arma", "bigmem"),
+  scores  = c("none", "r", "big"),
+  chunk_size = 10000L,
+  scores_name = "scores",
+  mode = c("auto","pls1","pls2"),
+  scores_target = c("auto","new","existing"),
+  scores_bm = NULL,
+  scores_backingfile = NULL,
+  scores_backingpath = NULL,
+  scores_descriptorfile = NULL,
+  scores_colnames = NULL,
+  return_scores_descriptor = FALSE
+)
+```
+
+**Auto selection**
+
+- `backend = "auto"` → `"bigmem"` when `X` is a `big.matrix` (or descriptor), else `"arma"`.
+- `mode = "auto"` → `"pls1"` when `y` is one column, else `"pls2"`.
+
+**Return values**
+
+- **PLS1:** `coefficients` (p), `intercept` (scalar), `x_weights`, `x_loadings`, `y_loadings`, `scores` (optional), `x_means`, `y_mean`, `ncomp`.
+- **PLS2:** `coefficients` (p×m), `intercept` (length m), `x_weights` (p×ncomp), `x_loadings` (p×ncomp), `y_loadings` (m×ncomp), `scores` (optional), `x_means`, `y_means`, `ncomp`.
+
+---
+
+## Backends & algorithms
+
+### Dense path (`backend = "arma"`)
+
+- **PLS1**: fast dense solver (BLAS).
+- **PLS2**: **SIMPLS on cross-products**  
+  1. Center `X`, `Y`, build `XtX = XcᵀXc`, `XtY = XcᵀYc`.  
+  2. Cholesky-whitened symmetric eigen solve; enforce symmetry and add tiny ridge to stabilize.  
+  3. Optional scores: `T = Xc %*% W`.
+
+### Big-matrix path (`backend = "bigmem"`)
+
+- Chunked I/O from `big.matrix` with **preallocated buffers**.
+- **PLS1**: streaming cross-products and deflation; optional scores streamed chunk-wise into a sink.
+- **PLS2**: chunked **cross-products** (`XtX += BᵀB`, `XtY += BᵀY`) + the same **SIMPLS** solver for parity; optional score streaming: `T = (X − μ) %*% W`.
+
+> Both paths enforce symmetry (`0.5*(M+Mᵀ)`) before eigen and use a small ridge on `XtX` for stability.
+
+---
+
+## Scores, sinks, and descriptors
+
+- `scores = "none"` – don’t compute scores.  
+- `scores = "r"` – return an in-memory matrix.  
+- `scores = "big"` – write to a `big.matrix`:
+  - Provide a sink via `scores_target = "existing"` + `scores_bm` (big.matrix or descriptor), **or**
+  - Let the function create file-backed storage via `scores_backingfile` (+ optional `scores_backingpath`, `scores_descriptorfile`).
+- `scores_colnames` – set column names of the scores.
+- `return_scores_descriptor = TRUE` – adds `fit$scores_descriptor` when `scores` is a `big.matrix`.
+
+---
+
+## Determinism (tests & reproducibility)
+
+For tight parity tests, force **1 BLAS thread** and fix RNG:
+
+```r
+set.seed(1)
+if (requireNamespace("RhpcBLASctl", quietly = TRUE)) {
+  RhpcBLASctl::blas_set_num_threads(1L)
+} else {
+  # Use env vars before BLAS loads in the session
+  Sys.setenv(
+    OMP_NUM_THREADS="1",
+    OPENBLAS_NUM_THREADS="1",
+    MKL_NUM_THREADS="1",
+    VECLIB_MAXIMUM_THREADS="1",
+    BLIS_NUM_THREADS="1"
+  )
+}
+```
+
+---
+
+## Performance tuning
+
+- **chunk_size**: default `10000L`. On Apple Silicon, internal default is larger (e.g., `16384`) when `chunk_size == 0`. Tune per dataset for best GEMM throughput.
+- **Scores streaming**: with `scores="big"`, streaming avoids holding `T` fully in RAM.
+- **Multi-thread BLAS**: for production, allow multi-thread BLAS; for tests, use 1 thread.
+
+---
+
+## Optional CBLAS fast path (in-place GEMM)
+
+**Default: OFF (CRAN-safe).**  
+An optional in-place accumulation (true `beta = 1` **CBLAS** `dgemm`) is available and **guarded** by compile-time checks. When not available or not enabled, the package **falls back automatically** to the portable Armadillo path.
+
+**Enable locally (Unix/macOS):**
+```bash
+R CMD INSTALL .   --configure-vars="PKG_CPPFLAGS='-DBIGPLSR_USE_CBLAS'"
+```
+
+In `src/Makevars`, link to the **same BLAS/LAPACK that R uses**:
+```make
+PKG_LIBS += $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS)
+```
+
+- macOS: the code attempts `<vecLib/cblas.h>`; on Linux/others: `<cblas.h>`.  
+- If headers aren’t present, the build **silently falls back** to the portable GEMM path.
+- **Do not** hardcode `-lopenblas` or `-framework Accelerate`; use R’s variables.
+
+**Windows:** leave the macro off unless you’ve explicitly provided CBLAS headers/libs.
+
+---
+
+## Development
+
+- Unit tests compare dense vs big-matrix backends for both PLS1/PLS2 with tight tolerances.
+- Vignettes and examples keep datasets small; file-backed output uses `tempdir()`.
+
+---
+
+## Citation
+
+If you use **bigPLSR** in academic work, please cite this package and the SIMPLS method by de Jong (1993).
+
+---
 

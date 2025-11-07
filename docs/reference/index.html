@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">bigPLSR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.6.3</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -16,6 +16,12 @@
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto"><li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
+<li class="nav-item dropdown">
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/auto-backend.html">Auto backend usage</a></li>
+    <li><a class="dropdown-item" href="../articles/pls1-benchmark.html">Benchmarking PLS1 Implementations</a></li>
+    <li><a class="dropdown-item" href="../articles/pls2-benchmark.html">Benchmarking PLS2 Implementations</a></li>
+  </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json"></form></li>
@@ -50,10 +56,40 @@
         <dd>bigPLSR-package</dd>
       </dl><dl><dt>
 
-          <code><a href="bigscale.html">bigscale()</a></code>
+          <code><a href="bigmatrix-operations.html">`%*%`(<i>&lt;big.matrix&gt;</i>,<i>&lt;big.matrix&gt;</i>)</a></code> <code><a href="bigmatrix-operations.html">`%*%`(<i>&lt;matrix&gt;</i>,<i>&lt;big.matrix&gt;</i>)</a></code> <code><a href="bigmatrix-operations.html">`%*%`(<i>&lt;big.matrix&gt;</i>,<i>&lt;matrix&gt;</i>)</a></code> <code><a href="bigmatrix-operations.html">Arith(<i>&lt;big.matrix&gt;</i>,<i>&lt;big.matrix&gt;</i>)</a></code> <code><a href="bigmatrix-operations.html">Arith(<i>&lt;big.matrix&gt;</i>,<i>&lt;matrix&gt;</i>)</a></code> <code><a href="bigmatrix-operations.html">Arith(<i>&lt;matrix&gt;</i>,<i>&lt;big.matrix&gt;</i>)</a></code> <code><a href="bigmatrix-operations.html">Arith(<i>&lt;numeric&gt;</i>,<i>&lt;big.matrix&gt;</i>)</a></code> <code><a href="bigmatrix-operations.html">Arith(<i>&lt;big.matrix&gt;</i>,<i>&lt;numeric&gt;</i>)</a></code>
 
         </dt>
-        <dd>Title</dd>
+        <dd>Matrix and arithmetic operations for big.matrix objects</dd>
+      </dl><dl><dt>
+
+          <code><a href="pls1_dense.html">.harmonize_pls_result()</a></code> <code><a href="pls1_dense.html">pls1_stream()</a></code>
+
+        </dt>
+        <dd>Single-response partial least squares regression (PLS1)</dd>
+      </dl><dl><dt>
+
+          <code><a href="pls1_dense_a.html">pls1_dense_a()</a></code> <code><a href="pls1_dense_a.html">pls1_stream_a()</a></code>
+
+        </dt>
+        <dd>Single-response partial least squares regression (PLS1) another implementation</dd>
+      </dl><dl><dt>
+
+          <code><a href="pls1_dense_ya.html">pls1_dense_ya()</a></code> <code><a href="pls1_dense_ya.html">pls1_stream_ya()</a></code>
+
+        </dt>
+        <dd>Single-response partial least squares regression (PLS1) yet another implementation</dd>
+      </dl><dl><dt>
+
+          <code><a href="pls2_dense.html">pls2_dense()</a></code> <code><a href="pls2_dense.html">pls2_stream()</a></code>
+
+        </dt>
+        <dd>Partial least squares regression for multi-response problems (PLS2)</dd>
+      </dl><dl><dt>
+
+          <code><a href="pls_fit.html">pls_fit()</a></code>
+
+        </dt>
+        <dd>Unified PLS fit with auto backend</dd>
       </dl><dl><dt>
 
           <code><a href="sim_data.html">sim_data</a></code>
