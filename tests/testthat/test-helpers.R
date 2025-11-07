@@ -1,6 +1,7 @@
 library(testthat)
 
 skip_if_not_installed("RcppArmadillo")
+skip_if_not_installed("pls")
 
 set.seed(123)
 n <- 40
@@ -12,11 +13,15 @@ Y <- X %*% coef_mat + matrix(rnorm(n * m, sd = 0.1), nrow = n)
 
 fit_simpls <- pls_fit(X, Y, ncomp = 3, backend = "arma", algorithm = "simpls", scores = "r", mode = "pls1")
 fit_nipals <- pls_fit(X, Y, ncomp = 3, backend = "arma", algorithm = "nipals", scores = "r", mode = "pls1")
+pls_simpls <- pls::simpls.fit(X,Y,3)
+pls_nipals <- pls::oscorespls.fit(X,Y,3)
 
 test_that("pls_fit_nipals matches SIMPLS coefficients", {
   expect_s3_class(fit_nipals, "big_plsr")
   expect_equal(fit_nipals$ncomp, fit_simpls$ncomp)
-  expect_equal(fit_nipals$coefficients, fit_simpls$coefficients, tolerance = 1e-6)
+  expect_equal(fit_simpls$coefficients[,],pls_simpls$coefficients[,,3], tolerance = 1e-6)
+  expect_equal(fit_nipals$coefficients[,],pls_nipals$coefficients[,,3], tolerance = 1e-6)
+  expect_equal(as.vector(fit_nipals$scores),as.vector(pls_nipals$scores), tolerance = 1e-6)
 })
 
 test_that("predict.big_plsr works for responses and scores", {
@@ -64,6 +69,10 @@ Y <- X %*% coef_mat + matrix(rnorm(n * m, sd = 0.1), nrow = n)
 
 fit_simpls <- pls_fit(X, Y, ncomp = 3, backend = "arma", algorithm = "simpls", scores = "r", mode = "pls2")
 fit_nipals <- pls_fit(X, Y, ncomp = 3, backend = "arma", algorithm = "nipals", scores = "r", mode = "pls2")
+
+expect_equal(fit_simpls$coefficients[,],pls::simpls.fit(X,Y,3)$coefficients[,,3])
+pls::oscorespls.fit(X,Y,3)$coefficients[,,3]
+
 
 test_that("pls_fit_nipals matches SIMPLS coefficients", {
   expect_s3_class(fit_nipals, "big_plsr")

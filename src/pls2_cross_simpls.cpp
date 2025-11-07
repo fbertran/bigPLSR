@@ -141,6 +141,19 @@ SEXP cpp_bigmem_cross(SEXP X_ptrSEXP, SEXP Y_ptrSEXP, std::size_t chunk_size) {
 // ---- 2) SIMPLS on cross-products (multi-response) ----
 //   XtX: p x p, symmetric (centered cross-products)
 //   XtY: p x m, centered cross-products
+
+static inline void orthonormal_append(arma::mat& V, const arma::vec& v_new, double tol) {
+  arma::vec v = v_new;
+  if (V.n_cols > 0) {
+    v -= V * (V.t() * v);
+  }
+  double nv = arma::norm(v, 2);
+  if (nv > tol) {
+    arma::vec vunit = v / nv;
+    V.insert_cols(V.n_cols, vunit);
+  }
+}
+
 // [[Rcpp::export]]
 SEXP cpp_simpls_from_cross(const arma::mat& XtX,
                            const arma::mat& XtY,
@@ -148,98 +161,120 @@ SEXP cpp_simpls_from_cross(const arma::mat& XtX,
                            const arma::rowvec& y_mean,
                            int ncomp,
                            double tol) {
-  const std::size_t p = XtX.n_rows;
-  const std::size_t m = XtY.n_cols;
-  if (XtX.n_cols != p || XtY.n_rows != p) stop("dimension mismatch XtX/XtY");
+  if (ncomp <= 0) Rcpp::stop("ncomp must be positive");
+  const arma::uword p = XtX.n_rows;
+  const arma::uword m = XtY.n_cols;
+  if (XtX.n_cols != p) Rcpp::stop("XtX must be square p x p");
+  if (XtY.n_rows != p) Rcpp::stop("XtY must be p x m");
   
-  arma::mat XtX_curr = 0.5 * (XtX + XtX.t()); // symmetrize
-  arma::mat XtY_curr = XtY;
-  
+  // running containers
   arma::mat W(p, ncomp, arma::fill::zeros);
   arma::mat P(p, ncomp, arma::fill::zeros);
   arma::mat Q(m, ncomp, arma::fill::zeros);
+  arma::mat V(p, 0, arma::fill::none); // orthonormal (Euclidean) basis
   
-  int used = 0;
-  for (int h = 0; h < ncomp; ++h) {
-    // generalized eigen via Cholesky whitening
-    // (XtY XtY^T) w = λ (XtX) w
-    arma::mat A = XtY_curr * XtY_curr.t();  // p x p (theoretically symmetric)
-    A = 0.5 * (A + A.t());                  // enforce symmetry numerically
-    arma::mat B = XtX_curr;                 // p x p, SPD-ish
-    const double ridge = std::max(tol, 1e-12) * (arma::trace(B) / std::max<double>(1.0, (double)p));
-    B.diag() += ridge;
-    
-    arma::mat C;
-    if (!arma::chol(C, B)) {
-      // try a slightly larger ridge if needed
-      B.diag() += std::max(1e-8, ridge * 10.0);
-      if (!arma::chol(C, B)) break; // give up on this component
+  arma::mat S = XtY;                   // will be deflated via V
+  int a_used = 0;
+  
+  for (int a = 0; a < ncomp; ++a) {
+    // Deflate S in subspace spanned by V (Euclidean-orthonormal columns)
+    if (V.n_cols > 0) {
+      S -= V * (V.t() * S);
     }
-    // C is upper s.t. B = C.t() * C; build K = C^{-T} A C^{-1}
-    arma::mat Ci = arma::solve(arma::trimatu(C), arma::eye<arma::mat>(p, p)); // C^{-1}
-    arma::mat K  = Ci.t() * A * Ci;                                           // should be symmetric
-    K = 0.5 * (K + K.t());                                                    // enforce symmetry numerically
-    
+    // Leading eigenvector of S' S (m x m)
+    arma::mat StS = S.t() * S;  // symmetric
     arma::vec evals;
-    arma::mat V;
-    arma::eig_sym(evals, V, K);
-    if (evals.n_elem == 0u) break;
+    arma::mat evecs;
+    if (!arma::eig_sym(evals, evecs, StS)) {
+      break;
+    }
+    if (evals.n_elem == 0 || evals.max() <= tol) {
+      break;
+    }
+    arma::uword idx = evals.index_max();
+    arma::vec q = evecs.col(idx);         // m x 1
     
-    arma::vec v = V.col(V.n_cols - 1);    // dominant eigenvector of K
-    arma::vec w = Ci * v;                 // generalized eigenvector
-    double denom = arma::as_scalar(w.t() * XtX_curr * w);
-    if (!std::isfinite(denom) || denom <= tol) break;
-    w /= std::sqrt(denom);                // enforce w^T XtX w ≈ 1
+    // w = S q ; normalize in X-metric: sqrt(w' XtX w) = 1
+    arma::vec w = S * q;                  // p x 1
+    double xnorm = std::sqrt( arma::as_scalar(w.t() * XtX * w) );
+    if (!arma::is_finite(xnorm) || xnorm <= tol) {
+      break;
+    }
+    w /= xnorm;
     
-    arma::vec XtXw = XtX_curr * w;              // p x 1
-    arma::rowvec C_row = (w.t() * XtY_curr);    // 1 x m
-    arma::vec p_vec = XtXw;                     // since denom ~ 1
+    arma::vec pvec = XtX * w;             // p x 1
+    arma::vec v    = pvec;                 // for V expansion
+    // Euclidean orthonormalization of V with new column v
+    {
+      arma::vec vtmp = v;
+      if (V.n_cols > 0) vtmp -= V * (V.t() * vtmp);
+      double nv = arma::norm(vtmp, 2);
+      if (nv <= tol) break;
+      vtmp /= nv;
+      V.insert_cols(V.n_cols, vtmp);
+    }
     
-    // store
-    W.col(h) = w;
-    P.col(h) = p_vec;
-    Q.col(h) = C_row.t();
+    arma::vec qload = S.t() * w;          // m x 1
     
-    // deflate
-    arma::mat XtX_new = XtX_curr - XtXw * p_vec.t() - p_vec * XtXw.t() + (p_vec * p_vec.t());
-    arma::rowvec WtXtY = C_row; // same as w.t() * XtY_curr
-    arma::mat XtY_new = XtY_curr - XtXw * C_row - p_vec * WtXtY + (p_vec * C_row);
-    
-    XtX_curr = 0.5 * (XtX_new + XtX_new.t());
-    XtY_curr = XtY_new;
-    ++used;
+    W.col(a) = w;
+    P.col(a) = pvec;
+    Q.col(a) = qload;
+    ++a_used;
   }
   
-  if (used == 0) {
-    return List::create(
-      _["coefficients"] = arma::mat(p, m, arma::fill::zeros),
-      _["intercept"]    = y_mean,
-      _["x_weights"]    = arma::mat(p, 0),
-      _["x_loadings"]   = arma::mat(p, 0),
-      _["y_loadings"]   = arma::mat(m, 0),
-      _["x_means"]      = x_mean,
-      _["y_means"]      = y_mean,
-      _["ncomp"]        = 0
+  if (a_used == 0) {
+    return Rcpp::List::create(
+      Rcpp::Named("coefficients") = R_NilValue,
+      Rcpp::Named("intercept")    = y_mean,
+      Rcpp::Named("x_weights")    = R_NilValue,
+      Rcpp::Named("x_loadings")   = R_NilValue,
+      Rcpp::Named("y_loadings")   = R_NilValue,
+      Rcpp::Named("x_means")      = x_mean,
+      Rcpp::Named("y_means")      = y_mean,
+      Rcpp::Named("ncomp")        = 0
     );
   }
   
-  arma::mat W_sub = W.cols(0, used - 1);
-  arma::mat P_sub = P.cols(0, used - 1);
-  arma::mat Q_sub = Q.cols(0, used - 1);   // m x used
+  arma::mat WU = W.cols(0, a_used-1);
+  arma::mat PU = P.cols(0, a_used-1);
+  arma::mat QU = Q.cols(0, a_used-1);
   
-  arma::mat R = P_sub.t() * W_sub;         // used x used
-  arma::mat coef = W_sub * arma::solve(R, Q_sub.t());   // p x m
-  arma::rowvec intercept = y_mean - (x_mean.t() * coef); // 1 x m
+  // R = P' W  (small a_used x a_used); solve for R^{-1}
+  arma::mat R = PU.t() * WU;
+  arma::mat Rinv;
+  if (!arma::inv(Rinv, R)) {
+    Rcpp::stop("Failed to invert P'W in SIMPLS.");
+  }
+  // beta = W R^{-1} Q'
+  arma::mat coef = WU * Rinv * QU.t();      // p x m
   
-  return List::create(
-    _["coefficients"] = coef,
-    _["intercept"]    = intercept,
-    _["x_weights"]    = W_sub,
-    _["x_loadings"]   = P_sub,
-    _["y_loadings"]   = Q_sub,
-    _["x_means"]      = x_mean,
-    _["y_means"]      = y_mean,
-    _["ncomp"]        = used
+ // Ensure x_mean is a row for (1×p) · (p×m) → (1×m)
+ arma::rowvec xmean_row;
+ {
+   // handle either vec or rowvec inputs safely
+   if (x_mean.n_rows > 1 && x_mean.n_cols == 1) {
+     xmean_row = x_mean.t();              // vec → rowvec
+   } else if (x_mean.n_rows == 1) {
+     xmean_row = arma::rowvec(x_mean);    // already row
+   } else {
+     xmean_row = x_mean.t();              // fallback
+   }
+ }
+  arma::rowvec intercept = y_mean - xmean_row * coef;
+    
+  // intercept = y_mean - x_mean^T * coef
+  // arma::rowvec intercept = y_mean - (x_mean.t().t() * coef); // keep rowvec shape
+    
+  
+  return Rcpp::List::create(
+    Rcpp::Named("coefficients") = coef,
+    Rcpp::Named("intercept")    = intercept,
+    Rcpp::Named("x_weights")    = WU,
+    Rcpp::Named("x_loadings")   = PU,
+    Rcpp::Named("y_loadings")   = QU,
+    Rcpp::Named("x_means")      = x_mean,
+    Rcpp::Named("y_means")      = y_mean,
+    Rcpp::Named("ncomp")        = a_used
   );
 }
 

@@ -13,6 +13,7 @@ LinkingTo:
   BH,
   bigmemory
 Suggests:
+  pls,
   plsRglm,
   testthat (>= 3.0.0),
   bench,

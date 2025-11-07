@@ -281,15 +281,29 @@ SEXP cpp_dense_plsr_nipals(Rcpp::NumericMatrix X,
   arma::mat T_used = T.cols(0, actual_comp - 1);
   arma::vec B_used = B.subvec(0, actual_comp - 1);
 
-  arma::mat PtW = P_used.t() * W_used;
-  arma::mat PtW_inv;
-  bool status = arma::inv(PtW_inv, PtW);
-  if (!status) {
-    Rcpp::stop("Failed to invert P'W matrix in dense NIPALS solver");
-  }
-
-  arma::mat coef_internal = W_used * PtW_inv * arma::diagmat(B_used) * Q_used.t();
-
+  // === Build coefficients via scores ===
+    // C^T = (T^T T)^{-1} T^T Yc, then  Bx = W * (P^T W)^{-1} * C^T
+      // Invert R = P'W
+        arma::mat PtW = P_used.t() * W_used;         // ncomp x ncomp
+        arma::mat Rinv;
+        if (!arma::inv(Rinv, PtW)) {
+          Rcpp::stop("Failed to invert P'W matrix in dense NIPALS solver");
+        }
+      
+        // ---- SIMPLS-parity build via orthogonalized scores ----
+        // T_orth = Xc * W * R^{-1}
+        arma::mat T_orth = Xc * (W_used * Rinv);     // n x ncomp
+      
+        // C^T = (T_orth' T_orth)^{-1} T_orth' Yc   (solve rather than invert)
+        arma::mat ToT = T_orth.t() * T_orth;         // ncomp x ncomp
+        arma::mat ToY = T_orth.t() * Yc;             // ncomp x q
+        arma::mat Ctrans;
+        if (!arma::solve(Ctrans, ToT, ToY)) {
+          Rcpp::stop("Failed to solve (T_orth' T_orth) * C^T = T_orth' Yc");
+        }
+      
+        // β = W * R^{-1} * C^T
+        arma::mat coef_internal = W_used * Rinv * Ctrans;
   arma::rowvec intercept = meanY - meanX * coef_internal;
 
   Rcpp::NumericVector intercept_out(q);

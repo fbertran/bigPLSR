@@ -91,8 +91,8 @@ pls_fit <- function(
       fit$mode <- "pls1"
     } else {
       Y <- as.matrix(yr)
-      x_means <- colMeans(Xr)
-      y_means <- colMeans(Y)
+      x_means <- as.numeric(colMeans(Xr))
+      y_means <- as.numeric(colMeans(Y))
       Xc <- sweep(Xr, 2L, x_means, FUN = "-")
       Yc <- sweep(Y,  2L, y_means, FUN = "-")
       XtX <- crossprod(Xc)
