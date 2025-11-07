@@ -180,9 +180,10 @@ SEXP cpp_dense_plsr_nipals(Rcpp::NumericMatrix X,
     arma::vec w(px, arma::fill::zeros);
     arma::vec t(n, arma::fill::zeros);
     arma::vec c(q, arma::fill::zeros);
+    arma::vec t_prev; // for relative convergence on scores
 
     bool converged = false;
-    for (int iter = 0; iter < 500; ++iter) {
+    for (int iter = 0; iter < 5000; ++iter) {
       double u_norm_sq = arma::dot(u, u);
       if (u_norm_sq <= tol) {
         break;
@@ -195,6 +196,7 @@ SEXP cpp_dense_plsr_nipals(Rcpp::NumericMatrix X,
       }
       w /= w_norm;
 
+      t_prev = t;
       t = Xdef * w;
       double t_norm_sq = arma::dot(t, t);
       if (t_norm_sq <= tol) {
@@ -210,10 +212,14 @@ SEXP cpp_dense_plsr_nipals(Rcpp::NumericMatrix X,
       u_prev = u;
       u = Ydef * c / c_norm_sq;
 
-      if (is_converged(u, u_prev, tol)) {
-        converged = true;
-        break;
+      double rel = 0.0;
+      if (t_prev.n_elem == t.n_elem && t_prev.n_elem > 0) {
+        double denom = std::max(1.0, arma::norm(t_prev, 2));
+        rel = arma::norm(t - t_prev, 2) / denom;
+      } else {
+        rel = arma::norm(t, 2);
       }
+      if (rel <= tol) { converged = true; break; }
     }
 
     if (!converged) {
@@ -229,9 +235,17 @@ SEXP cpp_dense_plsr_nipals(Rcpp::NumericMatrix X,
     }
 
     arma::vec p = Xdef.t() * t / t_norm_sq;
-    arma::vec qvec = c;
-
-    double b = arma::dot(t, u) / t_norm_sq;
+    arma::vec qvec;
+    double b;
+    if (q > 1) {
+      double c_norm = std::sqrt(arma::dot(c, c));
+      if (c_norm <= tol) { break; }
+      qvec = c / c_norm;
+      b    = c_norm;
+    } else {
+      qvec = c;
+      b    = arma::dot(t, u) / t_norm_sq;
+    }
 
     Xdef -= t * p.t();
     Ydef -= b * t * qvec.t();
@@ -410,6 +424,8 @@ Rcpp::List big_plsr_fit_nipals(SEXP X_ptr,
       }
       w /= w_norm;
       
+      arma::vec t_prev;
+      t_prev = t;
       t = Xdef * w;
       double t_norm_sq = arma::dot(t, t);
       if (t_norm_sq <= 1e-20) {
@@ -425,10 +441,14 @@ Rcpp::List big_plsr_fit_nipals(SEXP X_ptr,
       u_prev = u;
       u = Ydef * c / c_norm_sq;
       
-      if (is_converged(u, u_prev, tol)) {
-        converged = true;
-        break;
+      double rel = 0.0;
+      if (t_prev.n_elem == t.n_elem && t_prev.n_elem > 0) {
+        double denom = std::max(1.0, arma::norm(t_prev, 2));
+        rel = arma::norm(t - t_prev, 2) / denom;
+      } else {
+        rel = arma::norm(t, 2);
       }
+      if (rel <= tol) { converged = true; break; }
     }
     
     if (!converged) {
@@ -487,7 +507,8 @@ Rcpp::List big_plsr_fit_nipals(SEXP X_ptr,
     Rcpp::stop("Failed to invert P'W matrix in NIPALS solver");
   }
   
-  arma::mat coef_internal = W_used * PtW_inv * arma::diagmat(B_used) * Q_used.t();
+// coefficients consistent for both PLS1 and PLS2 with b and q defined above
+arma::mat coef_internal = W_used * PtW_inv * arma::diagmat(B_used) * Q_used.t();
   
   if (scale) {
     arma::vec scaleX_vec = scaleX.t();
