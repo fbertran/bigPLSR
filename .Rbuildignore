@@ -57,3 +57,5 @@ genlogo.R
 ^vignettes/inst$
 
 cran_submit_text.txt
+
+^old_src*

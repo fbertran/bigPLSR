@@ -1,0 +1,89 @@
+---
+title: "Streaming Kernel PLS in bigPLSR: XX^T and Column-Chunked Variants"
+shorttitle: "Streaming Kernel PLS in bigPLSR: XX^T and Column-Chunked Variants"
+author:
+- name: "Frédéric Bertrand"
+  affiliation:
+  - Cedric, Cnam, Paris
+  email: frederic.bertrand@lecnam.net
+date: "`r Sys.Date()`"
+output:
+  rmarkdown::html_vignette:
+    toc: true
+vignette: >
+  %\VignetteIndexEntry{Streaming Kernel PLS in bigPLSR: XX^T and Column-Chunked Variants}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+## Overview
+
+This vignette documents bigPLSR's **kernel PLS** streaming backends for
+`bigmemory::big.matrix` inputs. We provide two complementary streaming strategies:
+
+- **Column-chunked Gram** (existing): updates based on per-column blocks to form
+  products involving K = X X^T implicitly.
+- **Row-chunked XX^T** (new): computes a = X^T u by scanning rows in blocks, then
+  emits t = X a, enabling efficient access patterns when n >> p or when the
+  storage layout favors row-contiguous slices (e.g., file-backed subsets).
+
+Both strategies produce the same model up to floating point round-off. Selection is
+automatic (see `?pls_fit`) or can be forced via the option
+`options(bigPLSR.kpls_gram = "rows" | "cols" | "auto")`.
+
+## Math sketch
+
+Let X in R^{n x p}, Y in R^{n x m} be centered.
+
+At component h, kernel-PLS uses the NIPALS-like fixed-point update
+
+1. Start with u in R^n (e.g., a column of Y).
+2. Compute a = X^T u.  
+3. Normalize w = a / ||a||_2.
+4. Scores: t = X w.
+5. Loadings:
+   - p = (X^T t)/(t^T t),
+   - q = (Y^T t)/(t^T t).
+6. Deflate: X <- X - t p^T, Y <- Y - t q^T,
+   and set u <- Y q.
+
+Coefficients after H components are
+
+beta = W (P^T W)^{-1} Q^T,   
+
+yhat = 1 * mu_Y + (x - mu_X) beta.
+
+The **row-chunked** implementation keeps X on disk and performs steps (2) and (4)
+with two passes over row blocks:
+
+- **Pass A (accumulate a)**: for each block B of rows, update a += B^T u_B.
+- **Pass B (emit t)**: for each block B, write t_B = B * a.
+
+Loadings p are accumulated precisely like Pass A but with t instead of u.
+
+## APIs
+
+- C++ entry points (Rcpp):
+  - `cpp_kpls_stream_xxt(X_ptr, Y_ptr, ncomp, chunk_rows, chunk_cols, center, return_big)`
+  - `cpp_kpls_stream_cols(X_ptr, Y_ptr, ncomp, chunk_cols, center, return_big)`
+- R wrapper:
+  - `pls_fit(..., backend = "bigmem", algorithm = "kernelpls", chunk_size, chunk_cols, ...)`
+
+`pls_fit()` chooses the variant via `options(bigPLSR.kpls_gram)` or heuristics when
+`"auto"` is set (the default).
+
+## When to prefer each variant
+
+- **Column-chunked ("cols")**: good default; excellent when p is large and
+  access by columns is cheap (typical bigmemory column-major backing).
+- **Row-chunked XX^T ("rows")**: prefer when n >> p, when row access is
+  contiguous (e.g., file-backed partitions), or when you want to minimize repeated
+  column-touching across iterations.
+
+## References
+
+- Dayal, B., & MacGregor, J.F. (1997). Improved PLS algorithms. *Journal of
+  Chemometrics*, 11(1), 73–85.
+- Rosipal, R., & Trejo, L.J. (2001). Kernel Partial Least Squares Regression
+  in Reproducing Kernel Hilbert Space. *JMLR*, 2, 97–123.
+- (and other kernel/logistic/sparse KPLS references in the `kpls_review` vignette)

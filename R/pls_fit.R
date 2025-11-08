@@ -1,9 +1,14 @@
 #' Unified PLS fit with auto backend and selectable algorithm
 #'
+#' @encoding UTF-8
+#' 
+#' @description
 #' Dispatches to a dense (Arm/BLAS) backend for in-memory matrices
 #' or to a streaming big.matrix backend when X (or Y) is a big.matrix.
 #' Algorithm can be chosen between "simpls" (default), "nipals", "kernelpls"
-#' and "widekernelpls".
+#' and "widekernelpls". The "kernelpls" paths now include a streaming XX'
+#' variant for big.matrix inputs, with an optional row-chunking loop
+#' controlled by \code{chunk_cols}.
 #'
 #' @param X numeric matrix or \code{bigmemory::big.matrix}
 #' @param y numeric vector/matrix or \code{big.matrix}
@@ -14,6 +19,7 @@
 #' @param algorithm one of \code{"auto"}, \code{"simpls"}, \code{"nipals"}
 #' @param scores one of \code{"none"}, \code{"r"}, \code{"big"}
 #' @param chunk_size chunk size for the bigmem backend
+#' @param chunk_cols columns chunk size for the bigmem backend
 #' @param scores_name name for dense scores (or output big.matrix)
 #' @param scores_target one of \code{"auto"}, \code{"new"}, \code{"existing"}
 #' @param scores_bm optional existing big.matrix or descriptor for scores
@@ -41,6 +47,7 @@ pls_fit <- function(
     algorithm = c("auto","simpls","nipals","kernelpls","widekernelpls"),
     scores  = c("none", "r", "big"),
     chunk_size = 10000L,
+    chunk_cols = NULL,
     scores_name = "scores",
     scores_target = c("auto","new","existing"),
     scores_bm = NULL,
@@ -436,39 +443,30 @@ pls_fit <- function(
   
   run_bigmem_kernelpls <- function(kind) {
     if (!inherits(X, "big.matrix")) stop("For backend='bigmem', X must be a big.matrix")
-    Xr <- as.matrix(X[,])
-    yr <- if (inherits(y, "big.matrix")) {
-      if (mode == "pls2" && ncol(y) > 1L) as.matrix(y[, , drop = FALSE]) else as.numeric(y[,1])
+    gram_mode <- getOption("bigPLSR.kpls_gram", "cols")
+    use_rows  <- identical(gram_mode, "rows")
+    if (is.null(chunk_cols)) chunk_cols_loc <- max(1024L, as.integer(0.1 * nrow(X))) else chunk_cols_loc <- as.integer(chunk_cols)
+    if (identical(gram_mode, "auto")) {
+      use_rows <- (nrow(X) > 4L * ncol(X))
+    }
+    if (use_rows) {
+      fit <- .Call(`_bigPLSR_cpp_kpls_stream_xxt`,
+                   X@address, y@address,
+                   as.integer(ncomp), as.integer(chunk_size), as.integer(chunk_cols_loc),
+                   TRUE,
+                   identical(scores, "big"))
     } else {
-      if (mode == "pls2" && is.matrix(y) && ncol(y) > 1L) as.matrix(y) else as.numeric(y)
+      fit <- .Call(`_bigPLSR_cpp_kpls_stream_cols`,
+                   X@address, y@address,
+                   as.integer(ncomp), as.integer(chunk_size),
+                   TRUE,
+                   identical(scores, "big"))
     }
-    Xmat <- as.matrix(Xr)
-    Ymat <- if (is.matrix(yr)) yr else matrix(yr, ncol = 1L)
-    fit <- .Call(`_bigPLSR_cpp_kernel_pls`, Xmat, Ymat, as.integer(ncomp), tol, identical(kind, "wide"))
-    fit$mode <- mode
-    if (identical(scores, "none")) {
-      fit$scores <- NULL
-    } else if (identical(scores, "big") && !is.null(fit$scores)) {
-      Tmat <- fit$scores
-      if (!is.null(scores_bm) && inherits(scores_bm, "big.matrix")) {
-        scores_bm[,] <- Tmat
-        fit$scores <- scores_bm
-      } else if (!is.null(scores_bm) && inherits(scores_bm, "big.matrix.descriptor")) {
-        bm <- bigmemory::attach.big.matrix(scores_bm)
-        bm[,] <- Tmat
-        fit$scores <- bm
-      } else if (!is.null(scores_backingfile)) {
-        bm <- bigmemory::filebacked.big.matrix(
-          nrow = nrow(Tmat), ncol = ncol(Tmat), type = "double",
-          backingfile = scores_backingfile,
-          backingpath = if (is.null(scores_backingpath)) getwd() else scores_backingpath,
-          descriptorfile = if (is.null(scores_descriptorfile)) "scores.desc" else scores_descriptorfile
-        )
-        bm[,] <- Tmat
-        fit$scores <- bm
-      }
+    fit$mode <- if (ncol(fit$coefficients) <= 1L) "pls1" else "pls2"
+    if (identical(scores, "r") && inherits(fit$scores, "big.matrix")) {
+      fit$scores <- as.matrix(fit$scores[])
     }
-    fit <- .finalize_pls_fit(.post_scores(fit), kind)
+    fit <- .finalize_pls_fit(.post_scores(fit), "kernelpls")
     .maybe_threshold(fit)
   }
   

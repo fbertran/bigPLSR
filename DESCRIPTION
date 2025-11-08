@@ -1,5 +1,5 @@
 Package: bigPLSR
-Version: 0.6.6
+Version: 0.6.5
 Date: 2025-11-08
 Depends: R (>= 4.0.0)
 biocViews:
@@ -29,11 +29,24 @@ Authors@R: c(
   email = "myriam.maumy@ehesp.fr", comment = c(ORCID = "0000-0002-4615-1512")))
 Author: Frederic Bertrand [cre, aut] (<https://orcid.org/0000-0002-0837-8281>), Myriam Maumy [aut] (<https://orcid.org/0000-0002-4615-1512>)
 Maintainer: Frederic Bertrand <frederic.bertrand@lecnam.net>
-Description: Provides partial least squares regression and various regular or 
-  sparse techniques for fitting models to big data. Provides a Partial Least 
-  Squares (PLS) regression algorithm that works with bigmemory matrices without 
-  loading the entire dataset in memory. Also implements a gradient-descent based 
-  solver that works directly on 'bigmemory' matrices.
+Description: 
+  Fast partial least squares (PLS) for dense and out-of-core data.
+  Provides SIMPLS and NIPALS solvers, plus kernel-style PLS variants
+  ('kernelpls' and 'widekernelpls') with parity to 'pls'. Optimized for
+  bigmemory-backed matrices with streamed cross-products and chunked BLAS
+  (XtX/XtY and XXt/YX), optional file-backed score sinks, and deterministic
+  testing helpers. Includes an auto-selection strategy that chooses between
+  XtX SIMPLS, XXt (wide) SIMPLS, and NIPALS based on (n, p) and a configurable
+  memory budget. About the package, Bertrand and Maumy (2023) <https://hal.science/hal-05352069>, 
+  and  <https://hal.science/hal-05352061> highlighted fitting and cross-validating 
+  PLS regression models to big data. For more details about some of the techniques 
+  featured in the package, 
+  Dayal and MacGregor (1997) <doi:10.1002/(SICI)1099-128X(199701)11:1<73::AID-CEM435>3.0.CO;2>, 
+  Rosipal & Trejo (2001) <https://www.jmlr.org/papers/v2/rosipal01a.html>,
+  Tenenhaus, Viennet, and Saporta (2007) <doi:10.1016/j.csda.2007.01.004>,
+  Rosipal (2004) <doi:10.1007/978-3-540-45167-9_17>,
+  Rosipal (2019) <https://ieeexplore.ieee.org/document/8616346>,
+  Song, Wang, and Bai (2024) <doi:10.1016/j.chemolab.2024.105238>.
 License: GPL-3
 Encoding: UTF-8
 URL: https://fbertran.github.io/bigPLSR/, https://github.com/fbertran/bigPLSR/

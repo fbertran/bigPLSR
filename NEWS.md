@@ -1,5 +1,12 @@
 # bigPLSR 0.6.5
 
+* Algorithm auto-selection: new internal heuristic chooses among
+  - **XtX SIMPLS** (standard cross-product SIMPLS),
+  - **XXt ("widekernelpls")** for n << p,
+  - **NIPALS** when memory is tight or rank is low.
+  Tuned by `options(bigPLSR.mem_budget_gb = 8)`. Users can override with `algorithm=`.
+* Kernel-style PLS routes: `algorithm = "kernelpls"` and `algorithm = "widekernelpls"`
+  implementing Dayal & MacGregor–style (1997) kernel PLS in X-space and wide-X (XXᵗ) space.
 * Implemented high-performance kernel and wide-kernel PLS algorithms in
   `pls_fit()` for both dense and bigmemory backends using RcppArmadillo.
 * Introduced optional coefficient thresholding.
