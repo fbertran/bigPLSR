@@ -11,11 +11,22 @@
 <url><loc>https://fbertran.github.io/bigPLSR/reference/bigmatrix-operations.html</loc></url>
 <url><loc>https://fbertran.github.io/bigPLSR/reference/bigscale.html</loc></url>
 <url><loc>https://fbertran.github.io/bigPLSR/reference/index.html</loc></url>
+<url><loc>https://fbertran.github.io/bigPLSR/reference/plot_pls_biplot.html</loc></url>
+<url><loc>https://fbertran.github.io/bigPLSR/reference/plot_pls_individuals.html</loc></url>
+<url><loc>https://fbertran.github.io/bigPLSR/reference/plot_pls_variables.html</loc></url>
 <url><loc>https://fbertran.github.io/bigPLSR/reference/pls1_dense.html</loc></url>
 <url><loc>https://fbertran.github.io/bigPLSR/reference/pls1_dense_a.html</loc></url>
 <url><loc>https://fbertran.github.io/bigPLSR/reference/pls1_dense_ya.html</loc></url>
 <url><loc>https://fbertran.github.io/bigPLSR/reference/pls2_dense.html</loc></url>
+<url><loc>https://fbertran.github.io/bigPLSR/reference/pls_bootstrap.html</loc></url>
+<url><loc>https://fbertran.github.io/bigPLSR/reference/pls_cross_validate.html</loc></url>
+<url><loc>https://fbertran.github.io/bigPLSR/reference/pls_cv_select.html</loc></url>
 <url><loc>https://fbertran.github.io/bigPLSR/reference/pls_fit.html</loc></url>
+<url><loc>https://fbertran.github.io/bigPLSR/reference/pls_select_components.html</loc></url>
+<url><loc>https://fbertran.github.io/bigPLSR/reference/pls_threshold.html</loc></url>
+<url><loc>https://fbertran.github.io/bigPLSR/reference/pls_vip.html</loc></url>
+<url><loc>https://fbertran.github.io/bigPLSR/reference/predict.big_plsr.html</loc></url>
 <url><loc>https://fbertran.github.io/bigPLSR/reference/sim_data.html</loc></url>
+<url><loc>https://fbertran.github.io/bigPLSR/reference/summary.big_plsr.html</loc></url>
 </urlset>
 

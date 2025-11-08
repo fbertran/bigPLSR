@@ -1,0 +1,5 @@
+new("big.matrix.descriptor", description = list(sharedType = "FileBacked", 
+    filename = "scores.bin", dirname = "/Users/bertran7/Documents/GitHub/bigPLSR/", 
+    totalRows = 150L, totalCols = 3L, rowOffset = c(0, 150), 
+    colOffset = c(0, 3), nrow = 150, ncol = 3, rowNames = NULL, 
+    colNames = NULL, type = "double", separated = FALSE))

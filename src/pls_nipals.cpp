@@ -41,7 +41,7 @@ inline void ensure_double_matrix(const BigMatrix& mat, const char* name) {
     return u;
   }
   
-  inline bool is_converged(const arma::vec& current, const arma::vec& previous, double tol) {
+[[maybe_unused]]  inline bool is_converged(const arma::vec& current, const arma::vec& previous, double tol) {
     if (previous.n_elem == 0) {
       return false;
     }

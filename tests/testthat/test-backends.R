@@ -9,7 +9,7 @@ test_that("dense and bigmem backends agree on small data", {
   # Create file-backed big.matrix
   bmX <- bigmemory::as.big.matrix(X)
   bmy <- bigmemory::as.big.matrix(matrix(y, n, 1))
-
+  
   fit_big <- pls_fit(bmX, bmy, ncomp = 2, backend = "bigmem", scores = "none")
 
   expect_equal(length(fit_dense$coefficients), p)
@@ -26,8 +26,14 @@ test_that("scores='big' returns a big.matrix of correct dimension", {
 
   bmX <- bigmemory::as.big.matrix(X)
   bmy <- bigmemory::as.big.matrix(matrix(y, n, 1))
-
-  fit <- pls_fit(bmX, bmy, ncomp = 3, backend = "bigmem", scores = "big")
+  
+  tmp <- tempdir()
+  if(file.exists(paste(tmp,"scores.desc",sep="/"))){unlink(paste(tmp,"scores.desc",sep="/"))}
+  if(file.exists(paste(tmp,"scores.bin",sep="/"))){unlink(paste(tmp,"scores.bin",sep="/"))}
+  
+  fit <- pls_fit(bmX, bmy, ncomp = 3, backend = "bigmem", scores = "big", 
+                 scores_backingfile="scores.bin", scores_backingpath=tmp, 
+                 scores_descriptorfile="scores.desc")
   expect_true(inherits(fit$scores, "big.matrix"))
   expect_equal(nrow(fit$scores), n)
   expect_equal(ncol(fit$scores), fit$ncomp)

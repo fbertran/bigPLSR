@@ -3,9 +3,8 @@
 
 
 
-# bigPLSR <img src="man/figures/logo_bigPLSR.svg" align="right" width="200"/>
+# bigPLSR, PLS regression models in R <img src="man/figures/logo_bigPLSR.svg" align="right" width="200"/>
 
-# bigPLSR, PLS regression models in R
 ## Frédéric Bertrand and Myriam Maumy
 
 <!-- badges: start -->

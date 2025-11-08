@@ -142,7 +142,7 @@ SEXP cpp_bigmem_cross(SEXP X_ptrSEXP, SEXP Y_ptrSEXP, std::size_t chunk_size) {
 //   XtX: p x p, symmetric (centered cross-products)
 //   XtY: p x m, centered cross-products
 
-static inline void orthonormal_append(arma::mat& V, const arma::vec& v_new, double tol) {
+[[maybe_unused]] static inline void orthonormal_append(arma::mat& V, const arma::vec& v_new, double tol) {
   arma::vec v = v_new;
   if (V.n_cols > 0) {
     v -= V * (V.t() * v);
@@ -197,7 +197,7 @@ SEXP cpp_simpls_from_cross(const arma::mat& XtX,
     // w = S q ; normalize in X-metric: sqrt(w' XtX w) = 1
     arma::vec w = S * q;                  // p x 1
     double xnorm = std::sqrt( arma::as_scalar(w.t() * XtX * w) );
-    if (!arma::is_finite(xnorm) || xnorm <= tol) {
+    if (!std::isfinite(xnorm) || xnorm <= tol) {
       break;
     }
     w /= xnorm;

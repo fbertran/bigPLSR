@@ -76,62 +76,72 @@ pls_fit <- function(
       yr <- if (inherits(y, "big.matrix")) {
         if (mode == "pls2" && ncol(y) > 1L) as.matrix(y[, , drop = FALSE]) else as.numeric(y[,1])
       } else {
-        as.numeric(y)
+        if (mode == "pls2" && is.matrix(y) && ncol(y) > 1L) as.matrix(y) else as.numeric(y)
       }
     } else {
       Xr <- as.matrix(X)
-      yr <- if (mode == "pls2" && is.matrix(y) && ncol(y) > 1L) y else as.numeric(y)
+      yr <- if (mode == "pls2" && is.matrix(y) && ncol(y) > 1L) as.matrix(y) else as.numeric(y)
     }
     
-    if (mode == "pls1" || (!is.matrix(yr))) {
-      compute_scores <- scores != "none"
-      scores_big <- identical(scores, "big")  # dense path: we copy if "big"
-      fit <- .Call(`_bigPLSR_cpp_dense_pls_fit`, Xr, yr, as.integer(ncomp), tol,
-                   compute_scores, scores_big, as.character(scores_name))
-      fit$mode <- "pls1"
-    } else {
-      Y <- as.matrix(yr)
-      x_means <- as.numeric(colMeans(Xr))
-      y_means <- as.numeric(colMeans(Y))
-      Xc <- sweep(Xr, 2L, x_means, FUN = "-")
-      Yc <- sweep(Y,  2L, y_means, FUN = "-")
-      XtX <- crossprod(Xc)
-      XtY <- crossprod(Xc, Yc)
-      fit <- .Call(`_bigPLSR_cpp_simpls_from_cross`,
-                   XtX, XtY, x_means, y_means, as.integer(ncomp), tol)
-      fit$mode <- "pls2"
-      
-      # Dense scores if requested: T = Xc %*% W
-      if (scores != "none") {
-        Tmat <- Xc %*% fit$x_weights
-        if (identical(scores, "r")) {
-          fit$scores <- Tmat
-        } else {
-          # scores=="big" → use user sink or file-backed
-          if (!is.null(scores_bm) && inherits(scores_bm, "big.matrix")) {
-            scores_bm[,] <- Tmat
-            fit$scores <- scores_bm
-          } else if (!is.null(scores_bm) && inherits(scores_bm, "big.matrix.descriptor")) {
-            bm <- bigmemory::attach.big.matrix(scores_bm)
-            bm[,] <- Tmat
-            fit$scores <- bm
-          } else if (!is.null(scores_backingfile)) {
-            bm <- bigmemory::filebacked.big.matrix(
-              nrow = nrow(Tmat), ncol = ncol(Tmat), type = "double",
-              backingfile = scores_backingfile,
-              backingpath = if (is.null(scores_backingpath)) getwd() else scores_backingpath,
-              descriptorfile = if (is.null(scores_descriptorfile)) "scores.desc" else scores_descriptorfile
-            )
-            bm[,] <- Tmat
-            fit$scores <- bm
-          } else {
-            fit$scores <- Tmat
-          }
-        }
+    ## Always do SIMPLS on cross-products for parity with pls::simpls.fit
+    Y <- if (is.matrix(yr)) yr else matrix(yr, nrow(Xr), 1L)
+    x_means <- colMeans(Xr)
+    y_means <- colMeans(Y)
+    Xc <- sweep(Xr, 2L, x_means, FUN = "-")
+    Yc <- sweep(Y,  2L, y_means, FUN = "-")
+    XtX <- crossprod(Xc)          # p x p
+    XtY <- crossprod(Xc, Yc)      # p x m
+    fit <- .Call(`_bigPLSR_cpp_simpls_from_cross`,
+                 XtX, XtY, x_means, y_means, as.integer(ncomp), tol)
+    fit$mode <- if (ncol(Y) == 1L) "pls1" else "pls2"
+    ## Ensure correct ncomp now (avoid fallback to coef dims later)
+    if (is.null(fit$ncomp) || !is.finite(fit$ncomp) || fit$ncomp <= 0L) {
+      if (!is.null(fit$x_weights)) fit$ncomp <- ncol(fit$x_weights)
+    }
+    
+    ## Default to PLS-style scores: T = Xc %*% W %*% solve(P'W)
+    if (scores != "none") {
+      # internal escape hatch for developers:
+      style <- getOption("bigPLSR.scores_style", "pls")  # "pls" or "raw" (undocumented)
+      if (!is.null(fit$x_weights) && !is.null(fit$x_loadings)) {
+        Rmat <- crossprod(fit$x_loadings, fit$x_weights)      # ncomp x ncomp
+        Rinv <- tryCatch(solve(Rmat), error = function(e) NULL)
       } else {
+        Rinv <- NULL
+      }
+      if (identical(style, "pls") && !is.null(Rinv)) {
+        W_eff <- fit$x_weights %*% Rinv
+      } else {
+        W_eff <- fit$x_weights     # "raw" or fallback
+      }
+      
+      Tmat <- Xc %*% W_eff
+      if (identical(scores, "r")) {
+        fit$scores <- Tmat
+      } else {
+        # scores=="big" → use sink or file-backed
+        if (!is.null(scores_bm) && inherits(scores_bm, "big.matrix")) {
+          scores_bm[,] <- Tmat
+          fit$scores <- scores_bm
+        } else if (!is.null(scores_bm) && inherits(scores_bm, "big.matrix.descriptor")) {
+          bm <- bigmemory::attach.big.matrix(scores_bm)
+          bm[,] <- Tmat
+          fit$scores <- bm
+        } else if (!is.null(scores_backingfile)) {
+          bm <- bigmemory::filebacked.big.matrix(
+            nrow = nrow(Tmat), ncol = ncol(Tmat), type = "double",
+            backingfile = scores_backingfile,
+            backingpath = if (is.null(scores_backingpath)) getwd() else scores_backingpath,
+            descriptorfile = if (is.null(scores_descriptorfile)) "scores.desc" else scores_descriptorfile
+          )
+          bm[,] <- Tmat
+          fit$scores <- bm
+        } else {
+          fit$scores <- Tmat
+        }
+      }} else {
         fit$scores <- NULL
       }
-    }
     .finalize_pls_fit(.post_scores(fit), "simpls")
   }
   
@@ -194,63 +204,55 @@ pls_fit <- function(
     if (!inherits(X, "big.matrix")) stop("For backend='bigmem', X must be a big.matrix")
     if (!inherits(y, "big.matrix")) stop("For backend='bigmem', y must be a big.matrix")
     
-    if (mode == "pls1") {
-      # existing streaming SIMPLS PLS1 path
-      sink_bm <- NULL
-      if (identical(scores, "big") && scores_target == "existing") {
-        if (!is.null(scores_bm) && inherits(scores_bm, "big.matrix")) {
-          sink_bm <- scores_bm
-        } else if (!is.null(scores_bm) && inherits(scores_bm, "big.matrix.descriptor")) {
-          sink_bm <- bigmemory::attach.big.matrix(scores_bm)
-        } else if (!is.null(scores_backingfile)) {
-          sink_bm <- bigmemory::filebacked.big.matrix(
-            nrow = nrow(X), ncol = as.integer(ncomp), type = "double",
-            backingfile = scores_backingfile,
+    ## Unified: always cross-products + SIMPLS (PLS1 or PLS2)
+    cross <- .Call(`_bigPLSR_cpp_bigmem_cross`, X@address, y@address, as.integer(chunk_size))
+    fit <- .Call(`_bigPLSR_cpp_simpls_from_cross`,
+                 cross$XtX, cross$XtY, cross$x_means, cross$y_means,
+                 as.integer(ncomp), tol)
+    fit$mode <- if (ncol(cross$XtY) == 1L) "pls1" else "pls2"
+    ## Ensure correct ncomp now (avoid fallback to coef dims later)
+    if (is.null(fit$ncomp) || !is.finite(fit$ncomp) || fit$ncomp <= 0L) {
+      if (!is.null(fit$x_weights)) fit$ncomp <- ncol(fit$x_weights)
+    }
+    
+    # Prepare PLS-style weights for streaming: W_eff = W %*% solve(P'W)
+    style <- getOption("bigPLSR.scores_style", "pls")  # hidden
+    if (!is.null(fit$x_weights) && !is.null(fit$x_loadings)) {
+      Rmat <- crossprod(fit$x_loadings, fit$x_weights)   # ncomp x ncomp
+      Rinv <- tryCatch(solve(Rmat), error = function(e) NULL)
+    } else {
+      Rinv <- NULL
+    }
+    if (identical(style, "pls") && !is.null(Rinv)) {
+      W_eff <- fit$x_weights %*% Rinv
+    } else {
+      W_eff <- fit$x_weights
+    }
+    
+    # Stream scores if requested: T = (X - mu) %*% W_eff
+    if (identical(scores, "big") || identical(scores, "r")) {
+      local_sink <- NULL
+      if (identical(scores, "big")) {
+        if (is.null(scores_bm)) {
+          local_sink <- bigmemory::filebacked.big.matrix(
+            nrow = nrow(X), ncol = as.integer(fit$ncomp), type = "double",
+            backingfile = if (is.null(scores_backingfile)) "scores.bin" else scores_backingfile,
             backingpath = if (is.null(scores_backingpath)) getwd() else scores_backingpath,
             descriptorfile = if (is.null(scores_descriptorfile)) "scores.desc" else scores_descriptorfile
           )
-        } else {
-          stop("scores_target='existing' requires scores_bm or backingfile/path/descriptorfile")
+        } else if (inherits(scores_bm, "big.matrix")) {
+          local_sink <- scores_bm
+        } else if (inherits(scores_bm, "big.matrix.descriptor")) {
+          local_sink <- bigmemory::attach.big.matrix(scores_bm)
         }
       }
-      
-      fit <- .Call(`_bigPLSR_cpp_big_pls_stream_fit_sink`, X@address, y@address,
-                   if (is.null(sink_bm)) NULL else sink_bm,
-                   as.integer(ncomp), as.integer(chunk_size), tol, identical(scores, "big"))
-      fit$mode <- "pls1"
+      fit$scores <- .Call(`_bigPLSR_cpp_stream_scores_given_W`,
+                          X@address, W_eff, fit$x_means,
+                          as.integer(chunk_size),
+                          if (is.null(local_sink)) NULL else local_sink,
+                          identical(scores, "big"))
     } else {
-      # PLS2: chunked cross-products + SIMPLS
-      cross <- .Call(`_bigPLSR_cpp_bigmem_cross`, X@address, y@address, as.integer(chunk_size))
-      fit <- .Call(`_bigPLSR_cpp_simpls_from_cross`,
-                   cross$XtX, cross$XtY, cross$x_means, cross$y_means,
-                   as.integer(ncomp), tol)
-      fit$mode <- "pls2"
-      
-      # Stream scores if requested (chunked T = (X - mu) %*% W)
-      if (identical(scores, "big") || identical(scores, "r")) {
-        local_sink <- NULL
-        if (identical(scores, "big")) {
-          if (is.null(scores_bm)) {
-            local_sink <- bigmemory::filebacked.big.matrix(
-              nrow = nrow(X), ncol = as.integer(fit$ncomp), type = "double",
-              backingfile = if (is.null(scores_backingfile)) "scores.bin" else scores_backingfile,
-              backingpath = if (is.null(scores_backingpath)) getwd() else scores_backingpath,
-              descriptorfile = if (is.null(scores_descriptorfile)) "scores.desc" else scores_descriptorfile
-            )
-          } else if (inherits(scores_bm, "big.matrix")) {
-            local_sink <- scores_bm
-          } else if (inherits(scores_bm, "big.matrix.descriptor")) {
-            local_sink <- bigmemory::attach.big.matrix(scores_bm)
-          }
-        }
-        fit$scores <- .Call(`_bigPLSR_cpp_stream_scores_given_W`,
-                            X@address, fit$x_weights, fit$x_means,
-                            as.integer(chunk_size),
-                            if (is.null(local_sink)) NULL else local_sink,
-                            identical(scores, "big"))
-      } else {
-        fit$scores <- NULL
-      }
+      fit$scores <- NULL
     }
     .finalize_pls_fit(.post_scores(fit), "simpls")
   }
@@ -349,8 +351,10 @@ pls_fit <- function(
     }
   } else { # bigmem
     if (algo_in == "simpls") {
+      cat("HERE")
       return(run_bigmem_simpls())
     } else if (algo_in == "nipals") {
+      cat("NO HERE")
       return(run_bigmem_nipals())
     } else { # auto
       out <- try(run_bigmem_simpls(), silent = TRUE)
@@ -393,16 +397,21 @@ pls_fit <- function(
   ## ---- Infer ncomp (prefer factor matrices) ----
   ncomp_from <- function(x) if (!is.null(x)) ncol(x) else NULL
   cand_ncomp <- ncomp_from(fit$x_weights) %||%
-    ncomp_from(fit$x_loadings) %||%
-    ncomp_from(fit$y_loadings)
-  
-  if (is.null(fit$ncomp)) {
-    fit$ncomp <- cand_ncomp %||% fit$ncomp
-  } else if (!is.null(cand_ncomp) && is.finite(fit$ncomp) && fit$ncomp != cand_ncomp) {
-    # sync to matrices; silent adjust (or message() if you prefer)
-    fit$ncomp <- cand_ncomp
+                ncomp_from(fit$x_loadings) %||%
+                ncomp_from(fit$y_loadings)
+  if (!is.null(cand_ncomp)) {
+    # always trust factor matrices; override mismatched or missing ncomp
+    if (is.null(fit$ncomp) || !is.finite(fit$ncomp) || fit$ncomp != cand_ncomp) {
+      fit$ncomp <- cand_ncomp
+    }
+  } else if (is.null(fit$ncomp)) {
+    # last resort if nothing else is available
+    if (!is.null(fit$coefficients) && !inherits(fit$coefficients, "big.matrix")) {
+      fit$ncomp <- 1L  # safest conservative default (PLS1 coef has 1 column)
+    } else {
+      fit$ncomp <- 0L
+    }
   }
-  if (is.null(fit$ncomp)) fit$ncomp <- 0L
   
   ## ---- Infer mode (pls1/pls2) if absent ----
   if (is.null(fit$mode)) {

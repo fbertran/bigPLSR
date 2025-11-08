@@ -38,6 +38,9 @@ test_that("file-backed scores sink matches dense scores on small data", {
   bmy <- bigmemory::as.big.matrix(matrix(y, n, 1))
   
   tmp <- tempdir()
+  if(file.exists(paste(tmp,"scores.desc",sep="/"))){unlink(paste(tmp,"scores.desc",sep="/"))}
+  if(file.exists(paste(tmp,"scores.bin",sep="/"))){unlink(paste(tmp,"scores.bin",sep="/"))}
+
   sink_bm <- bigmemory::filebacked.big.matrix(
     nrow = n, ncol = k, type = "double",
     backingfile = "scores.bin", backingpath = tmp,
