@@ -21,7 +21,8 @@ pls_fit(
   scores_backingpath = NULL,
   scores_descriptorfile = NULL,
   scores_colnames = NULL,
-  return_scores_descriptor = FALSE
+  return_scores_descriptor = FALSE,
+  coef_threshold = NULL
 )
 }
 \arguments{
@@ -53,6 +54,11 @@ pls_fit(
 
 \item{return_scores_descriptor}{logical; if TRUE and scores is big.matrix, add \code{$scores_descriptor}}
 
+\item{coef_threshold}{Optional non-negative value used to hard-threshold
+the fitted coefficients after model estimation. When supplied, absolute
+coefficients strictly below the threshold are set to zero via
+\code{\link[=pls_threshold]{pls_threshold()}}.}
+
 \item{scores_backingfile/backingpath/descriptorfile}{file-backed sink args}
 }
 \value{
@@ -64,4 +70,11 @@ Dispatches to a dense (Arm/BLAS) backend for in-memory matrices
 or to a streaming big.matrix backend when X (or Y) is a big.matrix.
 Algorithm can be chosen between "simpls" (default), "nipals", "kernelpls"
 and "widekernelpls".
+}
+\examples{
+set.seed(123)
+X <- matrix(rnorm(60), nrow = 20)
+y <- X[, 1] - 0.5 * X[, 2] + rnorm(20, sd = 0.1)
+fit <- pls_fit(X, y, ncomp = 2, scores = "r", algorithm = "simpls")
+head(pls_predict_response(fit, X, ncomp = 2))
 }

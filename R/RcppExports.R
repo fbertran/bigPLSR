@@ -13,6 +13,19 @@ cpp_dense_pls_fit <- function(X, y, ncomp, tol, compute_scores = FALSE, scores_b
     .Call(`_bigPLSR_cpp_dense_pls_fit`, X, y, ncomp, tol, compute_scores, scores_big, scores_name)
 }
 
+#' Internal kernel and wide-kernel PLS solver
+#'
+#' @param X Centered design matrix.
+#' @param Y Centered response matrix.
+#' @param ncomp Maximum number of components.
+#' @param tol Numerical tolerance.
+#' @param wide Whether to use the wide-kernel update.
+#' @return A list containing the kernel PLS factors.
+#'
+cpp_kernel_pls <- function(X, Y, ncomp, tol, wide) {
+    .Call(`_bigPLSR_cpp_kernel_pls`, X, Y, ncomp, tol, wide)
+}
+
 cpp_big_pls_fit <- function(x_ptr, y_ptr, ncomp, tol, return_big) {
     .Call(`_bigPLSR_cpp_big_pls_fit`, x_ptr, y_ptr, ncomp, tol, return_big)
 }

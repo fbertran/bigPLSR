@@ -19,3 +19,10 @@ Selected number of components.
 \description{
 Select components from cross-validation results
 }
+\examples{
+set.seed(123)
+X <- matrix(rnorm(60), nrow = 20)
+y <- X[, 1] - 0.5 * X[, 2] + rnorm(20, sd = 0.1)
+cv <- pls_cross_validate(X, y, ncomp = 2, folds = 3)
+pls_cv_select(cv, metric = "rmse")
+}

@@ -1,0 +1,135 @@
+---
+title: "Automatic Algorithm Selection in bigPLSR"
+shorttitle: "Automatic Algorithm Selection in bigPLSR"
+author:
+- name: "Frédéric Bertrand"
+  affiliation:
+  - Cedric, Cnam, Paris
+  email: frederic.bertrand@lecnam.net
+date: "`r Sys.Date()`"
+output:
+  rmarkdown::html_vignette:
+    toc: true
+vignette: >
+  %\VignetteIndexEntry{Automatic Algorithm Selection in bigPLSR}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+
+## Overview
+
+`bigPLSR::pls_fit()` can automatically choose an algorithm based on **problem shape**
+and a user-configurable **memory budget**:
+
+- **SIMPLS (XtX route)** when forming the `p × p` cross-product fits in memory.
+- **SIMPLS (XXt / kernel route)** when `XtX` does not fit but `XXt (n × n)` does.
+- **NIPALS (streaming)** when neither `XtX` nor `XXt` comfortably fit.
+
+This selection only applies when `algorithm = "auto"` (the default). Any explicit
+`algorithm =` overrides the decision.
+
+### Why these choices?
+- SIMPLS works entirely from centered cross-products, which is fast and numerically
+  robust when the target cross-product fits (either `p×p` or `n×n`).
+- Using `XtX` is efficient when `p` is moderate; using `XXt` is efficient for "wide"
+  problems (`p ≫ n`) but still bounded by `n^2` memory.
+- NIPALS avoids materializing any large cross-product and can **stream** from
+  `big.memory` with fixed working memory; it is the safe fallback when memory is tight.
+
+## The decision rule
+
+Let the memory budget be `B` bytes (defaults to 8 GB, configurable via
+`options(bigPLSR.mem_budget_gb = ...)`). With doubles (8 bytes), we estimate the
+size of each symmetric matrix as:
+
+- `need_XtX = 8 * p^2`
+- `need_XXt = 8 * n^2`
+
+Then:
+
+```
+if (backend == "arma") {
+  if (need_XtX <= B)       algorithm <- "simpls"         # XtX
+  else if (need_XXt <= B)  algorithm <- "kernelpls"      # XXt (a.k.a. "kernel" route)
+  else                     algorithm <- "nipals"
+} else { # backend == "bigmem"
+  if (need_XtX <= B)       algorithm <- "simpls"         # chunked XtX + SIMPLS
+  else                     algorithm <- "nipals"         # streaming
+}
+```
+
+> Note: a dedicated **XXt** streaming path for the big-matrix backend can be added
+> later; until then, bigmem chooses between XtX+SIMPLS and streaming NIPALS.
+
+## Configuring the memory budget
+
+```r
+# Use 16 GB as selection budget
+options(bigPLSR.mem_budget_gb = 16)
+```
+
+This **does not** change R's actual memory limit; it only controls the selection.
+
+## Reproducibility knobs
+
+For tight numerical parity in tests:
+
+```r
+set.seed(1)
+if (requireNamespace("RhpcBLASctl", quietly = TRUE)) {
+  RhpcBLASctl::blas_set_num_threads(1L)
+  RhpcBLASctl::omp_set_num_threads(1L)
+}
+# otherwise, you can try environment variables:
+# Sys.setenv(OPENBLAS_NUM_THREADS = "1", OMP_NUM_THREADS = "1")
+```
+
+## Examples
+
+```r
+library(bigPLSR)
+
+n <- 2e3; p <- 5e2
+X <- matrix(rnorm(n*p), n, p)
+y <- X[,1] - 0.5*X[,2] + rnorm(n)
+
+# Auto will likely pick SIMPLS (XtX) here
+fit <- pls_fit(X, y, ncomp = 10, algorithm = "auto")
+fit$algorithm  # "simpls"
+```
+
+Wide case:
+
+```r
+n <- 200; p <- 4000
+X <- matrix(rnorm(n*p), n, p)
+y <- rnorm(n)
+
+# If budget is small, auto picks kernel (XXt) or NIPALS
+options(bigPLSR.mem_budget_gb = 2)  # small budget
+fit <- pls_fit(X, y, ncomp = 5, algorithm = "auto")
+fit$algorithm  # "kernelpls" or "nipals" depending on n^2 vs budget
+```
+
+Big-matrix streaming:
+
+```r
+library(bigmemory)
+n <- 1e6; p <- 50
+# (example only; allocate according to your RAM)
+# bmX <- big.matrix(n, p, type = "double")
+# bmy <- big.matrix(n, 1, type = "double")
+# fit <- pls_fit(bmX, bmy, ncomp = 10, backend = "bigmem", algorithm = "auto")
+# fit$algorithm  # "simpls" or "nipals"
+```
+
+## References
+
+- de Jong, S. (1993). **SIMPLS: An alternative approach to partial least squares regression**.
+  *Chemometrics and Intelligent Laboratory Systems*, 18(3), 251–263.
+- Dayal, B., & MacGregor, J. F. (1997). **Improved PLS algorithms**.
+  *Journal of Chemometrics*, 11(1), 73–85.
+- Rosipal, R., & Trejo, L. J. (2001). **Kernel Partial Least Squares Regression in Reproducing Kernel Hilbert Space**.
+  *Journal of Machine Learning Research*, 2, 97–123.
+- Wold, H. (1966, 1985). **NIPALS** algorithm (original PLS formulation).

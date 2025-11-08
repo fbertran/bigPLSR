@@ -65,6 +65,21 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// cpp_kernel_pls
+Rcpp::List cpp_kernel_pls(const arma::mat& X, const arma::mat& Y, int ncomp, double tol, bool wide);
+RcppExport SEXP _bigPLSR_cpp_kernel_pls(SEXP XSEXP, SEXP YSEXP, SEXP ncompSEXP, SEXP tolSEXP, SEXP wideSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type X(XSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type Y(YSEXP);
+    Rcpp::traits::input_parameter< int >::type ncomp(ncompSEXP);
+    Rcpp::traits::input_parameter< double >::type tol(tolSEXP);
+    Rcpp::traits::input_parameter< bool >::type wide(wideSEXP);
+    rcpp_result_gen = Rcpp::wrap(cpp_kernel_pls(X, Y, ncomp, tol, wide));
+    return rcpp_result_gen;
+END_RCPP
+}
 // cpp_big_pls_fit
 SEXP cpp_big_pls_fit(SEXP x_ptr, SEXP y_ptr, int ncomp, double tol, bool return_big);
 RcppExport SEXP _bigPLSR_cpp_big_pls_fit(SEXP x_ptrSEXP, SEXP y_ptrSEXP, SEXP ncompSEXP, SEXP tolSEXP, SEXP return_bigSEXP) {
@@ -282,6 +297,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_bigPLSR_big_pls_fit_cpp", (DL_FUNC) &_bigPLSR_big_pls_fit_cpp, 8},
     {"_bigPLSR_big_pls_stream_cpp", (DL_FUNC) &_bigPLSR_big_pls_stream_cpp, 9},
     {"_bigPLSR_cpp_dense_pls_fit", (DL_FUNC) &_bigPLSR_cpp_dense_pls_fit, 7},
+    {"_bigPLSR_cpp_kernel_pls", (DL_FUNC) &_bigPLSR_cpp_kernel_pls, 5},
     {"_bigPLSR_cpp_big_pls_fit", (DL_FUNC) &_bigPLSR_cpp_big_pls_fit, 5},
     {"_bigPLSR_cpp_big_pls_stream_fit", (DL_FUNC) &_bigPLSR_cpp_big_pls_stream_fit, 6},
     {"_bigPLSR_cpp_bigmem_cross", (DL_FUNC) &_bigPLSR_cpp_bigmem_cross, 3},

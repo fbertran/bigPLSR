@@ -1,3 +1,11 @@
+# bigPLSR 0.6.5
+
+* Implemented high-performance kernel and wide-kernel PLS algorithms in
+  `pls_fit()` for both dense and bigmemory backends using RcppArmadillo.
+* Introduced optional coefficient thresholding.
+* Added fast-running examples to all exported functions to improve documentation
+  usability on CRAN.
+
 # bigPLSR 0.6.4
 
 * Added kernel PLS and wide-kernel PLS algorithms to `pls_fit()` for both dense

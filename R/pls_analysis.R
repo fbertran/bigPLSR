@@ -45,9 +45,15 @@
 #' @param ncomp Number of components to use for prediction.
 #' @param type Either "response" (default) or "scores".
 #' @param ... Unused, for compatibility with the generic.
-#'
+#' 
 #' @return Predicted responses or component scores.
 #' @export
+#' @examples
+#' set.seed(123)
+#' X <- matrix(rnorm(40), nrow = 10)
+#' y <- X[, 1] - 0.5 * X[, 2] + rnorm(10, sd = 0.1)
+#' fit <- pls_fit(X, y, ncomp = 2, scores = "r")
+#' predict(fit, X, ncomp = 2)
 predict.big_plsr <- function(object, newdata, ncomp = NULL, type = c("response", "scores"), ...) {
   type <- match.arg(type)
   if (is.null(newdata)) {
@@ -92,6 +98,12 @@ predict.big_plsr <- function(object, newdata, ncomp = NULL, type = c("response",
 #' @param ncomp Number of components to use.
 #' @return A numeric matrix or vector of predictions.
 #' @export
+#' @examples
+#' set.seed(123)
+#' X <- matrix(rnorm(40), nrow = 10)
+#' y <- X[, 1] - 0.5 * X[, 2] + rnorm(10, sd = 0.1)
+#' fit <- pls_fit(X, y, ncomp = 2, scores = "r")
+#' pls_predict_response(fit, X, ncomp = 2)
 pls_predict_response <- function(object, newdata, ncomp = NULL) {
   predict(object, newdata = newdata, ncomp = ncomp, type = "response")
 }
@@ -101,6 +113,12 @@ pls_predict_response <- function(object, newdata, ncomp = NULL) {
 #' @inheritParams pls_predict_response
 #' @return Matrix of component scores.
 #' @export
+#' @examples
+#' set.seed(123)
+#' X <- matrix(rnorm(40), nrow = 10)
+#' y <- X[, 1] - 0.5 * X[, 2] + rnorm(10, sd = 0.1)
+#' fit <- pls_fit(X, y, ncomp = 2, scores = "r")
+#' pls_predict_scores(fit, X, ncomp = 2)
 pls_predict_scores <- function(object, newdata, ncomp = NULL) {
   predict(object, newdata = newdata, ncomp = ncomp, type = "scores")
 }
@@ -113,6 +131,12 @@ pls_predict_scores <- function(object, newdata, ncomp = NULL) {
 #'
 #' @return A named numeric vector of VIP scores.
 #' @export
+#' @examples
+#' set.seed(123)
+#' X <- matrix(rnorm(40), nrow = 10)
+#' y <- X[, 1] - 0.5 * X[, 2] + rnorm(10, sd = 0.1)
+#' fit <- pls_fit(X, y, ncomp = 2, scores = "r")
+#' pls_vip(fit)
 pls_vip <- function(object, comps = NULL) {
   if (is.null(object$scores)) {
     stop("Scores are required to compute VIP. Refit with scores enabled.", call. = FALSE)
@@ -156,6 +180,12 @@ pls_vip <- function(object, comps = NULL) {
 #' @param palette Colour palette used for bars.
 #' @param ... Additional parameters passed to [graphics::barplot()].
 #' @export
+#' @examples
+#' set.seed(123)
+#' X <- matrix(rnorm(40), nrow = 10)
+#' y <- X[, 1] - 0.5 * X[, 2] + rnorm(10, sd = 0.1)
+#' fit <- pls_fit(X, y, ncomp = 2, scores = "r")
+#' plot_pls_vip(fit)
 plot_pls_vip <- function(object, comps = NULL, threshold = 1, palette = c("#4575b4", "#d73027"), ...) {
   vip <- pls_vip(object, comps = comps)
   pal <- rep_len(palette, length.out = 2L)
@@ -173,9 +203,15 @@ plot_pls_vip <- function(object, comps = NULL, threshold = 1, palette = c("#4575
 #' @param X Optional design matrix to recompute reconstruction metrics.
 #' @param Y Optional response matrix/vector.
 #' @param ... Unused.
-#'
+#' 
 #' @return An object of class `summary.big_plsr`.
 #' @export
+#' @examples
+#' set.seed(123)
+#' X <- matrix(rnorm(40), nrow = 10)
+#' y <- X[, 1] - 0.5 * X[, 2] + rnorm(10, sd = 0.1)
+#' fit <- pls_fit(X, y, ncomp = 2, scores = "r")
+#' summary(fit)
 summary.big_plsr <- function(object, X = NULL, Y = NULL, ...) {
   if (!inherits(object, "big_plsr")) {
     stop("summary.big_plsr() expects an object of class 'big_plsr'", call. = FALSE)
@@ -213,7 +249,15 @@ summary.big_plsr <- function(object, X = NULL, Y = NULL, ...) {
   res
 }
 
+#' @rdname summary.big_plsr
+#' 
 #' @export
+#' @examples
+#' set.seed(123)
+#' X <- matrix(rnorm(40), nrow = 10)
+#' y <- X[, 1] - 0.5 * X[, 2] + rnorm(10, sd = 0.1)
+#' fit <- pls_fit(X, y, ncomp = 2, scores = "r")
+#' print(summary(fit))
 print.summary.big_plsr <- function(x, ...) {
   cat("Partial least squares regression summary\n")
   if (!is.null(x$call)) {
@@ -250,6 +294,12 @@ print.summary.big_plsr <- function(x, ...) {
 #' @param labels Optional character vector of point labels.
 #' @param ... Additional plotting parameters passed to [graphics::plot()].
 #' @export
+#' @examples
+#' set.seed(123)
+#' X <- matrix(rnorm(60), nrow = 20)
+#' y <- X[, 1] - 0.5 * X[, 2] + rnorm(20, sd = 0.1)
+#' fit <- pls_fit(X, y, ncomp = 2, scores = "r")
+#' plot_pls_individuals(fit)
 plot_pls_individuals <- function(object, comps = c(1L, 2L), labels = NULL, ...) {
   if (length(comps) != 2L) {
     stop("`comps` must contain exactly two component indices", call. = FALSE)
@@ -279,6 +329,12 @@ plot_pls_individuals <- function(object, comps = c(1L, 2L), labels = NULL, ...) 
 #' @param arrow_scale Scaling applied to variable vectors.
 #' @param ... Additional plotting parameters passed to [graphics::plot()].
 #' @export
+#' @examples
+#' set.seed(123)
+#' X <- matrix(rnorm(60), nrow = 20)
+#' y <- X[, 1] - 0.5 * X[, 2] + rnorm(20, sd = 0.1)
+#' fit <- pls_fit(X, y, ncomp = 2, scores = "r")
+#' plot_pls_variables(fit)
 plot_pls_variables <- function(object, comps = c(1L, 2L), circle = TRUE,
                                circle_col = "grey80", arrow_col = "steelblue",
                                arrow_scale = 1, ...) {
@@ -323,6 +379,12 @@ plot_pls_variables <- function(object, comps = c(1L, 2L), circle = TRUE,
 #' @param arrow_col Colour for loading arrows.
 #' @param ... Additional arguments passed to [graphics::plot()].
 #' @export
+#' @examples
+#' set.seed(123)
+#' X <- matrix(rnorm(60), nrow = 20)
+#' y <- X[, 1] - 0.5 * X[, 2] + rnorm(20, sd = 0.1)
+#' fit <- pls_fit(X, y, ncomp = 2, scores = "r")
+#' plot_pls_biplot(fit)
 plot_pls_biplot <- function(object, comps = c(1L, 2L), scale_variables = 1,
                             circle = TRUE, circle_col = "grey85",
                             arrow_col = "firebrick", ...) {
@@ -368,6 +430,12 @@ plot_pls_biplot <- function(object, comps = c(1L, 2L), scale_variables = 1,
 #'
 #' @return A data frame with RSS, RMSE, AIC and BIC per component.
 #' @export
+#' @examples
+#' set.seed(123)
+#' X <- matrix(rnorm(60), nrow = 20)
+#' y <- X[, 1] - 0.5 * X[, 2] + rnorm(20, sd = 0.1)
+#' fit <- pls_fit(X, y, ncomp = 2, scores = "r")
+#' pls_information_criteria(fit, X, y)
 pls_information_criteria <- function(object, X, Y, max_comp = NULL) {
   if (is.null(max_comp)) {
     max_comp <- object$ncomp
@@ -397,6 +465,12 @@ pls_information_criteria <- function(object, X, Y, max_comp = NULL) {
 #'
 #' @return A list with the per-component table and the selected components.
 #' @export
+#' @examples
+#' set.seed(123)
+#' X <- matrix(rnorm(60), nrow = 20)
+#' y <- X[, 1] - 0.5 * X[, 2] + rnorm(20, sd = 0.1)
+#' fit <- pls_fit(X, y, ncomp = 2, scores = "r")
+#' pls_select_components(fit, X, y)
 pls_select_components <- function(object, X, Y, criteria = c("aic", "bic"), max_comp = NULL) {
   table <- pls_information_criteria(object, X, Y, max_comp = max_comp)  
   best <- lapply(criteria, function(cri) {
@@ -442,6 +516,11 @@ pls_select_components <- function(object, X, Y, criteria = c("aic", "bic"), max_
 #' @param seed Optional seed for reproducibility.
 #' @return A list containing per-fold metrics and their summary across folds.
 #' @export
+#' @examples
+#' set.seed(123)
+#' X <- matrix(rnorm(60), nrow = 20)
+#' y <- X[, 1] - 0.5 * X[, 2] + rnorm(20, sd = 0.1)
+#' pls_cross_validate(X, y, ncomp = 2, folds = 3)
 pls_cross_validate <- function(X, Y, ncomp, folds = 5L, type = c("kfold", "loo"),
                                algorithm = c("simpls", "nipals", "kernelpls", 
                                              "widekernelpls"), backend = "arma",
@@ -500,6 +579,11 @@ pls_cross_validate <- function(X, Y, ncomp, folds = 5L, type = c("kfold", "loo")
 #' @param seed Optional seed.
 #' @return A list with bootstrap samples and confidence intervals.
 #' @export
+#' @examples
+#' set.seed(123)
+#' X <- matrix(rnorm(60), nrow = 20)
+#' y <- X[, 1] - 0.5 * X[, 2] + rnorm(20, sd = 0.1)
+#' pls_bootstrap(X, y, ncomp = 2, R = 20)
 pls_bootstrap <- function(X, Y, ncomp, R = 100L, algorithm = c("simpls", "nipals", "kernelpls", "widekernelpls"),
                           backend = "arma", conf = 0.95, seed = NULL) {
   algorithm <- match.arg(algorithm)
@@ -535,13 +619,29 @@ pls_bootstrap <- function(X, Y, ncomp, R = 100L, algorithm = c("simpls", "nipals
 #' @param threshold Values below this absolute magnitude are set to zero.
 #' @return A modified copy of `object` with thresholded coefficients.
 #' @export
+#' @examples
+#' set.seed(123)
+#' X <- matrix(rnorm(40), nrow = 10)
+#' y <- X[, 1] - 0.5 * X[, 2] + rnorm(10, sd = 0.1)
+#' fit <- pls_fit(X, y, ncomp = 2)
+#' pls_threshold(fit, threshold = 0.05)
 pls_threshold <- function(object, threshold) {
   if (is.null(object$coefficients)) {
     stop("Object does not contain coefficient estimates", call. = FALSE)
   }
-  coef_mat <- as.matrix(object$coefficients)
-  coef_mat[abs(coef_mat) < threshold] <- 0
-  object$coefficients <- coef_mat
+  if (!is.numeric(threshold) || length(threshold) != 1L || !is.finite(threshold) || threshold < 0) {
+    stop("`threshold` must be a single non-negative numeric value", call. = FALSE)
+  }
+  if (inherits(object$coefficients, "big.matrix")) {
+    coef_mat <- object$coefficients[,]
+    coef_mat[abs(coef_mat) < threshold] <- 0
+    object$coefficients[,] <- coef_mat
+  } else {
+    coef_mat <- as.matrix(object$coefficients)
+    coef_mat[abs(coef_mat) < threshold] <- 0
+    object$coefficients <- coef_mat
+  }
+  object$coef_threshold <- threshold
   object
 }
 
@@ -552,6 +652,12 @@ pls_threshold <- function(object, threshold) {
 #' @param minimise Logical; whether the metric should be minimised.
 #' @return Selected number of components.
 #' @export
+#' @examples
+#' set.seed(123)
+#' X <- matrix(rnorm(60), nrow = 20)
+#' y <- X[, 1] - 0.5 * X[, 2] + rnorm(20, sd = 0.1)
+#' cv <- pls_cross_validate(X, y, ncomp = 2, folds = 3)
+#' pls_cv_select(cv, metric = "rmse")
 pls_cv_select <- function(cv_result, metric = c("rmse", "mae", "r2"), minimise = NULL) {
   metric <- match.arg(metric)
   summary_df <- cv_result$summary

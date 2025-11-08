@@ -23,3 +23,10 @@ Predicted responses or component scores.
 \description{
 Predict method for big_plsr objects
 }
+\examples{
+set.seed(123)
+X <- matrix(rnorm(40), nrow = 10)
+y <- X[, 1] - 0.5 * X[, 2] + rnorm(10, sd = 0.1)
+fit <- pls_fit(X, y, ncomp = 2, scores = "r")
+predict(fit, X, ncomp = 2)
+}

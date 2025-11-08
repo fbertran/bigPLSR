@@ -18,3 +18,10 @@ plot_pls_individuals(object, comps = c(1L, 2L), labels = NULL, ...)
 \description{
 Plot individual scores
 }
+\examples{
+set.seed(123)
+X <- matrix(rnorm(60), nrow = 20)
+y <- X[, 1] - 0.5 * X[, 2] + rnorm(20, sd = 0.1)
+fit <- pls_fit(X, y, ncomp = 2, scores = "r")
+plot_pls_individuals(fit)
+}

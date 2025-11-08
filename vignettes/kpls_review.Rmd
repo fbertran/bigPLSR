@@ -1,0 +1,173 @@
+---
+title: "Kernel & Extended PLS Methods: A Practical Review"
+shorttitle: "Kernel & Extended PLS Methods: A Practical Review"
+author:
+- name: "Frédéric Bertrand"
+  affiliation:
+  - Cedric, Cnam, Paris
+  email: frederic.bertrand@lecnam.net
+date: "`r Sys.Date()`"
+output:
+  rmarkdown::html_vignette:
+    toc: true
+vignette: >
+  %\VignetteIndexEntry{Kernel & Extended PLS Methods: A Practical Review}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+## Scope
+
+This vignette reviews kernel and extended PLS methods and outlines how they map
+to `bigPLSR` APIs (existing and planned). We focus on algorithmic ideas,
+computational trade-offs, and big-data readiness (tall vs. wide matrices).
+
+Covered methods:
+- **Kernel PLS (KPLS)** in RKHS (Rosipal & Trejo, 2001).
+- **Dayal & MacGregor (1997)**: kernel-style PLS updates and improved variants.
+- **Kernel logistic PLS** for binary classification (Bennani & Benabdeslem).
+- **Sparse Kernel PLS** (feature selection in RKHS).
+- **Kernel PLS Regression II** (projecting both X and Y into RKHS).
+- **KF‑PLS**: Kalman-Filter PLS for streaming, time-varying systems.
+
+> Status in `bigPLSR` (dense):
+> - `algorithm="kernelpls"` and `"widekernelpls"` (XXt/XtX choices) are available
+>   for regression. Logistic, sparse and KF variants are on the roadmap.
+> - For big-matrix backends, a streaming KPLS path is planned; currently, the
+>   streaming option is NIPALS; SIMPLS uses chunked cross-products.
+
+## Notation
+
+Let `X ∈ ℝ^{n×p}` and responses `Y ∈ ℝ^{n×m}` (with `m=1` for PLS1). Centered
+variables are `Xc`, `Yc`. Scores `T ∈ ℝ^{n×a}`, X-loadings `P ∈ ℝ^{p×a}`,
+Y-loadings `Q ∈ ℝ^{m×a}`, weights `W ∈ ℝ^{p×a}`, components `a = 1…A`.
+
+## 1. Kernel PLS in RKHS (Rosipal & Trejo, 2001)
+
+**Idea.** Map inputs via a feature map φ into RKHS `ℋ` with kernel
+`K(i,j) = ⟨φ(x_i), φ(x_j)⟩`. Perform PLS using **only** Gram matrices (dual
+representation), avoiding explicit φ. Centering is done in feature space
+(`K̃ = H K H`, with `H = I - 1/n 11ᵀ`).
+
+**Algorithm sketch (regression):**
+1. Build centered Gram matrix `K̃` and response `Yc`.
+2. At step `h`, compute a score vector `t_h ∝ K̃ u_{h-1}` with an appropriate
+   projection from `Yc` (several equivalent formulations exist; e.g. SIMPLS-like
+   or NIPALS-like in dual form).
+3. Orthogonalize/deflate `K̃` (and optionally `Yc`) in the span of previous
+   components.
+4. After `A` steps, recover dual weights and primal coefficients (if needed) via
+   pre-images or in the original input space using representer expansions.
+
+**When to prefer.** Very wide `p` (or infinite-dimensional) with moderate `n`.
+Memory bound is `O(n^2)` due to the Gram matrix.
+
+**Reference.** Rosipal, R., & Trejo, L. J. (2001).
+*Kernel Partial Least Squares Regression in Reproducing Kernel Hilbert Space.*
+JMLR 2:97–123.
+
+## 2. Improved/Kernel PLS updates (Dayal & MacGregor, 1997)
+
+Dayal & MacGregor present efficient variants of PLS, including **kernel
+formulations** that replace `XᵀX` factorizations with XXᵀ-based updates and
+orthogonalization tricks. These stabilize and speed up PLS, especially when
+`n < p`. In practice, you can view **"kernelpls"** (XXt) and **"widekernelpls"**
+(XᵀX) as pragmatic choices depending on which cross-product fits into memory.
+
+**Reference.** Dayal, B., & MacGregor, J. F. (1997). *Improved PLS algorithms.*
+J. Chemometrics, 11(1), 73–85.
+
+## 3. Kernel Logistic PLS (binary classification)
+
+**Goal.** Combine supervised dimensionality reduction (PLS in RKHS) with a
+**logistic link**. A practical approach is to embed PLS in an **IRLS** loop:
+- At each IRLS step (weighted least squares), compute KPLS scores using the
+  current working response.
+- Update the coefficients in the latent space; iterate to convergence.
+
+**Use cases.** Nonlinear decision boundaries with small–moderate `n` and
+wide/infinite `p` (e.g., text, spectra, kernels over sequences).
+
+**Reference.** *Kernel logistic PLS: a tool for supervised nonlinear dimensionality
+reduction and binary classification.* HAL: hal-00152898.
+
+## 4. Sparse Kernel PLS
+
+**Idea.** Impose sparsity either on **primal** weights (if a finite feature map
+is used) or, more commonly, on the **dual** representation (coefficients on
+training points). Penalties: ℓ₁ (lasso), elastic-net, or group structures across
+components to stabilize selection.
+
+**Benefits.** Interpretability, feature selection, and better generalization in
+high dimensions.
+
+**Reference.** *Sparse Kernel Partial Least Squares Regression.* In **LNCS 2904**
+(2003): 434–449 (Springer chapter).
+
+## 5. KPLS with both X and Y in RKHS
+
+**Idea.** Project **both** predictors and responses into RKHS and perform PLS
+in the product space (or using two kernels `Kx`, `Ky`). This can capture
+nonlinearities on both sides (multi-output or structured responses).
+
+**Reference.** *Kernel PLS Regression II: Kernel Partial Least Squares Regression
+by Projecting Both Independent and Dependent Variables into RKHS.* IEEE (2019).
+
+## 6. KF‑PLS (Kalman-Filter PLS)
+
+**Goal.** Online/streaming PLS with **time-varying** dynamics. The state-space
+model tracks latent scores/loadings; the **Kalman filter** provides recursive
+updates as new rows arrive and can adapt to drift.
+
+**When to use.** Industrial monitoring, sensors, or any data stream with
+nonstationarity.
+
+**Reference.** KF‑PLS (2024), *Chemometrics and Intelligent Laboratory Systems*
+(Elsevier) — see “A Kalman Filter based partial least squares…”.
+
+## Complexity & Memory (rule of thumb)
+
+| Method            | Memory key      | Good for              | Notes |
+|-------------------|-----------------|-----------------------|-------|
+| SIMPLS (XtX)      | `O(p^2)`        | tall/moderate `p`     | Stable via cross-products |
+| SIMPLS (XXt)      | `O(n^2)`        | wide/moderate `n`     | “kernel” route without nonlinear kernel |
+| Kernel PLS        | `O(n^2)`        | nonlinear, wide data  | Needs Gram matrix + centering |
+| Sparse KPLS       | `O(n^2)` (+pen) | interpretability      | Optimization adds cost |
+| Kernel logistic   | `O(n^2)`        | classification        | IRLS outer loop |
+| KF‑PLS            | `O(p a + a^2)`  | streaming/drift       | a = #components |
+
+## Mapping to `bigPLSR`
+
+**Dense backend (current):**
+```r
+pls_fit(X, Y, ncomp, algorithm = "simpls")        # XtX cross-products
+pls_fit(X, Y, ncomp, algorithm = "kernelpls")     # XXt (wide) route
+pls_fit(X, Y, ncomp, algorithm = "nipals")        # iterative, no big cross-prod
+```
+
+**Big-matrix backend (current):**
+- `algorithm="simpls"` → chunked cross-products + SIMPLS.
+- `algorithm="nipals"` → streaming (fixed memory).
+
+**Planned:**
+- `kernelpls` with streaming Gram blocks.
+- logistic KPLS (IRLS wrapper).
+- sparse KPLS penalties.
+- KF‑PLS online updates.
+
+## Practical tips
+
+- Start with `algorithm="auto"` and set `options(bigPLSR.mem_budget_gb=...)`.
+- For very wide data, try `"kernelpls"`; for tight RAM, use `"nipals"`.
+- In classification, begin with a standard pipeline (PLS → GLM) then consider
+  **kernel logistic PLS** when nonlinearity matters.
+- For drift/streams, consider KF‑PLS once available.
+
+## References
+
+- Dayal, B., & MacGregor, J. F. (1997). *Improved PLS algorithms.* **J. Chemometrics**, 11(1), 73–85.
+- Rosipal, R., & Trejo, L. J. (2001). *Kernel Partial Least Squares Regression in Reproducing Kernel Hilbert Space.* **JMLR**, 2, 97–123.
+- **Kernel logistic PLS**: HAL preprint hal-00152898.
+- *Sparse Kernel Partial Least Squares Regression.* In **LNCS 2904** (Springer), 2003.
+- *Kernel PLS Regression II…* **IEEE**, 2019.
+- **KF‑PLS** (2024): *Chemometrics and Intelligent Laboratory Systems* (Elsevier).

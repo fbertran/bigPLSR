@@ -17,3 +17,10 @@ A modified copy of \code{object} with thresholded coefficients.
 \description{
 Naive sparsity control by coefficient thresholding
 }
+\examples{
+set.seed(123)
+X <- matrix(rnorm(40), nrow = 10)
+y <- X[, 1] - 0.5 * X[, 2] + rnorm(10, sd = 0.1)
+fit <- pls_fit(X, y, ncomp = 2)
+pls_threshold(fit, threshold = 0.05)
+}

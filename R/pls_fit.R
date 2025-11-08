@@ -20,9 +20,19 @@
 #' @param scores_backingfile/backingpath/descriptorfile file-backed sink args
 #' @param scores_colnames optional character vector for score column names
 #' @param return_scores_descriptor logical; if TRUE and scores is big.matrix, add \code{$scores_descriptor}
+#' @param coef_threshold Optional non-negative value used to hard-threshold
+#'   the fitted coefficients after model estimation. When supplied, absolute
+#'   coefficients strictly below the threshold are set to zero via
+#'   [pls_threshold()].
 #' @return a list with coefficients, intercept, weights, loadings, means,
 #'   and optionally \code{$scores}.
 #' @export
+#' @examples
+#' set.seed(123)
+#' X <- matrix(rnorm(60), nrow = 20)
+#' y <- X[, 1] - 0.5 * X[, 2] + rnorm(20, sd = 0.1)
+#' fit <- pls_fit(X, y, ncomp = 2, scores = "r", algorithm = "simpls")
+#' head(pls_predict_response(fit, X, ncomp = 2))
 pls_fit <- function(
     X, y, ncomp,
     tol = 1e-8,
@@ -38,13 +48,46 @@ pls_fit <- function(
     scores_backingpath = NULL,
     scores_descriptorfile = NULL,
     scores_colnames = NULL,
-    return_scores_descriptor = FALSE
+    return_scores_descriptor = FALSE,
+    coef_threshold = NULL
 ) {
   backend   <- match.arg(backend)
   mode      <- match.arg(mode)
   scores    <- match.arg(scores)
   algo_in   <- match.arg(algorithm)
   scores_target <- match.arg(scores_target)
+  if (!is.null(coef_threshold)) {
+    if (!is.numeric(coef_threshold) || length(coef_threshold) != 1L || !is.finite(coef_threshold) || coef_threshold < 0) {
+      stop("`coef_threshold` must be a single non-negative numeric value", call. = FALSE)
+    }
+  }
+  
+  # -------------------- Auto-selection helper --------------------
+  .mem_bytes <- function() {
+    gb <- getOption("bigPLSR.mem_budget_gb", 8)
+    as.numeric(gb) * (1024^3)
+  }
+  .dims_of <- function(X) {
+    if (inherits(X, "big.matrix")) c(nrow(X), ncol(X)) else c(NROW(X), NCOL(X))
+  }
+  .choose_algorithm_auto <- function(backend, X, y, ncomp) {
+    dims <- .dims_of(X); n <- as.integer(dims[1]); p <- as.integer(dims[2])
+    B <- .mem_bytes()
+    need_XtX <- 8 * as.double(p) * as.double(p)      # bytes for p x p
+    need_XXt <- 8 * as.double(n) * as.double(n)      # bytes for n x n
+    if (backend == "arma") {
+      if (need_XtX <= B) return("simpls")
+      if (need_XXt <= B) return("kernelpls")   # XXt route (a.k.a. "kernel" in this code path)
+      return("nipals")
+    } else {
+      # bigmem backend currently supports: chunked XtX+SIMPLS or streaming NIPALS
+      if (need_XtX <= B) return("simpls") else return("nipals")
+    }
+  }
+  # If user asked for auto, pick algorithm now; explicit user choice always wins
+  if (identical(algo_in, "auto")) {
+    algo_in <- .choose_algorithm_auto(backend, X, y, ncomp)
+  }
   
   is_big <- inherits(X, "big.matrix") || inherits(X, "big.matrix.descriptor")
   y_ncol <- if (is.matrix(y)) ncol(y) else if (inherits(y, "big.matrix")) ncol(y) else 1L
@@ -70,127 +113,11 @@ pls_fit <- function(
     fit
   }
   
-  .kernel_pls_core <- function(X, Y, ncomp, tol, type = c("kernel", "wide")) {
-    type <- match.arg(type)
-    X <- as.matrix(X)
-    Y <- if (is.vector(Y)) matrix(Y, ncol = 1L) else as.matrix(Y)
-    n <- nrow(X)
-    p <- ncol(X)
-    m <- ncol(Y)
-    if (n == 0L || p == 0L || m == 0L) {
-      stop("Invalid data dimensions for kernel PLS", call. = FALSE)
+  .maybe_threshold <- function(fit) {
+    if (is.null(coef_threshold)) {
+      return(fit)
     }
-    X_means <- colMeans(X)
-    Y_means <- colMeans(Y)
-    Xc <- sweep(X, 2L, X_means, FUN = "-")
-    Yc <- sweep(Y, 2L, Y_means, FUN = "-")
-    max_comp <- min(ncomp, n, p)
-    if (max_comp <= 0L) {
-      return(list(
-        coefficients = matrix(0, nrow = p, ncol = m),
-        intercept = Y_means,
-        x_weights = NULL,
-        x_loadings = NULL,
-        y_loadings = NULL,
-        scores = NULL,
-        x_means = X_means,
-        y_means = Y_means,
-        ncomp = 0L
-      ))
-    }
-    W <- matrix(0, nrow = p, ncol = max_comp)
-    P <- matrix(0, nrow = p, ncol = max_comp)
-    Q <- matrix(0, nrow = m, ncol = max_comp)
-    Tmat <- matrix(0, nrow = n, ncol = max_comp)
-    X_res <- Xc
-    Y_res <- Yc
-    actual <- 0L
-    for (h in seq_len(max_comp)) {
-      if (ncol(Y_res) == 0L) break
-      u <- Y_res[, 1]
-      if (!any(is.finite(u))) break
-      if (all(abs(u) <= tol)) {
-        u <- stats::rnorm(length(u))
-      }
-      for (iter in seq_len(50L)) {
-        if (type == "kernel") {
-          t_vec <- X_res %*% (t(X_res) %*% u)
-        } else {
-          t_vec <- X_res %*% (crossprod(X_res, u))
-        }
-        t_norm <- sqrt(sum(t_vec^2))
-        if (!is.finite(t_norm) || t_norm <= tol) break
-        t_vec <- t_vec / t_norm
-        c_vec <- crossprod(Y_res, t_vec)
-        if (all(abs(c_vec) <= tol)) break
-        u_new <- Y_res %*% c_vec
-        u_norm <- sqrt(sum(u_new^2))
-        if (!is.finite(u_norm) || u_norm <= tol) break
-        u_new <- u_new / u_norm
-        if (sqrt(sum((u_new - u)^2)) <= tol) {
-          u <- u_new
-          break
-        }
-        u <- u_new
-      }
-      if (type == "kernel") {
-        t_vec <- X_res %*% (t(X_res) %*% u)
-      } else {
-        t_vec <- X_res %*% (crossprod(X_res, u))
-      }
-      t_norm <- sqrt(sum(t_vec^2))
-      if (!is.finite(t_norm) || t_norm <= tol) break
-      t_vec <- t_vec / t_norm
-      denom <- drop(crossprod(t_vec))
-      if (!is.finite(denom) || denom <= tol) break
-      p_vec <- crossprod(X_res, t_vec) / denom
-      q_vec <- crossprod(Y_res, t_vec) / denom
-      w_vec <- crossprod(Xc, t_vec)
-      w_norm <- sqrt(sum(w_vec^2))
-      if (is.finite(w_norm) && w_norm > tol) {
-        w_vec <- w_vec / w_norm
-      }
-      X_res <- X_res - t_vec %*% t(p_vec)
-      Y_res <- Y_res - t_vec %*% t(q_vec)
-      actual <- actual + 1L
-      W[, actual] <- w_vec
-      P[, actual] <- p_vec
-      Q[, actual] <- q_vec
-      Tmat[, actual] <- t_vec
-      if (ncol(X_res) == 0L || nrow(X_res) == 0L) break
-    }
-    if (actual == 0L) {
-      return(list(
-        coefficients = matrix(0, nrow = p, ncol = m),
-        intercept = Y_means,
-        x_weights = NULL,
-        x_loadings = NULL,
-        y_loadings = NULL,
-        scores = NULL,
-        x_means = X_means,
-        y_means = Y_means,
-        ncomp = 0L
-      ))
-    }
-    W <- W[, seq_len(actual), drop = FALSE]
-    P <- P[, seq_len(actual), drop = FALSE]
-    Q <- Q[, seq_len(actual), drop = FALSE]
-    Tmat <- Tmat[, seq_len(actual), drop = FALSE]
-    Rmat <- crossprod(P, W)
-    Rinv <- tryCatch(solve(Rmat), error = function(e) NULL)
-    beta <- if (is.null(Rinv)) matrix(0, nrow = p, ncol = m) else W %*% Rinv %*% t(Q)
-    intercept <- drop(Y_means - X_means %*% beta)
-    list(
-      coefficients = beta,
-      intercept = intercept,
-      x_weights = W,
-      x_loadings = P,
-      y_loadings = Q,
-      scores = Tmat,
-      x_means = X_means,
-      y_means = Y_means,
-      ncomp = actual
-    )
+    pls_threshold(fit, coef_threshold)
   }
   
   # ---- DENSE BACKEND --------------------------------------------------------
@@ -266,7 +193,8 @@ pls_fit <- function(
       }} else {
         fit$scores <- NULL
       }
-    .finalize_pls_fit(.post_scores(fit), "simpls")
+    fit <- .finalize_pls_fit(.post_scores(fit), "simpls")
+    .maybe_threshold(fit)
   }
   
   run_dense_nipals <- function() {
@@ -320,7 +248,7 @@ pls_fit <- function(
     if (isTRUE(return_scores_descriptor) && inherits(fit$scores, "big.matrix")) {
       fit$scores_descriptor <- bigmemory::describe(fit$scores)
     }
-    fit
+    .maybe_threshold(fit)
   }
   
   run_dense_kernelpls <- function(kind) {
@@ -335,7 +263,9 @@ pls_fit <- function(
       Xr <- as.matrix(X)
       yr <- if (mode == "pls2" && is.matrix(y) && ncol(y) > 1L) as.matrix(y) else as.numeric(y)
     }
-    fit <- .kernel_pls_core(Xr, yr, ncomp, tol, type = kind)
+    Xmat <- as.matrix(Xr)
+    Ymat <- if (is.matrix(yr)) yr else matrix(yr, ncol = 1L)
+    fit <- .Call(`_bigPLSR_cpp_kernel_pls`, Xmat, Ymat, as.integer(ncomp), tol, identical(kind, "wide"))
     fit$mode <- mode
     if (identical(scores, "none")) {
       fit$scores <- NULL
@@ -359,7 +289,8 @@ pls_fit <- function(
         fit$scores <- bm
       }
     }
-    .finalize_pls_fit(.post_scores(fit), kind)
+    fit <- .finalize_pls_fit(.post_scores(fit), kind)
+    .maybe_threshold(fit)
   }
   
   # ---- BIGMEM BACKEND -------------------------------------------------------
@@ -417,7 +348,8 @@ pls_fit <- function(
     } else {
       fit$scores <- NULL
     }
-    .finalize_pls_fit(.post_scores(fit), "simpls")
+    fit <- .finalize_pls_fit(.post_scores(fit), "simpls")
+    .maybe_threshold(fit)
   }
   
   run_bigmem_nipals <- function() {
@@ -498,7 +430,8 @@ pls_fit <- function(
       }
     }
     
-    .finalize_pls_fit(.post_scores(fit), "nipals")
+    fit <- .finalize_pls_fit(.post_scores(fit), "nipals")
+    .maybe_threshold(fit)
   }
   
   run_bigmem_kernelpls <- function(kind) {
@@ -509,7 +442,9 @@ pls_fit <- function(
     } else {
       if (mode == "pls2" && is.matrix(y) && ncol(y) > 1L) as.matrix(y) else as.numeric(y)
     }
-    fit <- .kernel_pls_core(Xr, yr, ncomp, tol, type = kind)
+    Xmat <- as.matrix(Xr)
+    Ymat <- if (is.matrix(yr)) yr else matrix(yr, ncol = 1L)
+    fit <- .Call(`_bigPLSR_cpp_kernel_pls`, Xmat, Ymat, as.integer(ncomp), tol, identical(kind, "wide"))
     fit$mode <- mode
     if (identical(scores, "none")) {
       fit$scores <- NULL
@@ -533,7 +468,8 @@ pls_fit <- function(
         fit$scores <- bm
       }
     }
-    .finalize_pls_fit(.post_scores(fit), kind)
+    fit <- .finalize_pls_fit(.post_scores(fit), kind)
+    .maybe_threshold(fit)
   }
   
   # ---- Dispatch on algorithm -------------------------------------------------

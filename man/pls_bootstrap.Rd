@@ -39,3 +39,9 @@ A list with bootstrap samples and confidence intervals.
 \description{
 Bootstrap confidence intervals for coefficients
 }
+\examples{
+set.seed(123)
+X <- matrix(rnorm(60), nrow = 20)
+y <- X[, 1] - 0.5 * X[, 2] + rnorm(20, sd = 0.1)
+pls_bootstrap(X, y, ncomp = 2, R = 20)
+}
