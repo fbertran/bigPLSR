@@ -1,5 +1,5 @@
 Package: bigPLSR
-Version: 0.6.5
+Version: 0.6.6
 Date: 2025-11-08
 Depends: R (>= 4.0.0)
 biocViews:
@@ -56,3 +56,4 @@ Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
 Config/testthat/edition: 3
 SystemRequirements: C++17
+NeedsCompilation: yes

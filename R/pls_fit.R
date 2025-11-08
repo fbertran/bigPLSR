@@ -5,8 +5,12 @@
 #' @description
 #' Dispatches to a dense (Arm/BLAS) backend for in-memory matrices
 #' or to a streaming big.matrix backend when X (or Y) is a big.matrix.
-#' Algorithm can be chosen between "simpls" (default), "nipals", "kernelpls"
-#' and "widekernelpls". The "kernelpls" paths now include a streaming XX'
+#' Algorithm can be chosen between:
+#' "simpls" (default), "nipals", "kernelpls", "widekernelpls",
+#' "rkhs" (Rosipal & Trejo), "klogitpls", "sparse_kpls",
+#' "rkhs_xy" (double RKHS), and "kf_pls" (Kalman-filter PLS, streaming).
+#' 
+#' The "kernelpls" paths now include a streaming XX'
 #' variant for big.matrix inputs, with an optional row-chunking loop
 #' controlled by \code{chunk_cols}.
 #'
@@ -16,7 +20,10 @@
 #' @param tol numeric tolerance used in the core solver
 #' @param backend one of \code{"auto"}, \code{"arma"}, \code{"bigmem"}
 #' @param mode one of \code{"auto"}, \code{"pls1"}, \code{"pls2"}
-#' @param algorithm one of \code{"auto"}, \code{"simpls"}, \code{"nipals"}
+#' @param algorithm one of \code{"auto"}, \code{"simpls"}, \code{"nipals"},
+#'   \code{"kernelpls"}, \code{"widekernelpls"},
+#'   \code{"rkhs"}, \code{"klogitpls"}, \code{"sparse_kpls"},
+#'   \code{"rkhs_xy"}, \code{"kf_pls"}
 #' @param scores one of \code{"none"}, \code{"r"}, \code{"big"}
 #' @param chunk_size chunk size for the bigmem backend
 #' @param chunk_cols columns chunk size for the bigmem backend
@@ -30,6 +37,13 @@
 #'   the fitted coefficients after model estimation. When supplied, absolute
 #'   coefficients strictly below the threshold are set to zero via
 #'   [pls_threshold()].
+#' @param kernel kernel name for RKHS/KPLS (\code{"linear"}, \code{"rbf"}, \code{"poly"}, \code{"sigmoid"})
+#' @param gamma RBF/sigmoid/poly scale parameter
+#' @param degree polynomial degree
+#' @param coef0 polynomial/sigmoid bias
+#' @param approx kernel approximation: \code{"none"}, \code{"nystrom"}, \code{"rff"}
+#' @param approx_rank rank (columns / features) for the approximation
+#' @param class_weights optional numeric weights for classes in \code{klogitpls}
 #' @return a list with coefficients, intercept, weights, loadings, means,
 #'   and optionally \code{$scores}.
 #' @export
@@ -44,7 +58,9 @@ pls_fit <- function(
     tol = 1e-8,
     backend = c("auto", "arma", "bigmem"),
     mode    = c("auto","pls1","pls2"),
-    algorithm = c("auto","simpls","nipals","kernelpls","widekernelpls"),
+    algorithm = c("auto","simpls","nipals",
+                  "kernelpls","widekernelpls",
+                  "rkhs","klogitpls","sparse_kpls","rkhs_xy","kf_pls"),
     scores  = c("none", "r", "big"),
     chunk_size = 10000L,
     chunk_cols = NULL,
@@ -56,13 +72,22 @@ pls_fit <- function(
     scores_descriptorfile = NULL,
     scores_colnames = NULL,
     return_scores_descriptor = FALSE,
-    coef_threshold = NULL
+    coef_threshold = NULL,
+    kernel = c("linear","rbf","poly","sigmoid"),
+    gamma = 1.0,
+    degree = 3L,
+    coef0 = 0.0,
+    approx = c("none","nystrom","rff"),
+    approx_rank = NULL,
+    class_weights = NULL    
 ) {
   backend   <- match.arg(backend)
   mode      <- match.arg(mode)
   scores    <- match.arg(scores)
   algo_in   <- match.arg(algorithm)
   scores_target <- match.arg(scores_target)
+  kernel    <- match.arg(kernel)
+  approx    <- match.arg(approx)
   if (!is.null(coef_threshold)) {
     if (!is.numeric(coef_threshold) || length(coef_threshold) != 1L || !is.finite(coef_threshold) || coef_threshold < 0) {
       stop("`coef_threshold` must be a single non-negative numeric value", call. = FALSE)
@@ -77,20 +102,27 @@ pls_fit <- function(
   .dims_of <- function(X) {
     if (inherits(X, "big.matrix")) c(nrow(X), ncol(X)) else c(NROW(X), NCOL(X))
   }
+  
   .choose_algorithm_auto <- function(backend, X, y, ncomp) {
+    is_big_local <- inherits(X, "big.matrix") || inherits(X, "big.matrix.descriptor")
     dims <- .dims_of(X); n <- as.integer(dims[1]); p <- as.integer(dims[2])
-    B <- .mem_bytes()
-    need_XtX <- 8 * as.double(p) * as.double(p)      # bytes for p x p
-    need_XXt <- 8 * as.double(n) * as.double(n)      # bytes for n x n
-    if (backend == "arma") {
-      if (need_XtX <= B) return("simpls")
-      if (need_XXt <= B) return("kernelpls")   # XXt route (a.k.a. "kernel" in this code path)
-      return("nipals")
+    M <- .mem_bytes()
+    bytes <- 8
+    need_XtX <- bytes * as.double(p) * as.double(p)      # bytes for p x p
+    need_XXt <- bytes * as.double(n) * as.double(n)      # bytes for n x n
+    can_XtX  <- need_XtX <= M
+    can_XXt  <- need_XXt <= M
+    shape_XtX <- (p <= 4L * n)
+    shape_XXt <- (n <= 4L * p)
+    if (can_XtX && shape_XtX) {
+      algo_in <- "simpls"
+    } else if (can_XXt && shape_XXt) {
+      algo_in <- "widekernelpls"
     } else {
-      # bigmem backend currently supports: chunked XtX+SIMPLS or streaming NIPALS
-      if (need_XtX <= B) return("simpls") else return("nipals")
+      algo_in <- "nipals"
     }
   }
+  
   # If user asked for auto, pick algorithm now; explicit user choice always wins
   if (identical(algo_in, "auto")) {
     algo_in <- .choose_algorithm_auto(backend, X, y, ncomp)
@@ -126,6 +158,10 @@ pls_fit <- function(
     }
     pls_threshold(fit, coef_threshold)
   }
+  
+  # ---- RKHS / kernel helpers (dense or bigmem will pass what they need) ----
+  .rkhs_args <- list(kernel = kernel, gamma = gamma, degree = degree,
+                     coef0 = coef0, approx = approx, approx_rank = approx_rank)
   
   # ---- DENSE BACKEND --------------------------------------------------------
   run_dense_simpls <- function() {
@@ -300,6 +336,60 @@ pls_fit <- function(
     .maybe_threshold(fit)
   }
   
+  run_dense_rkhs <- function() {
+    # Dense: build centered K, call dual RKHS-PLS core
+    Xr <- if (is_big) as.matrix(X[]) else as.matrix(X)
+    Yr <- if (inherits(y, "big.matrix")) as.matrix(y[, , drop = FALSE]) else as.matrix(y)
+    # kernel + approx handled inside C++
+    fit <- .Call(`_bigPLSR_cpp_kpls_rkhs_dense`,
+                 Xr, Yr, as.integer(ncomp), as.numeric(tol),
+                 kernel, as.numeric(gamma), as.integer(degree), as.numeric(coef0),
+                 approx, if (is.null(approx_rank)) -1L else as.integer(approx_rank),
+                 scores != "none")
+    fit$mode <- if (ncol(Yr) == 1L) "pls1" else "pls2"
+    # big scores sink if requested
+    if (identical(scores, "big") && !is.null(fit$scores)) {
+      Tmat <- as.matrix(fit$scores)
+      if (inherits(scores_bm, "big.matrix")) {
+        scores_bm[,] <- Tmat; fit$scores <- scores_bm
+      } else if (inherits(scores_bm, "big.matrix.descriptor")) {
+        bm <- bigmemory::attach.big.matrix(scores_bm); bm[,] <- Tmat; fit$scores <- bm
+      }
+    } else if (identical(scores, "none")) fit$scores <- NULL
+    .finalize_pls_fit(.post_scores(fit), "rkhs")
+  }
+  
+  run_dense_klogitpls <- function() {
+    Xr <- if (is_big) as.matrix(X[]) else as.matrix(X)
+    yr <- if (inherits(y, "big.matrix")) as.numeric(y[,1]) else as.numeric(y)
+    cw <- if (is.null(class_weights)) numeric() else as.numeric(class_weights)
+    fit <- .Call(`_bigPLSR_cpp_klogit_pls_dense`,
+                 Xr, yr, as.integer(ncomp), as.numeric(tol),
+                 kernel, as.numeric(gamma), as.integer(degree), as.numeric(coef0),
+                 cw)
+    fit$mode <- "pls1"
+    .finalize_pls_fit(.post_scores(fit), "klogitpls")
+  }
+  
+  run_dense_sparse_kpls <- function() {
+    Xr <- if (is_big) as.matrix(X[]) else as.matrix(X)
+    Yr <- if (inherits(y, "big.matrix")) as.matrix(y[, , drop = FALSE]) else as.matrix(y)
+    fit <- .Call(`_bigPLSR_cpp_sparse_kpls_dense`,
+                 Xr, Yr, as.integer(ncomp), as.numeric(tol))
+    fit$mode <- if (ncol(Yr) == 1L) "pls1" else "pls2"
+    .finalize_pls_fit(.post_scores(fit), "sparse_kpls")
+  }
+  
+  run_dense_rkhs_xy <- function() {
+    Xr <- if (is_big) as.matrix(X[]) else as.matrix(X)
+    Yr <- if (inherits(y, "big.matrix")) as.matrix(y[, , drop = FALSE]) else as.matrix(y)
+    fit <- .Call(`_bigPLSR_cpp_rkhs_xy_dense`,
+                 Xr, Yr, as.integer(ncomp), as.numeric(tol),
+                 kernel, as.numeric(gamma), as.integer(degree), as.numeric(coef0))
+    fit$mode <- if (ncol(Yr) == 1L) "pls1" else "pls2"
+    .finalize_pls_fit(.post_scores(fit), "rkhs_xy")
+  }
+  
   # ---- BIGMEM BACKEND -------------------------------------------------------
   run_bigmem_simpls <- function() {
     if (!inherits(X, "big.matrix")) stop("For backend='bigmem', X must be a big.matrix")
@@ -470,6 +560,45 @@ pls_fit <- function(
     .maybe_threshold(fit)
   }
   
+  run_bigmem_rkhs <- function() {
+    if (!inherits(X, "big.matrix") || !inherits(y, "big.matrix"))
+      stop("For backend='bigmem' and algorithm='rkhs', both X and y must be big.matrix")
+    fit <- .Call(`_bigPLSR_cpp_kpls_rkhs_bigmem`,
+                 X@address, y@address,
+                 as.integer(ncomp), as.integer(chunk_size), as.numeric(tol),
+                 kernel, as.numeric(gamma), as.integer(degree), as.numeric(coef0),
+                 approx, if (is.null(approx_rank)) -1L else as.integer(approx_rank),
+                 scores != "none")
+    # bigmem: scores returned as big or dense depending on request inside C++
+    .finalize_pls_fit(.post_scores(fit), "rkhs")
+  }
+  
+  run_bigmem_klogitpls <- function() {
+    if (!inherits(X, "big.matrix")) stop("X must be big.matrix for bigmem klogitpls")
+    yv <- if (inherits(y, "big.matrix")) as.numeric(y[,1]) else as.numeric(y)
+    cw <- if (is.null(class_weights)) numeric() else as.numeric(class_weights)
+    fit <- .Call(`_bigPLSR_cpp_klogit_pls_bigmem`,
+                 X@address, yv,
+                 as.integer(ncomp), as.integer(chunk_size), as.numeric(tol),
+                 kernel, as.numeric(gamma), as.integer(degree), as.numeric(coef0),
+                 cw)
+    .finalize_pls_fit(.post_scores(fit), "klogitpls")
+  }
+  
+  run_bigmem_kf_pls <- function() {
+    if (!inherits(X, "big.matrix") || !inherits(y, "big.matrix"))
+      stop("For backend='bigmem' and algorithm='kf_pls', both X and y must be big.matrix")
+    fit <- .Call(`_bigPLSR_cpp_kf_pls_stream`,
+                 X@address, y@address,
+                 as.integer(ncomp), as.integer(chunk_size), as.numeric(tol))
+    .finalize_pls_fit(.post_scores(fit), "kf_pls")
+  }
+  
+  run_bigmem_kernelpls <- function(kind) {
+    # Keep legacy kernelpls wiring via dense helper on pulled blocks for now
+    return(run_dense_kernelpls(kind))
+  }
+  
   # ---- Dispatch on algorithm -------------------------------------------------
   if (backend == "arma") {
     if (algo_in == "simpls") {
@@ -480,6 +609,14 @@ pls_fit <- function(
       return(run_dense_kernelpls("kernel"))
     } else if (algo_in == "widekernelpls") {
       return(run_dense_kernelpls("wide"))
+    } else if (algo_in == "rkhs") {
+      return(run_dense_rkhs())
+    } else if (algo_in == "klogitpls") {
+      return(run_dense_klogitpls())
+    } else if (algo_in == "sparse_kpls") {
+      return(run_dense_sparse_kpls())
+    } else if (algo_in == "rkhs_xy") {
+      return(run_dense_rkhs_xy())
     } else { # auto
       out <- try(run_dense_simpls(), silent = TRUE)
       if (inherits(out, "try-error")) {
@@ -500,6 +637,12 @@ pls_fit <- function(
       return(run_bigmem_kernelpls("kernel"))
     } else if (algo_in == "widekernelpls") {
       return(run_bigmem_kernelpls("wide"))
+    } else if (algo_in == "rkhs") {
+      return(run_bigmem_rkhs())
+    } else if (algo_in == "klogitpls") {
+      return(run_bigmem_klogitpls())
+    } else if (algo_in == "kf_pls") {
+      return(run_bigmem_kf_pls())
     } else { # auto
       out <- try(run_bigmem_simpls(), silent = TRUE)
       if (inherits(out, "try-error")) {

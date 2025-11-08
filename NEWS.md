@@ -1,3 +1,7 @@
+# bigPLSR 0.6.6
+* Vignettes: *Kernel and Streaming PLS Methods*, *Automatic Algorithm Selection*.
+* Stub C++ entry points for RKHS / kernel logistic / sparse KPLS / KF-PLS.
+
 # bigPLSR 0.6.5
 
 * Algorithm auto-selection: new internal heuristic chooses among

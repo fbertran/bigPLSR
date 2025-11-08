@@ -14,12 +14,52 @@ cpp_kernel_pls <- function(X, Y, ncomp, tol, wide) {
     .Call(`_bigPLSR_cpp_kernel_pls`, X, Y, ncomp, tol, wide)
 }
 
+cpp_kf_pls_stream <- function(X_ptr, Y_ptr, ncomp, chunk, tol) {
+    .Call(`_bigPLSR_cpp_kf_pls_stream`, X_ptr, Y_ptr, ncomp, chunk, tol)
+}
+
+cpp_rkhs_xy_dense <- function(X, Y, ncomp, tol, kernel, gamma, degree, coef0) {
+    .Call(`_bigPLSR_cpp_rkhs_xy_dense`, X, Y, ncomp, tol, kernel, gamma, degree, coef0)
+}
+
+cpp_klogit_pls_fit <- function(X, y, ncomp, tol = 1e-6, maxit = 25L) {
+    .Call(`_bigPLSR_cpp_klogit_pls_fit`, X, y, ncomp, tol, maxit)
+}
+
+cpp_klogit_pls_dense <- function(X, y, ncomp, tol, kernel, gamma, degree, coef0, class_weights) {
+    .Call(`_bigPLSR_cpp_klogit_pls_dense`, X, y, ncomp, tol, kernel, gamma, degree, coef0, class_weights)
+}
+
+cpp_klogit_pls_bigmem <- function(X_ptr, y, ncomp, chunk, tol, kernel, gamma, degree, coef0, class_weights) {
+    .Call(`_bigPLSR_cpp_klogit_pls_bigmem`, X_ptr, y, ncomp, chunk, tol, kernel, gamma, degree, coef0, class_weights)
+}
+
+cpp_kpls_rkhs_dense <- function(X, Y, ncomp, tol, kernel, gamma, degree, coef0, approx, approx_rank, return_scores) {
+    .Call(`_bigPLSR_cpp_kpls_rkhs_dense`, X, Y, ncomp, tol, kernel, gamma, degree, coef0, approx, approx_rank, return_scores)
+}
+
+cpp_kpls_rkhs_bigmem <- function(X_ptr, Y_ptr, ncomp, chunk, tol, kernel, gamma, degree, coef0, approx, approx_rank, return_scores) {
+    .Call(`_bigPLSR_cpp_kpls_rkhs_bigmem`, X_ptr, Y_ptr, ncomp, chunk, tol, kernel, gamma, degree, coef0, approx, approx_rank, return_scores)
+}
+
+cpp_sparse_kpls_dense <- function(X, Y, ncomp, tol) {
+    .Call(`_bigPLSR_cpp_sparse_kpls_dense`, X, Y, ncomp, tol)
+}
+
 cpp_kpls_stream_cols <- function(X_ptr, Y_ptr, ncomp, chunk_cols, center, return_big) {
     .Call(`_bigPLSR_cpp_kpls_stream_cols`, X_ptr, Y_ptr, ncomp, chunk_cols, center, return_big)
 }
 
 cpp_kpls_stream_xxt <- function(X_ptr, Y_ptr, ncomp, chunk_rows, chunk_cols, center, return_big) {
     .Call(`_bigPLSR_cpp_kpls_stream_xxt`, X_ptr, Y_ptr, ncomp, chunk_rows, chunk_cols, center, return_big)
+}
+
+cpp_kpls_from_gram <- function(K, Y, ncomp, tol = 1e-8, compute_scores = FALSE) {
+    .Call(`_bigPLSR_cpp_kpls_from_gram`, K, Y, ncomp, tol, compute_scores)
+}
+
+cpp_kernel_gram_block <- function(X_ptr, rows_i, rows_j, kernel = "linear", gamma = 1.0, coef0 = 0.0, degree = 2.0) {
+    .Call(`_bigPLSR_cpp_kernel_gram_block`, X_ptr, rows_i, rows_j, kernel, gamma, coef0, degree)
 }
 
 cpp_bigmem_cross <- function(X_ptrSEXP, Y_ptrSEXP, chunk_size) {

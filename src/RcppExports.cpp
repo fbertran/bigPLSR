@@ -26,6 +26,150 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// cpp_kf_pls_stream
+SEXP cpp_kf_pls_stream(SEXP X_ptr, SEXP Y_ptr, int ncomp, int chunk, double tol);
+RcppExport SEXP _bigPLSR_cpp_kf_pls_stream(SEXP X_ptrSEXP, SEXP Y_ptrSEXP, SEXP ncompSEXP, SEXP chunkSEXP, SEXP tolSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type X_ptr(X_ptrSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type Y_ptr(Y_ptrSEXP);
+    Rcpp::traits::input_parameter< int >::type ncomp(ncompSEXP);
+    Rcpp::traits::input_parameter< int >::type chunk(chunkSEXP);
+    Rcpp::traits::input_parameter< double >::type tol(tolSEXP);
+    rcpp_result_gen = Rcpp::wrap(cpp_kf_pls_stream(X_ptr, Y_ptr, ncomp, chunk, tol));
+    return rcpp_result_gen;
+END_RCPP
+}
+// cpp_rkhs_xy_dense
+SEXP cpp_rkhs_xy_dense(const arma::mat& X, const arma::mat& Y, int ncomp, double tol, std::string kernel, double gamma, int degree, double coef0);
+RcppExport SEXP _bigPLSR_cpp_rkhs_xy_dense(SEXP XSEXP, SEXP YSEXP, SEXP ncompSEXP, SEXP tolSEXP, SEXP kernelSEXP, SEXP gammaSEXP, SEXP degreeSEXP, SEXP coef0SEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type X(XSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type Y(YSEXP);
+    Rcpp::traits::input_parameter< int >::type ncomp(ncompSEXP);
+    Rcpp::traits::input_parameter< double >::type tol(tolSEXP);
+    Rcpp::traits::input_parameter< std::string >::type kernel(kernelSEXP);
+    Rcpp::traits::input_parameter< double >::type gamma(gammaSEXP);
+    Rcpp::traits::input_parameter< int >::type degree(degreeSEXP);
+    Rcpp::traits::input_parameter< double >::type coef0(coef0SEXP);
+    rcpp_result_gen = Rcpp::wrap(cpp_rkhs_xy_dense(X, Y, ncomp, tol, kernel, gamma, degree, coef0));
+    return rcpp_result_gen;
+END_RCPP
+}
+// cpp_klogit_pls_fit
+SEXP cpp_klogit_pls_fit(const arma::mat& X, const arma::vec& y, int ncomp, double tol, int maxit);
+RcppExport SEXP _bigPLSR_cpp_klogit_pls_fit(SEXP XSEXP, SEXP ySEXP, SEXP ncompSEXP, SEXP tolSEXP, SEXP maxitSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type X(XSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type y(ySEXP);
+    Rcpp::traits::input_parameter< int >::type ncomp(ncompSEXP);
+    Rcpp::traits::input_parameter< double >::type tol(tolSEXP);
+    Rcpp::traits::input_parameter< int >::type maxit(maxitSEXP);
+    rcpp_result_gen = Rcpp::wrap(cpp_klogit_pls_fit(X, y, ncomp, tol, maxit));
+    return rcpp_result_gen;
+END_RCPP
+}
+// cpp_klogit_pls_dense
+SEXP cpp_klogit_pls_dense(const arma::mat& X, const arma::vec& y, int ncomp, double tol, std::string kernel, double gamma, int degree, double coef0, arma::vec class_weights);
+RcppExport SEXP _bigPLSR_cpp_klogit_pls_dense(SEXP XSEXP, SEXP ySEXP, SEXP ncompSEXP, SEXP tolSEXP, SEXP kernelSEXP, SEXP gammaSEXP, SEXP degreeSEXP, SEXP coef0SEXP, SEXP class_weightsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type X(XSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type y(ySEXP);
+    Rcpp::traits::input_parameter< int >::type ncomp(ncompSEXP);
+    Rcpp::traits::input_parameter< double >::type tol(tolSEXP);
+    Rcpp::traits::input_parameter< std::string >::type kernel(kernelSEXP);
+    Rcpp::traits::input_parameter< double >::type gamma(gammaSEXP);
+    Rcpp::traits::input_parameter< int >::type degree(degreeSEXP);
+    Rcpp::traits::input_parameter< double >::type coef0(coef0SEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type class_weights(class_weightsSEXP);
+    rcpp_result_gen = Rcpp::wrap(cpp_klogit_pls_dense(X, y, ncomp, tol, kernel, gamma, degree, coef0, class_weights));
+    return rcpp_result_gen;
+END_RCPP
+}
+// cpp_klogit_pls_bigmem
+SEXP cpp_klogit_pls_bigmem(SEXP X_ptr, arma::vec y, int ncomp, int chunk, double tol, std::string kernel, double gamma, int degree, double coef0, arma::vec class_weights);
+RcppExport SEXP _bigPLSR_cpp_klogit_pls_bigmem(SEXP X_ptrSEXP, SEXP ySEXP, SEXP ncompSEXP, SEXP chunkSEXP, SEXP tolSEXP, SEXP kernelSEXP, SEXP gammaSEXP, SEXP degreeSEXP, SEXP coef0SEXP, SEXP class_weightsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type X_ptr(X_ptrSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type y(ySEXP);
+    Rcpp::traits::input_parameter< int >::type ncomp(ncompSEXP);
+    Rcpp::traits::input_parameter< int >::type chunk(chunkSEXP);
+    Rcpp::traits::input_parameter< double >::type tol(tolSEXP);
+    Rcpp::traits::input_parameter< std::string >::type kernel(kernelSEXP);
+    Rcpp::traits::input_parameter< double >::type gamma(gammaSEXP);
+    Rcpp::traits::input_parameter< int >::type degree(degreeSEXP);
+    Rcpp::traits::input_parameter< double >::type coef0(coef0SEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type class_weights(class_weightsSEXP);
+    rcpp_result_gen = Rcpp::wrap(cpp_klogit_pls_bigmem(X_ptr, y, ncomp, chunk, tol, kernel, gamma, degree, coef0, class_weights));
+    return rcpp_result_gen;
+END_RCPP
+}
+// cpp_kpls_rkhs_dense
+SEXP cpp_kpls_rkhs_dense(const arma::mat& X, const arma::mat& Y, int ncomp, double tol, std::string kernel, double gamma, int degree, double coef0, std::string approx, int approx_rank, bool return_scores);
+RcppExport SEXP _bigPLSR_cpp_kpls_rkhs_dense(SEXP XSEXP, SEXP YSEXP, SEXP ncompSEXP, SEXP tolSEXP, SEXP kernelSEXP, SEXP gammaSEXP, SEXP degreeSEXP, SEXP coef0SEXP, SEXP approxSEXP, SEXP approx_rankSEXP, SEXP return_scoresSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type X(XSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type Y(YSEXP);
+    Rcpp::traits::input_parameter< int >::type ncomp(ncompSEXP);
+    Rcpp::traits::input_parameter< double >::type tol(tolSEXP);
+    Rcpp::traits::input_parameter< std::string >::type kernel(kernelSEXP);
+    Rcpp::traits::input_parameter< double >::type gamma(gammaSEXP);
+    Rcpp::traits::input_parameter< int >::type degree(degreeSEXP);
+    Rcpp::traits::input_parameter< double >::type coef0(coef0SEXP);
+    Rcpp::traits::input_parameter< std::string >::type approx(approxSEXP);
+    Rcpp::traits::input_parameter< int >::type approx_rank(approx_rankSEXP);
+    Rcpp::traits::input_parameter< bool >::type return_scores(return_scoresSEXP);
+    rcpp_result_gen = Rcpp::wrap(cpp_kpls_rkhs_dense(X, Y, ncomp, tol, kernel, gamma, degree, coef0, approx, approx_rank, return_scores));
+    return rcpp_result_gen;
+END_RCPP
+}
+// cpp_kpls_rkhs_bigmem
+SEXP cpp_kpls_rkhs_bigmem(SEXP X_ptr, SEXP Y_ptr, int ncomp, int chunk, double tol, std::string kernel, double gamma, int degree, double coef0, std::string approx, int approx_rank, bool return_scores);
+RcppExport SEXP _bigPLSR_cpp_kpls_rkhs_bigmem(SEXP X_ptrSEXP, SEXP Y_ptrSEXP, SEXP ncompSEXP, SEXP chunkSEXP, SEXP tolSEXP, SEXP kernelSEXP, SEXP gammaSEXP, SEXP degreeSEXP, SEXP coef0SEXP, SEXP approxSEXP, SEXP approx_rankSEXP, SEXP return_scoresSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type X_ptr(X_ptrSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type Y_ptr(Y_ptrSEXP);
+    Rcpp::traits::input_parameter< int >::type ncomp(ncompSEXP);
+    Rcpp::traits::input_parameter< int >::type chunk(chunkSEXP);
+    Rcpp::traits::input_parameter< double >::type tol(tolSEXP);
+    Rcpp::traits::input_parameter< std::string >::type kernel(kernelSEXP);
+    Rcpp::traits::input_parameter< double >::type gamma(gammaSEXP);
+    Rcpp::traits::input_parameter< int >::type degree(degreeSEXP);
+    Rcpp::traits::input_parameter< double >::type coef0(coef0SEXP);
+    Rcpp::traits::input_parameter< std::string >::type approx(approxSEXP);
+    Rcpp::traits::input_parameter< int >::type approx_rank(approx_rankSEXP);
+    Rcpp::traits::input_parameter< bool >::type return_scores(return_scoresSEXP);
+    rcpp_result_gen = Rcpp::wrap(cpp_kpls_rkhs_bigmem(X_ptr, Y_ptr, ncomp, chunk, tol, kernel, gamma, degree, coef0, approx, approx_rank, return_scores));
+    return rcpp_result_gen;
+END_RCPP
+}
+// cpp_sparse_kpls_dense
+SEXP cpp_sparse_kpls_dense(const arma::mat& X, const arma::mat& Y, int ncomp, double tol);
+RcppExport SEXP _bigPLSR_cpp_sparse_kpls_dense(SEXP XSEXP, SEXP YSEXP, SEXP ncompSEXP, SEXP tolSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type X(XSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type Y(YSEXP);
+    Rcpp::traits::input_parameter< int >::type ncomp(ncompSEXP);
+    Rcpp::traits::input_parameter< double >::type tol(tolSEXP);
+    rcpp_result_gen = Rcpp::wrap(cpp_sparse_kpls_dense(X, Y, ncomp, tol));
+    return rcpp_result_gen;
+END_RCPP
+}
 // cpp_kpls_stream_cols
 Rcpp::List cpp_kpls_stream_cols(SEXP X_ptr, SEXP Y_ptr, int ncomp, int chunk_cols, bool center, bool return_big);
 RcppExport SEXP _bigPLSR_cpp_kpls_stream_cols(SEXP X_ptrSEXP, SEXP Y_ptrSEXP, SEXP ncompSEXP, SEXP chunk_colsSEXP, SEXP centerSEXP, SEXP return_bigSEXP) {
@@ -56,6 +200,38 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< bool >::type center(centerSEXP);
     Rcpp::traits::input_parameter< bool >::type return_big(return_bigSEXP);
     rcpp_result_gen = Rcpp::wrap(cpp_kpls_stream_xxt(X_ptr, Y_ptr, ncomp, chunk_rows, chunk_cols, center, return_big));
+    return rcpp_result_gen;
+END_RCPP
+}
+// cpp_kpls_from_gram
+SEXP cpp_kpls_from_gram(const arma::mat& K, const arma::mat& Y, int ncomp, double tol, bool compute_scores);
+RcppExport SEXP _bigPLSR_cpp_kpls_from_gram(SEXP KSEXP, SEXP YSEXP, SEXP ncompSEXP, SEXP tolSEXP, SEXP compute_scoresSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type K(KSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type Y(YSEXP);
+    Rcpp::traits::input_parameter< int >::type ncomp(ncompSEXP);
+    Rcpp::traits::input_parameter< double >::type tol(tolSEXP);
+    Rcpp::traits::input_parameter< bool >::type compute_scores(compute_scoresSEXP);
+    rcpp_result_gen = Rcpp::wrap(cpp_kpls_from_gram(K, Y, ncomp, tol, compute_scores));
+    return rcpp_result_gen;
+END_RCPP
+}
+// cpp_kernel_gram_block
+SEXP cpp_kernel_gram_block(SEXP X_ptr, IntegerVector rows_i, IntegerVector rows_j, std::string kernel, double gamma, double coef0, double degree);
+RcppExport SEXP _bigPLSR_cpp_kernel_gram_block(SEXP X_ptrSEXP, SEXP rows_iSEXP, SEXP rows_jSEXP, SEXP kernelSEXP, SEXP gammaSEXP, SEXP coef0SEXP, SEXP degreeSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type X_ptr(X_ptrSEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type rows_i(rows_iSEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type rows_j(rows_jSEXP);
+    Rcpp::traits::input_parameter< std::string >::type kernel(kernelSEXP);
+    Rcpp::traits::input_parameter< double >::type gamma(gammaSEXP);
+    Rcpp::traits::input_parameter< double >::type coef0(coef0SEXP);
+    Rcpp::traits::input_parameter< double >::type degree(degreeSEXP);
+    rcpp_result_gen = Rcpp::wrap(cpp_kernel_gram_block(X_ptr, rows_i, rows_j, kernel, gamma, coef0, degree));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -210,8 +386,18 @@ END_RCPP
 
 static const R_CallMethodDef CallEntries[] = {
     {"_bigPLSR_cpp_kernel_pls", (DL_FUNC) &_bigPLSR_cpp_kernel_pls, 5},
+    {"_bigPLSR_cpp_kf_pls_stream", (DL_FUNC) &_bigPLSR_cpp_kf_pls_stream, 5},
+    {"_bigPLSR_cpp_rkhs_xy_dense", (DL_FUNC) &_bigPLSR_cpp_rkhs_xy_dense, 8},
+    {"_bigPLSR_cpp_klogit_pls_fit", (DL_FUNC) &_bigPLSR_cpp_klogit_pls_fit, 5},
+    {"_bigPLSR_cpp_klogit_pls_dense", (DL_FUNC) &_bigPLSR_cpp_klogit_pls_dense, 9},
+    {"_bigPLSR_cpp_klogit_pls_bigmem", (DL_FUNC) &_bigPLSR_cpp_klogit_pls_bigmem, 10},
+    {"_bigPLSR_cpp_kpls_rkhs_dense", (DL_FUNC) &_bigPLSR_cpp_kpls_rkhs_dense, 11},
+    {"_bigPLSR_cpp_kpls_rkhs_bigmem", (DL_FUNC) &_bigPLSR_cpp_kpls_rkhs_bigmem, 12},
+    {"_bigPLSR_cpp_sparse_kpls_dense", (DL_FUNC) &_bigPLSR_cpp_sparse_kpls_dense, 4},
     {"_bigPLSR_cpp_kpls_stream_cols", (DL_FUNC) &_bigPLSR_cpp_kpls_stream_cols, 6},
     {"_bigPLSR_cpp_kpls_stream_xxt", (DL_FUNC) &_bigPLSR_cpp_kpls_stream_xxt, 7},
+    {"_bigPLSR_cpp_kpls_from_gram", (DL_FUNC) &_bigPLSR_cpp_kpls_from_gram, 5},
+    {"_bigPLSR_cpp_kernel_gram_block", (DL_FUNC) &_bigPLSR_cpp_kernel_gram_block, 7},
     {"_bigPLSR_cpp_bigmem_cross", (DL_FUNC) &_bigPLSR_cpp_bigmem_cross, 3},
     {"_bigPLSR_cpp_simpls_from_cross", (DL_FUNC) &_bigPLSR_cpp_simpls_from_cross, 6},
     {"_bigPLSR_cpp_stream_scores_given_W", (DL_FUNC) &_bigPLSR_cpp_stream_scores_given_W, 6},

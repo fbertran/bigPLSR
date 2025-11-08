@@ -16,6 +16,73 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
+```{r, echo=FALSE, message=FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+```
+
+We choose between **XtX (SIMPLS)**, **XX^T (wide-kernel)**, and **NIPALS** using $(n,p)$ and a RAM budget.
+
+```r
+# In pls_fit(), after arg parsing:
+if (identical(algo_in, "auto")) {
+  algo_in <- .choose_algorithm_auto(backend, X, y, ncomp)
+}
+
+.mem_bytes <- function() {
+  gb <- getOption("bigPLSR.mem_budget_gb", 8)
+  as.numeric(gb) * (1024^3)
+}
+.dims_of <- function(X) {
+  if (inherits(X, "big.matrix")) c(nrow(X), ncol(X)) else c(NROW(X), NCOL(X))
+}
+
+.choose_algorithm_auto <- function(backend, X, y, ncomp) {
+  is_big_local <- inherits(X, "big.matrix") || inherits(X, "big.matrix.descriptor")
+  dims <- .dims_of(X); n <- as.integer(dims[1]); p <- as.integer(dims[2])
+  B <- .mem_bytes()
+  bytes <- 8
+  need_XtX <- bytes * as.double(p) * as.double(p)      # bytes for p x p
+  need_XXt <- bytes * as.double(n) * as.double(n)      # bytes for n x n
+  can_XtX  <- need_XtX <= M
+  can_XXt  <- need_XXt <= M
+  shape_XtX <- (p <= 4L * n)
+  shape_XXt <- (n <= 4L * p)
+  if (can_XtX && shape_XtX) {
+    algo_in <- "simpls"
+  } else if (can_XXt && shape_XXt) {
+    algo_in <- "widekernelpls"
+  } else {
+    algo_in <- "nipals"
+  }
+}
+```
+
+Users can override the memory budget:
+
+```r
+options(bigPLSR.memory_budget_bytes = 8L * 1024^3)  # 8 GiB
+```
+
+## When does each win?
+
+- **XtX (SIMPLS)**: moderate \(p\) (fits \(p^2\) in RAM). Fast BLAS-3; excellent for \(n \gg p\).
+- **XXᵗ (wide-kernel)**: moderate \(n\) (fits \(n^2\)). Great when \(p\gg n\) (wide problems).
+- **NIPALS / streaming**: both \(p^2\) and \(n^2\) exceed budget; supports file-backed scores and large-scale chunked BLAS.
+
+## Sanity check
+
+```r
+set.seed(1)
+n <- 1e5; p <- 200
+X <- matrix(rnorm(n*p), n, p)
+y <- X[,1]*0.5 + rnorm(n)
+bmX <- bigmemory::as.big.matrix(X)
+bmy <- bigmemory::as.big.matrix(matrix(y, n, 1))
+
+options(bigPLSR.memory_budget_bytes = 2L*1024^3)
+fit <- pls_fit(bmX, bmy, ncomp=3, backend="bigmem", scores="r")
+fit$algorithm
+```
 
 ## Overview
 
@@ -49,18 +116,10 @@ size of each symmetric matrix as:
 Then:
 
 ```
-if (backend == "arma") {
-  if (need_XtX <= B)       algorithm <- "simpls"         # XtX
-  else if (need_XXt <= B)  algorithm <- "kernelpls"      # XXt (a.k.a. "kernel" route)
-  else                     algorithm <- "nipals"
-} else { # backend == "bigmem"
-  if (need_XtX <= B)       algorithm <- "simpls"         # chunked XtX + SIMPLS
-  else                     algorithm <- "nipals"         # streaming
-}
+  if (can_XtX && shape_XtX) { algo_in <- "simpls"}.    # XtX
+  if (can_XXt && shape_XXt) { algo_in <- "widekernelpls"}. XXt (a.k.a. "kernel" route)
+  else                      { algorithm <- "nipals"}         # streaming
 ```
-
-> Note: a dedicated **XXt** streaming path for the big-matrix backend can be added
-> later; until then, bigmem chooses between XtX+SIMPLS and streaming NIPALS.
 
 ## Configuring the memory budget
 
@@ -133,3 +192,22 @@ n <- 1e6; p <- 50
 - Rosipal, R., & Trejo, L. J. (2001). **Kernel Partial Least Squares Regression in Reproducing Kernel Hilbert Space**.
   *Journal of Machine Learning Research*, 2, 97–123.
 - Wold, H. (1966, 1985). **NIPALS** algorithm (original PLS formulation).
+
+---
+
+## Appendix: streaming Gram math
+
+For column blocks \(J\),
+\[
+K \approx \sum_{J} X_{[:,J]} X_{[:,J]}^\top,\quad
+(Kv) \leftarrow (Kv) + X_{[:,J]} \big(X_{[:,J]}^\top v\big).
+\]
+
+For row blocks \(B\),
+\[
+K \approx \sum_{B} X_B X^\top,\quad
+(Kv) \leftarrow (Kv) + X_B \big(X^\top v\big)_B.
+\]
+
+Center on the fly: \(H K H v = K v - \tfrac{1}{n}\mathbf{1}\mathbf{1}^\top K v - \tfrac{1}{n}K\mathbf{1}\mathbf{1}^\top v + \tfrac{1}{n^2}\mathbf{1}\mathbf{1}^\top K \mathbf{1}\,\mathbf{1}^\top v\). Maintain the needed aggregated vectors once per pass.
+

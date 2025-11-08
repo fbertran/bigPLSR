@@ -12,7 +12,8 @@ pls_fit(
   tol = 1e-08,
   backend = c("auto", "arma", "bigmem"),
   mode = c("auto", "pls1", "pls2"),
-  algorithm = c("auto", "simpls", "nipals", "kernelpls", "widekernelpls"),
+  algorithm = c("auto", "simpls", "nipals", "kernelpls", "widekernelpls", "rkhs",
+    "klogitpls", "sparse_kpls", "rkhs_xy", "kf_pls"),
   scores = c("none", "r", "big"),
   chunk_size = 10000L,
   chunk_cols = NULL,
@@ -24,7 +25,14 @@ pls_fit(
   scores_descriptorfile = NULL,
   scores_colnames = NULL,
   return_scores_descriptor = FALSE,
-  coef_threshold = NULL
+  coef_threshold = NULL,
+  kernel = c("linear", "rbf", "poly", "sigmoid"),
+  gamma = 1,
+  degree = 3L,
+  coef0 = 0,
+  approx = c("none", "nystrom", "rff"),
+  approx_rank = NULL,
+  class_weights = NULL
 )
 }
 \arguments{
@@ -40,7 +48,10 @@ pls_fit(
 
 \item{mode}{one of \code{"auto"}, \code{"pls1"}, \code{"pls2"}}
 
-\item{algorithm}{one of \code{"auto"}, \code{"simpls"}, \code{"nipals"}}
+\item{algorithm}{one of \code{"auto"}, \code{"simpls"}, \code{"nipals"},
+\code{"kernelpls"}, \code{"widekernelpls"},
+\code{"rkhs"}, \code{"klogitpls"}, \code{"sparse_kpls"},
+\code{"rkhs_xy"}, \code{"kf_pls"}}
 
 \item{scores}{one of \code{"none"}, \code{"r"}, \code{"big"}}
 
@@ -63,6 +74,20 @@ the fitted coefficients after model estimation. When supplied, absolute
 coefficients strictly below the threshold are set to zero via
 \code{\link[=pls_threshold]{pls_threshold()}}.}
 
+\item{kernel}{kernel name for RKHS/KPLS (\code{"linear"}, \code{"rbf"}, \code{"poly"}, \code{"sigmoid"})}
+
+\item{gamma}{RBF/sigmoid/poly scale parameter}
+
+\item{degree}{polynomial degree}
+
+\item{coef0}{polynomial/sigmoid bias}
+
+\item{approx}{kernel approximation: \code{"none"}, \code{"nystrom"}, \code{"rff"}}
+
+\item{approx_rank}{rank (columns / features) for the approximation}
+
+\item{class_weights}{optional numeric weights for classes in \code{klogitpls}}
+
 \item{scores_backingfile/backingpath/descriptorfile}{file-backed sink args}
 }
 \value{
@@ -72,8 +97,12 @@ and optionally \code{$scores}.
 \description{
 Dispatches to a dense (Arm/BLAS) backend for in-memory matrices
 or to a streaming big.matrix backend when X (or Y) is a big.matrix.
-Algorithm can be chosen between "simpls" (default), "nipals", "kernelpls"
-and "widekernelpls". The "kernelpls" paths now include a streaming XX'
+Algorithm can be chosen between:
+"simpls" (default), "nipals", "kernelpls", "widekernelpls",
+"rkhs" (Rosipal & Trejo), "klogitpls", "sparse_kpls",
+"rkhs_xy" (double RKHS), and "kf_pls" (Kalman-filter PLS, streaming).
+
+The "kernelpls" paths now include a streaming XX'
 variant for big.matrix inputs, with an optional row-chunking loop
 controlled by \code{chunk_cols}.
 }
