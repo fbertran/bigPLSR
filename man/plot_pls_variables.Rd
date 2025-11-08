@@ -4,12 +4,28 @@
 \alias{plot_pls_variables}
 \title{Plot variable loadings}
 \usage{
-plot_pls_variables(object, comps = c(1L, 2L), ...)
+plot_pls_variables(
+  object,
+  comps = c(1L, 2L),
+  circle = TRUE,
+  circle_col = "grey80",
+  arrow_col = "steelblue",
+  arrow_scale = 1,
+  ...
+)
 }
 \arguments{
 \item{object}{A fitted PLS model.}
 
 \item{comps}{Components to display (length two).}
+
+\item{circle}{Logical; draw the correlation circle.}
+
+\item{circle_col}{Colour of the correlation circle.}
+
+\item{arrow_col}{Colour of the variable arrows.}
+
+\item{arrow_scale}{Scaling applied to variable vectors.}
 
 \item{...}{Additional plotting parameters passed to \code{\link[graphics:plot.default]{graphics::plot()}}.}
 }

@@ -4,7 +4,15 @@
 \alias{plot_pls_biplot}
 \title{PLS biplot}
 \usage{
-plot_pls_biplot(object, comps = c(1L, 2L), scale_variables = 1, ...)
+plot_pls_biplot(
+  object,
+  comps = c(1L, 2L),
+  scale_variables = 1,
+  circle = TRUE,
+  circle_col = "grey85",
+  arrow_col = "firebrick",
+  ...
+)
 }
 \arguments{
 \item{object}{A fitted PLS model with scores and loadings.}
@@ -12,6 +20,12 @@ plot_pls_biplot(object, comps = c(1L, 2L), scale_variables = 1, ...)
 \item{comps}{Components to display.}
 
 \item{scale_variables}{Scaling factor applied to variable loadings.}
+
+\item{circle}{Logical; draw a correlation circle behind loadings.}
+
+\item{circle_col}{Colour of the circle guide.}
+
+\item{arrow_col}{Colour for loading arrows.}
 
 \item{...}{Additional arguments passed to \code{\link[graphics:plot.default]{graphics::plot()}}.}
 }

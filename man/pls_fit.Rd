@@ -11,7 +11,7 @@ pls_fit(
   tol = 1e-08,
   backend = c("auto", "arma", "bigmem"),
   mode = c("auto", "pls1", "pls2"),
-  algorithm = c("auto", "simpls", "nipals"),
+  algorithm = c("auto", "simpls", "nipals", "kernelpls", "widekernelpls"),
   scores = c("none", "r", "big"),
   chunk_size = 10000L,
   scores_name = "scores",
@@ -62,5 +62,6 @@ and optionally \code{$scores}.
 \description{
 Dispatches to a dense (Arm/BLAS) backend for in-memory matrices
 or to a streaming big.matrix backend when X (or Y) is a big.matrix.
-Algorithm can be chosen between "simpls" (default) and "nipals".
+Algorithm can be chosen between "simpls" (default), "nipals", "kernelpls"
+and "widekernelpls".
 }

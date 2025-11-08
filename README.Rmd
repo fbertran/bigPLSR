@@ -30,6 +30,13 @@ knitr::opts_chunk$set(
 
 Both **PLS1** (single response) and **PLS2** (multi-response) are supported. PLS2 uses **SIMPLS on cross-products** in both backends for numerical parity.
 
+Recent updates bring additional solvers and tooling:
+
+- **Kernel PLS** and **wide kernel PLS** are available alongside SIMPLS/NIPALS.
+- Plot helpers now include correlation circles, loading arrows and VIP bar charts.
+- New wrappers simplify prediction, information-criteria based component selection,
+  cross-validation and bootstrapping workflows.
+
 > The package is set up to be CRAN-friendly: the optional CBLAS fast path is **off** by default.
 
 Support for parallel computation and GPU is being developed.

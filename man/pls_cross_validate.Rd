@@ -10,7 +10,7 @@ pls_cross_validate(
   ncomp,
   folds = 5L,
   type = c("kfold", "loo"),
-  algorithm = c("simpls", "nipals"),
+  algorithm = c("simpls", "nipals", "kernelpls", "widekernelpls"),
   backend = "arma",
   metrics = c("rmse", "mae", "r2"),
   seed = NULL
@@ -27,7 +27,8 @@ pls_cross_validate(
 
 \item{type}{Either "kfold" (default) or "loo".}
 
-\item{algorithm}{Backend algorithm: "simpls" or "nipals".}
+\item{algorithm}{Backend algorithm: "simpls", "nipals", "kernelpls" or
+"widekernelpls".}
 
 \item{backend}{Backend passed to \code{\link[=pls_fit]{pls_fit()}}.}
 

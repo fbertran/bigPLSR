@@ -9,7 +9,7 @@ pls_bootstrap(
   Y,
   ncomp,
   R = 100L,
-  algorithm = c("simpls", "nipals"),
+  algorithm = c("simpls", "nipals", "kernelpls", "widekernelpls"),
   backend = "arma",
   conf = 0.95,
   seed = NULL
@@ -24,7 +24,8 @@ pls_bootstrap(
 
 \item{R}{Number of bootstrap replications.}
 
-\item{algorithm}{Backend algorithm.}
+\item{algorithm}{Backend algorithm ("simpls", "nipals", "kernelpls" or
+"widekernelpls").}
 
 \item{backend}{Backend argument passed to the fitting routine.}
 
