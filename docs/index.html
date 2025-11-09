@@ -11,8 +11,8 @@
 <script src="deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="Partial Least Squares Regression Models with Big Matrices">
-<meta name="description" content="Provides partial least squares regression and various regular or sparse techniques for fitting models to big data. Provides a Partial Least Squares (PLS) regression algorithm that works with bigmemory matrices without loading the entire dataset in memory. Also implements a gradient-descent based solver that works directly on bigmemory matrices.">
-<meta property="og:description" content="Provides partial least squares regression and various regular or sparse techniques for fitting models to big data. Provides a Partial Least Squares (PLS) regression algorithm that works with bigmemory matrices without loading the entire dataset in memory. Also implements a gradient-descent based solver that works directly on bigmemory matrices.">
+<meta name="description" content="Fast partial least squares (PLS) for dense and out-of-core data. Provides SIMPLS and NIPALS solvers, plus kernel-style PLS variants (kernelpls and widekernelpls) with parity to pls. Optimized for bigmemory-backed matrices with streamed cross-products and chunked BLAS (XtX/XtY and XXt/YX), optional file-backed score sinks, and deterministic testing helpers. Includes an auto-selection strategy that chooses between XtX SIMPLS, XXt (wide) SIMPLS, and NIPALS based on (n, p) and a configurable memory budget. About the package, Bertrand and Maumy (2023) &lt;https://hal.science/hal-05352069&gt;, and &lt;https://hal.science/hal-05352061&gt; highlighted fitting and cross-validating PLS regression models to big data. For more details about some of the techniques featured in the package, Dayal and MacGregor (1997) &lt;doi:10.1002/(SICI)1099-128X(199701)11:1&lt;73::AID-CEM435&gt;3.0.CO;2&gt;, Rosipal &amp; Trejo (2001) &lt;https://www.jmlr.org/papers/v2/rosipal01a.html&gt;, Tenenhaus, Viennet, and Saporta (2007) &lt;doi:10.1016/j.csda.2007.01.004&gt;, Rosipal (2004) &lt;doi:10.1007/978-3-540-45167-9_17&gt;, Rosipal (2019) &lt;https://ieeexplore.ieee.org/document/8616346&gt;, Song, Wang, and Bai (2024) &lt;doi:10.1016/j.chemolab.2024.105238&gt;.">
+<meta property="og:description" content="Fast partial least squares (PLS) for dense and out-of-core data. Provides SIMPLS and NIPALS solvers, plus kernel-style PLS variants (kernelpls and widekernelpls) with parity to pls. Optimized for bigmemory-backed matrices with streamed cross-products and chunked BLAS (XtX/XtY and XXt/YX), optional file-backed score sinks, and deterministic testing helpers. Includes an auto-selection strategy that chooses between XtX SIMPLS, XXt (wide) SIMPLS, and NIPALS based on (n, p) and a configurable memory budget. About the package, Bertrand and Maumy (2023) &lt;https://hal.science/hal-05352069&gt;, and &lt;https://hal.science/hal-05352061&gt; highlighted fitting and cross-validating PLS regression models to big data. For more details about some of the techniques featured in the package, Dayal and MacGregor (1997) &lt;doi:10.1002/(SICI)1099-128X(199701)11:1&lt;73::AID-CEM435&gt;3.0.CO;2&gt;, Rosipal &amp; Trejo (2001) &lt;https://www.jmlr.org/papers/v2/rosipal01a.html&gt;, Tenenhaus, Viennet, and Saporta (2007) &lt;doi:10.1016/j.csda.2007.01.004&gt;, Rosipal (2004) &lt;doi:10.1007/978-3-540-45167-9_17&gt;, Rosipal (2019) &lt;https://ieeexplore.ieee.org/document/8616346&gt;, Song, Wang, and Bai (2024) &lt;doi:10.1016/j.chemolab.2024.105238&gt;.">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -22,7 +22,7 @@
 
     <a class="navbar-brand me-2" href="index.html">bigPLSR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.6.4</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.6.7</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -36,6 +36,10 @@
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
 <li><a class="dropdown-item" href="articles/auto-backend.html">Auto backend usage</a></li>
+    <li><a class="dropdown-item" href="articles/bigPLSR-auto-selection.html">Automatic Algorithm Selection in bigPLSR</a></li>
+    <li><a class="dropdown-item" href="articles/bigPLSR-kpls-streaming.html">Streaming Kernel PLS in bigPLSR: XX^T and Column-Chunked Variants</a></li>
+    <li><a class="dropdown-item" href="articles/double-rkhs-pls.html">double-rkhs-pls</a></li>
+    <li><a class="dropdown-item" href="articles/kpls_review.html">Kernel and Streaming PLS Methods in bigPLSR</a></li>
     <li><a class="dropdown-item" href="articles/pls1-benchmark.html">Benchmarking PLS1 Implementations</a></li>
     <li><a class="dropdown-item" href="articles/pls2-benchmark.html">Benchmarking PLS2 Implementations</a></li>
   </ul>
@@ -70,6 +74,13 @@
 <strong>Big-matrix</strong> (<code>backend = "bigmem"</code>): chunked streaming over <code><a href="https://rdrr.io/pkg/bigmemory/man/big.matrix.html" class="external-link">bigmemory::big.matrix</a></code> for large data.</li>
 </ul>
 <p>Both <strong>PLS1</strong> (single response) and <strong>PLS2</strong> (multi-response) are supported. PLS2 uses <strong>SIMPLS on cross-products</strong> in both backends for numerical parity.</p>
+<p>Recent updates bring additional solvers and tooling:</p>
+<ul>
+<li>
+<strong>Kernel PLS</strong> and <strong>wide kernel PLS</strong> are available alongside SIMPLS/NIPALS.</li>
+<li>Plot helpers now include correlation circles, loading arrows and VIP bar charts.</li>
+<li>New wrappers simplify prediction, information-criteria based component selection, cross-validation and bootstrapping workflows.</li>
+</ul>
 <blockquote>
 <p>The package is set up to be CRAN-friendly: the optional CBLAS fast path is <strong>off</strong> by default.</p>
 </blockquote>

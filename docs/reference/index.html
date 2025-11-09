@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">bigPLSR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.6.4</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.6.7</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -19,6 +19,10 @@
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/auto-backend.html">Auto backend usage</a></li>
+    <li><a class="dropdown-item" href="../articles/bigPLSR-auto-selection.html">Automatic Algorithm Selection in bigPLSR</a></li>
+    <li><a class="dropdown-item" href="../articles/bigPLSR-kpls-streaming.html">Streaming Kernel PLS in bigPLSR: XX^T and Column-Chunked Variants</a></li>
+    <li><a class="dropdown-item" href="../articles/double-rkhs-pls.html">double-rkhs-pls</a></li>
+    <li><a class="dropdown-item" href="../articles/kpls_review.html">Kernel and Streaming PLS Methods in bigPLSR</a></li>
     <li><a class="dropdown-item" href="../articles/pls1-benchmark.html">Benchmarking PLS1 Implementations</a></li>
     <li><a class="dropdown-item" href="../articles/pls2-benchmark.html">Benchmarking PLS2 Implementations</a></li>
   </ul></li>
@@ -62,6 +66,12 @@
         <dd>Matrix and arithmetic operations for big.matrix objects</dd>
       </dl><dl><dt>
 
+          <code><a href="cpp_kernel_pls.html">cpp_kernel_pls()</a></code>
+
+        </dt>
+        <dd>Internal kernel and wide-kernel PLS solver</dd>
+      </dl><dl><dt>
+
           <code><a href="plot_pls_biplot.html">plot_pls_biplot()</a></code>
 
         </dt>
@@ -80,28 +90,10 @@
         <dd>Plot variable loadings</dd>
       </dl><dl><dt>
 
-          <code><a href="pls1_dense.html">.harmonize_pls_result()</a></code> <code><a href="pls1_dense.html">pls1_stream()</a></code>
+          <code><a href="plot_pls_vip.html">plot_pls_vip()</a></code>
 
         </dt>
-        <dd>Single-response partial least squares regression (PLS1)</dd>
-      </dl><dl><dt>
-
-          <code><a href="pls1_dense_a.html">pls1_dense_a()</a></code> <code><a href="pls1_dense_a.html">pls1_stream_a()</a></code>
-
-        </dt>
-        <dd>Single-response partial least squares regression (PLS1) another implementation</dd>
-      </dl><dl><dt>
-
-          <code><a href="pls1_dense_ya.html">pls1_dense_ya()</a></code> <code><a href="pls1_dense_ya.html">pls1_stream_ya()</a></code>
-
-        </dt>
-        <dd>Single-response partial least squares regression (PLS1) yet another implementation</dd>
-      </dl><dl><dt>
-
-          <code><a href="pls2_dense.html">pls2_dense()</a></code> <code><a href="pls2_dense.html">pls2_stream()</a></code>
-
-        </dt>
-        <dd>Partial least squares regression for multi-response problems (PLS2)</dd>
+        <dd>Plot Variable Importance in Projection (VIP)</dd>
       </dl><dl><dt>
 
           <code><a href="pls_bootstrap.html">pls_bootstrap()</a></code>
@@ -126,6 +118,24 @@
 
         </dt>
         <dd>Unified PLS fit with auto backend and selectable algorithm</dd>
+      </dl><dl><dt>
+
+          <code><a href="pls_information_criteria.html">pls_information_criteria()</a></code>
+
+        </dt>
+        <dd>Compute information criteria for component selection</dd>
+      </dl><dl><dt>
+
+          <code><a href="pls_predict_response.html">pls_predict_response()</a></code>
+
+        </dt>
+        <dd>Predict responses from a PLS fit</dd>
+      </dl><dl><dt>
+
+          <code><a href="pls_predict_scores.html">pls_predict_scores()</a></code>
+
+        </dt>
+        <dd>Predict latent scores from a PLS fit</dd>
       </dl><dl><dt>
 
           <code><a href="pls_select_components.html">pls_select_components()</a></code>
@@ -158,7 +168,7 @@
         <dd>Simulated dataset</dd>
       </dl><dl><dt>
 
-          <code><a href="summary.big_plsr.html">summary(<i>&lt;big_plsr&gt;</i>)</a></code>
+          <code><a href="summary.big_plsr.html">summary(<i>&lt;big_plsr&gt;</i>)</a></code> <code><a href="summary.big_plsr.html">print.summary.big_plsr()</a></code>
 
         </dt>
         <dd>Summaries for big_plsr objects</dd>

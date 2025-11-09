@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">bigPLSR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.6.3</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.6.7</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -19,6 +19,10 @@
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/auto-backend.html">Auto backend usage</a></li>
+    <li><a class="dropdown-item" href="../articles/bigPLSR-auto-selection.html">Automatic Algorithm Selection in bigPLSR</a></li>
+    <li><a class="dropdown-item" href="../articles/bigPLSR-kpls-streaming.html">Streaming Kernel PLS in bigPLSR: XX^T and Column-Chunked Variants</a></li>
+    <li><a class="dropdown-item" href="../articles/double-rkhs-pls.html">double-rkhs-pls</a></li>
+    <li><a class="dropdown-item" href="../articles/kpls_review.html">Kernel and Streaming PLS Methods in bigPLSR</a></li>
     <li><a class="dropdown-item" href="../articles/pls1-benchmark.html">Benchmarking PLS1 Implementations</a></li>
     <li><a class="dropdown-item" href="../articles/pls2-benchmark.html">Benchmarking PLS2 Implementations</a></li>
   </ul></li>
@@ -50,7 +54,7 @@
 <span>  <span class="va">Y</span>,</span>
 <span>  <span class="va">ncomp</span>,</span>
 <span>  R <span class="op">=</span> <span class="fl">100L</span>,</span>
-<span>  algorithm <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"simpls"</span>, <span class="st">"nipals"</span><span class="op">)</span>,</span>
+<span>  algorithm <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"simpls"</span>, <span class="st">"nipals"</span>, <span class="st">"kernelpls"</span>, <span class="st">"widekernelpls"</span><span class="op">)</span>,</span>
 <span>  backend <span class="op">=</span> <span class="st">"arma"</span>,</span>
 <span>  conf <span class="op">=</span> <span class="fl">0.95</span>,</span>
 <span>  seed <span class="op">=</span> <span class="cn">NULL</span></span>
@@ -78,7 +82,8 @@
 
 
 <dt id="arg-algorithm">algorithm<a class="anchor" aria-label="anchor" href="#arg-algorithm"></a></dt>
-<dd><p>Backend algorithm.</p></dd>
+<dd><p>Backend algorithm ("simpls", "nipals", "kernelpls" or
+"widekernelpls").</p></dd>
 
 
 <dt id="arg-backend">backend<a class="anchor" aria-label="anchor" href="#arg-backend"></a></dt>
@@ -98,6 +103,154 @@
     <p>A list with bootstrap samples and confidence intervals.</p>
     </div>
 
+    <div class="section level2">
+    <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">123</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">X</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">60</span><span class="op">)</span>, nrow <span class="op">=</span> <span class="fl">20</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">y</span> <span class="op">&lt;-</span> <span class="va">X</span><span class="op">[</span>, <span class="fl">1</span><span class="op">]</span> <span class="op">-</span> <span class="fl">0.5</span> <span class="op">*</span> <span class="va">X</span><span class="op">[</span>, <span class="fl">2</span><span class="op">]</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">20</span>, sd <span class="op">=</span> <span class="fl">0.1</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu">pls_bootstrap</span><span class="op">(</span><span class="va">X</span>, <span class="va">y</span>, ncomp <span class="op">=</span> <span class="fl">2</span>, R <span class="op">=</span> <span class="fl">20</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $mean</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>            [,1]</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1,]  0.9913106</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [2,] -0.4513641</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [3,] -0.0364948</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $lower</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>            [,1]</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1,]  0.9008479</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [2,] -0.5554312</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [3,] -0.1578291</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $upper</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>             [,1]</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1,]  1.04643103</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [2,] -0.29747912</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [3,]  0.03218767</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $samples</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $samples[[1]]</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>             [,1]</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1,]  1.01370235</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [2,] -0.47362869</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [3,] -0.01871238</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $samples[[2]]</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>             [,1]</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1,]  1.00805220</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [2,] -0.29373547</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [3,] -0.03438166</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $samples[[3]]</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>             [,1]</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1,]  1.02482494</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [2,] -0.43981055</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [3,] -0.06598034</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $samples[[4]]</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>            [,1]</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1,]  0.9217837</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [2,] -0.4195667</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [3,] -0.1675766</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $samples[[5]]</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>             [,1]</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1,]  0.90088847</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [2,] -0.56898923</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [3,] -0.06228952</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $samples[[6]]</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>             [,1]</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1,]  1.03738707</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [2,] -0.48335047</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [3,]  0.02431306</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $samples[[7]]</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>             [,1]</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1,]  1.03665669</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [2,] -0.41794678</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [3,] -0.01365786</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $samples[[8]]</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>             [,1]</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1,]  0.90081111</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [2,] -0.53015677</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [3,] -0.06947427</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $samples[[9]]</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>              [,1]</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1,]  1.046587228</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [2,] -0.420771928</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [3,]  0.006859411</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $samples[[10]]</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>            [,1]</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1,]  1.0205916</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [2,] -0.3137173</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [3,] -0.0397945</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $samples[[11]]</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>             [,1]</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1,]  1.04625839</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [2,] -0.46446341</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [3,]  0.00655102</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $samples[[12]]</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>            [,1]</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1,]  0.9487480</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [2,] -0.5126467</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [3,] -0.1244670</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $samples[[13]]</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>             [,1]</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1,]  0.96695471</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [2,] -0.52643057</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [3,] -0.01118588</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $samples[[14]]</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>             [,1]</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1,]  1.00591617</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [2,] -0.51301573</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [3,]  0.03150559</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $samples[[15]]</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>             [,1]</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1,]  1.00430562</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [2,] -0.49498888</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [3,] -0.03036961</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $samples[[16]]</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>              [,1]</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1,]  1.006820717</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [2,] -0.490124440</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [3,]  0.006203915</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $samples[[17]]</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>            [,1]</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1,]  1.0193070</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [2,] -0.3016168</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [3,] -0.1470557</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $samples[[18]]</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>            [,1]</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1,]  0.9601683</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [2,] -0.5404460</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [3,] -0.0334001</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $samples[[19]]</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>             [,1]</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1,]  0.99306219</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [2,] -0.51709589</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [3,] -0.01978846</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $samples[[20]]</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>             [,1]</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1,]  0.96338505</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [2,] -0.30477937</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [3,]  0.03280478</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+</code></pre></div>
+    </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside></div>
 

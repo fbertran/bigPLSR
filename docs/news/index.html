@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">bigPLSR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.6.4</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.6.7</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -19,6 +19,10 @@
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/auto-backend.html">Auto backend usage</a></li>
+    <li><a class="dropdown-item" href="../articles/bigPLSR-auto-selection.html">Automatic Algorithm Selection in bigPLSR</a></li>
+    <li><a class="dropdown-item" href="../articles/bigPLSR-kpls-streaming.html">Streaming Kernel PLS in bigPLSR: XX^T and Column-Chunked Variants</a></li>
+    <li><a class="dropdown-item" href="../articles/double-rkhs-pls.html">double-rkhs-pls</a></li>
+    <li><a class="dropdown-item" href="../articles/kpls_review.html">Kernel and Streaming PLS Methods in bigPLSR</a></li>
     <li><a class="dropdown-item" href="../articles/pls1-benchmark.html">Benchmarking PLS1 Implementations</a></li>
     <li><a class="dropdown-item" href="../articles/pls2-benchmark.html">Benchmarking PLS2 Implementations</a></li>
   </ul></li>
@@ -38,6 +42,49 @@
       <small>Source: <a href="https://github.com/fbertran/bigPLSR/blob/HEAD/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.6.6" id="bigplsr-066">bigPLSR 0.6.6<a class="anchor" aria-label="anchor" href="#bigplsr-066"></a></h2>
+<ul><li>Vignettes: <em>Kernel and Streaming PLS Methods</em>, <em>Automatic Algorithm Selection</em>.</li>
+<li>Stub C++ entry points for RKHS / kernel logistic / sparse KPLS / KF-PLS.</li>
+</ul></div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.6.5" id="bigplsr-065">bigPLSR 0.6.5<a class="anchor" aria-label="anchor" href="#bigplsr-065"></a></h2>
+<ul><li>Algorithm auto-selection: new internal heuristic chooses among
+<ul><li>
+<strong>XtX SIMPLS</strong> (standard cross-product SIMPLS),</li>
+<li>
+<strong>XXt (“widekernelpls”)</strong> for n &lt;&lt; p,</li>
+<li>
+<strong>NIPALS</strong> when memory is tight or rank is low. Tuned by <code>options(bigPLSR.mem_budget_gb = 8)</code>. Users can override with <code>algorithm=</code>.</li>
+</ul></li>
+<li>Kernel-style PLS routes: <code>algorithm = "kernelpls"</code> and <code>algorithm = "widekernelpls"</code> implementing Dayal &amp; MacGregor–style (1997) kernel PLS in X-space and wide-X (XXᵗ) space.</li>
+<li>Implemented high-performance kernel and wide-kernel PLS algorithms in <code><a href="../reference/pls_fit.html">pls_fit()</a></code> for both dense and bigmemory backends using RcppArmadillo.</li>
+<li>Introduced optional coefficient thresholding.</li>
+<li>Added fast-running examples to all exported functions to improve documentation usability on CRAN.</li>
+</ul></div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.6.4" id="bigplsr-064">bigPLSR 0.6.4<a class="anchor" aria-label="anchor" href="#bigplsr-064"></a></h2>
+<ul><li>Added kernel PLS and wide-kernel PLS algorithms to <code><a href="../reference/pls_fit.html">pls_fit()</a></code> for both dense and bigmemory backends.</li>
+<li>Refreshed plotting helpers with correlation circles, arrow-based loadings and a dedicated VIP bar plot.</li>
+<li>Introduced convenience prediction wrappers, information-criteria helpers, and expanded cross-validation/bootstrapping utilities to support the new algorithms.</li>
+<li>Improved summaries with explained-variance reporting and updated package documentation.</li>
+</ul></div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.6.2" id="bigplsr-062">bigPLSR 0.6.2<a class="anchor" aria-label="anchor" href="#bigplsr-062"></a></h2>
+<ul><li>Added cross validation and bootstrap for plsR.</li>
+</ul></div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.6.1" id="bigplsr-061">bigPLSR 0.6.1<a class="anchor" aria-label="anchor" href="#bigplsr-061"></a></h2>
+<ul><li>Added plots and summaries for <code><a href="../reference/pls_fit.html">pls_fit()</a></code>.</li>
+</ul></div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.6.0" id="bigplsr-060">bigPLSR 0.6.0<a class="anchor" aria-label="anchor" href="#bigplsr-060"></a></h2>
+<ul><li>Added unified path <code><a href="../reference/pls_fit.html">pls_fit()</a></code> for plsR regression that features : dense and bigmemory, simpls and nipals.</li>
+</ul></div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.5.0" id="bigplsr-050">bigPLSR 0.5.0<a class="anchor" aria-label="anchor" href="#bigplsr-050"></a></h2>
+<ul><li>Added several plsR implementations. Benchmarks.</li>
+</ul></div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.4.0" id="bigplsr-040">bigPLSR 0.4.0<a class="anchor" aria-label="anchor" href="#bigplsr-040"></a></h2>
 <ul><li>Maintainer email update</li>

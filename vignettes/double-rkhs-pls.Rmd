@@ -1,0 +1,112 @@
+---
+title: "double-rkhs-pls"
+output: html_document
+---
+
+---
+title: "Double RKHS PLS (rkhs_xy): Theory and Usage"
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+vignette: >
+  %\VignetteIndexEntry{Double RKHS PLS (rkhs_xy): Theory and Usage}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+## Overview
+
+We implement a **double RKHS** variant of PLS, where both the input and the output
+spaces are endowed with reproducing kernels:
+
+- \( K_X \in \mathbb{R}^{n\times n} \) with entries \( [K_X]_{ij} = k_X(x_i, x_j) \),
+- \( K_Y \in \mathbb{R}^{n\times n} \) with entries \( [K_Y]_{ij} = k_Y(y_i, y_j) \).
+
+We use centered Grams \( \tilde K_X = H K_X H \) and \( \tilde K_Y = H K_Y H \), where
+\( H = I - \frac{1}{n}\mathbf{1}\mathbf{1}^\top \).
+
+### Operator and Latent Directions
+
+Following the spirit of *Kernel PLS Regression II* (IEEE TNNLS, 2019), we avoid
+explicit square roots and form the **SPD surrogate operator**
+\[
+\mathcal{M} \, v
+= (K_X+\lambda_x I)^{-1} \; K_X \; K_Y \; K_X \; (K_X+\lambda_x I)^{-1} \, v,
+\]
+with small ridge \( \lambda_x > 0 \) for stability. We compute the first \(A\)
+orthonormal latent directions \(T = [t_1,\dots,t_A]\) via power iteration with
+Gram–Schmidt orthogonalization on \(\mathcal{M}\).
+
+We then solve a **small** regression in the latent space:
+\[
+C = (T^\top T)^{-1} (T^\top \tilde Y),
+\qquad \tilde Y = Y - \mathbf{1} \bar y^\top,
+\]
+and form dual coefficients
+\[
+\alpha \;=\; U \, C, \qquad U \;=\; (K_X+\lambda_x I)^{-1} T,
+\]
+so that training predictions satisfy
+\[
+\hat Y \;=\; \tilde K_X \, \alpha + \mathbf{1}\,\bar y^\top .
+\]
+
+### Centering for Prediction
+
+Given new inputs \(X_\*\), define the **cross-Gram**
+\[
+K_\* = K(X_\*, X) .
+\]
+To apply training centering to \(K_\*\), use
+\[
+\tilde K_\* \;=\; K_\* \;-\; \mathbf{1}\, \bar k_X^\top \;-\; \bar k_\* \mathbf{1}^\top \;+\; \mu_X,
+\]
+where:
+- \( \bar k_X = \frac{1}{n}\mathbf{1}^\top K_X \) is the **column mean** vector for the (uncentered) training Gram,
+- \( \mu_X = \frac{1}{n^2} \mathbf{1}^\top K_X \mathbf{1} \) is its **grand mean**,
+- \( \bar k_\* \) is the **row mean** of \(K_\*\) (computed at prediction time).
+
+Predictions then follow the familiar dual form:
+\[
+\hat Y_\* \;=\; \tilde K_\* \, \alpha + \mathbf{1}_\* \, \bar y^\top .
+\]
+
+### Practical Notes
+
+- Choose \(k_X\) (e.g., RBF) to reflect **nonlinear structure** in inputs. A linear \(k_Y\) already produces numeric outputs in \(\mathbb{R}^m\).
+- The ridge terms \( \lambda_x, \lambda_y \) stabilize inversions and dampen numerical noise.
+- With `algorithm = "rkhs_xy"`, the package returns:
+  - `dual_coef` \(=\alpha\),
+  - `scores` \(=T\) (approximately orthonormal),
+  - `intercept` \(=\bar y\),
+  - and uses the centered cross-kernel formula above in `predict()`.
+
+### Minimal Example
+
+```{r}
+library(bigPLSR)
+set.seed(42)
+n <- 60; p <- 6; m <- 2
+X <- matrix(rnorm(n * p), n, p)
+Y <- cbind(sin(X[,1]) + 0.4 * X[,2]^2,
+           cos(X[,3]) - 0.3 * X[,4]^2) + matrix(rnorm(n*m, sd=.05), n, m)
+
+op <- options(
+  bigPLSR.rkhs_xy.kernel_x = "rbf",
+  bigPLSR.rkhs_xy.gamma_x  = 0.5,
+  bigPLSR.rkhs_xy.kernel_y = "linear",
+  bigPLSR.rkhs_xy.lambda_x = 1e-6,
+  bigPLSR.rkhs_xy.lambda_y = 1e-6
+)
+on.exit(options(op), add = TRUE)
+
+fit <- pls_fit(X, Y, ncomp = 3, algorithm = "rkhs_xy", backend = "arma")
+Yhat <- predict(fit, X)
+mean((Y - Yhat)^2)
+```
+
+References
+	•	Rosipal & Trejo (2001) Kernel Partial Least Squares Regression in Reproducing Kernel Hilbert Space. JMLR 2:97–123. doi:10.5555/944733.944741.
+	•	Kernel PLS Regression II: Kernel Partial Least Squares Regression by Projecting Both Independent and Dependent Variables into Reproducing Kernel Hilbert Space. IEEE TNNLS (2019). doi:10.1109/TNNLS.2019.2932014.
+

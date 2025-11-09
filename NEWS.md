@@ -1,3 +1,8 @@
+# bigPLSR 0.6.7
+* kernelpls on backend='bigmem' now uses streaming XXᵗ/column paths; the previous 
+  dense fallback was removed. Control with options(bigPLSR.kpls_gram = 'rows'|'cols'|'auto') 
+  and bigPLSR.chunk_rows, bigPLSR.chunk_cols.
+
 # bigPLSR 0.6.6
 * Vignettes: *Kernel and Streaming PLS Methods*, *Automatic Algorithm Selection*.
 * Stub C++ entry points for RKHS / kernel logistic / sparse KPLS / KF-PLS.

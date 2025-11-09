@@ -226,6 +226,35 @@ fit_sk <- pls_fit(X, Y, ncomp = 5,
                   algorithm = "sparse_kpls")
 ```
 
+### Prediction in RKHS PLS
+
+Let \(X\in\mathbb{R}^{n\times p}\) be training inputs and \(Y\in\mathbb{R}^{n\times m}\) the responses.
+With kernel \(k(\cdot,\cdot)\) and training Gram \(K\), the **centered** Gram is
+\[
+K_c = K - \mathbf{1}_n \bar{k}^\top - \bar{k}\,\mathbf{1}_n^\top + \bar{\bar{k}},
+\quad
+\bar{k} = \frac{1}{n}\sum_{i=1}^n K_{i\cdot},\quad
+\bar{\bar{k}} = \frac{1}{n^2}\sum_{i,j}K_{ij}.
+\]
+KPLS on \(K_c\) yields **dual coefficients** \(A\in\mathbb{R}^{n\times m}\).
+
+For new inputs \(X_\*\), the cross-kernel \(K_\* \in \mathbb{R}^{n_\*\times n}\) has
+\((K_\*)_{i,j} = k(x^\*_i, x_j)\). The **centered** cross-Gram is
+\[
+K_{\*,c} = K_\* - \mathbf{1}_{n_\*}\bar{k}^\top - \bar{k}_\*\mathbf{1}_n^\top + \bar{\bar{k}},
+\quad
+\bar{k}_\* = \frac{1}{n}K_\*\mathbf{1}_n.
+\]
+Predictions follow
+\[
+\widehat{Y}_\* = K_{\*,c}\,A + \mathbf{1}_{n_\*}\,\mu_Y^\top,
+\]
+where \(\mu_Y\) is the vector of training response means.
+
+In `bigPLSR`, these are stored as:
+`dual_coef` (\(A\)), `k_colmeans` (\(\bar{k}\)), `k_mean` (\(\bar{\bar{k}}\)), `y_means` (\(\mu_Y\)),
+and `X_ref` (dense training inputs). The RKHS branch of `predict.big_plsr()` uses the same formula.
+
 ---
 
 ## Dependency overview (wrappers → C++ entry points)

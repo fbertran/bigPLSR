@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">bigPLSR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.6.3</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.6.7</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -19,6 +19,10 @@
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/auto-backend.html">Auto backend usage</a></li>
+    <li><a class="dropdown-item" href="../articles/bigPLSR-auto-selection.html">Automatic Algorithm Selection in bigPLSR</a></li>
+    <li><a class="dropdown-item" href="../articles/bigPLSR-kpls-streaming.html">Streaming Kernel PLS in bigPLSR: XX^T and Column-Chunked Variants</a></li>
+    <li><a class="dropdown-item" href="../articles/double-rkhs-pls.html">double-rkhs-pls</a></li>
+    <li><a class="dropdown-item" href="../articles/kpls_review.html">Kernel and Streaming PLS Methods in bigPLSR</a></li>
     <li><a class="dropdown-item" href="../articles/pls1-benchmark.html">Benchmarking PLS1 Implementations</a></li>
     <li><a class="dropdown-item" href="../articles/pls2-benchmark.html">Benchmarking PLS2 Implementations</a></li>
   </ul></li>
@@ -51,7 +55,7 @@
 <span>  <span class="va">ncomp</span>,</span>
 <span>  folds <span class="op">=</span> <span class="fl">5L</span>,</span>
 <span>  type <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"kfold"</span>, <span class="st">"loo"</span><span class="op">)</span>,</span>
-<span>  algorithm <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"simpls"</span>, <span class="st">"nipals"</span><span class="op">)</span>,</span>
+<span>  algorithm <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"simpls"</span>, <span class="st">"nipals"</span>, <span class="st">"kernelpls"</span>, <span class="st">"widekernelpls"</span><span class="op">)</span>,</span>
 <span>  backend <span class="op">=</span> <span class="st">"arma"</span>,</span>
 <span>  metrics <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"rmse"</span>, <span class="st">"mae"</span>, <span class="st">"r2"</span><span class="op">)</span>,</span>
 <span>  seed <span class="op">=</span> <span class="cn">NULL</span></span>
@@ -83,7 +87,8 @@
 
 
 <dt id="arg-algorithm">algorithm<a class="anchor" aria-label="anchor" href="#arg-algorithm"></a></dt>
-<dd><p>Backend algorithm: "simpls" or "nipals".</p></dd>
+<dd><p>Backend algorithm: "simpls", "nipals", "kernelpls" or
+"widekernelpls".</p></dd>
 
 
 <dt id="arg-backend">backend<a class="anchor" aria-label="anchor" href="#arg-backend"></a></dt>
@@ -103,6 +108,44 @@
     <p>A list containing per-fold metrics and their summary across folds.</p>
     </div>
 
+    <div class="section level2">
+    <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">123</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">X</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">60</span><span class="op">)</span>, nrow <span class="op">=</span> <span class="fl">20</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">y</span> <span class="op">&lt;-</span> <span class="va">X</span><span class="op">[</span>, <span class="fl">1</span><span class="op">]</span> <span class="op">-</span> <span class="fl">0.5</span> <span class="op">*</span> <span class="va">X</span><span class="op">[</span>, <span class="fl">2</span><span class="op">]</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">20</span>, sd <span class="op">=</span> <span class="fl">0.1</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu">pls_cross_validate</span><span class="op">(</span><span class="va">X</span>, <span class="va">y</span>, ncomp <span class="op">=</span> <span class="fl">2</span>, folds <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $details</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    fold ncomp metric      value</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1     1     1   rmse 0.16328299</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2     1     1    mae 0.12805868</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3     1     1     r2 0.97080073</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4     1     2   rmse 0.07303034</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5     1     2    mae 0.05597072</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 6     1     2     r2 0.99415887</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 7     2     1   rmse 0.24657144</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 8     2     1    mae 0.20919627</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 9     2     1     r2 0.95049915</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 10    2     2   rmse 0.11001802</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 11    2     2    mae 0.08976574</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 12    2     2     r2 0.99014504</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 13    3     1   rmse 0.36542334</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 14    3     1    mae 0.34056432</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 15    3     1     r2 0.78937830</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 16    3     2   rmse 0.38837465</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 17    3     2    mae 0.37082266</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 18    3     2     r2 0.76209023</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $summary</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   ncomp metric     value</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1     1    mae 0.2259398</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2     2    mae 0.1721864</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3     1     r2 0.9035594</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4     2     r2 0.9154647</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5     1   rmse 0.2584259</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 6     2   rmse 0.1904743</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+</code></pre></div>
+    </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside></div>
 

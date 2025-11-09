@@ -4,7 +4,7 @@
 #include <bigmemory/MatrixAccessor.hpp>
 using namespace Rcpp;
 
-static inline void ensure_double_bigmatrix(const BigMatrix& M, const char* nm){
+[[maybe_unused]] static inline void ensure_double_bigmatrix(const BigMatrix& M, const char* nm){
   if (M.matrix_type() != 8) stop(std::string(nm) + " must be a double big.matrix");
 }
 
