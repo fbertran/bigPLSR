@@ -627,19 +627,16 @@ pls_fit <- function(
     if (alt_it > 0L) {
       for (kk in seq_len(alt_it)) {
         eta <- drop(cbind(1, T) %*% c(ir$b, ir$beta))
-        p   <- 1/(1+exp(-eta))
+        p   <- .sigmoid(eta)
         # Re-use **Kc** (centered Gram train)
         kfitk <- cpp_kpls_from_gram(Kc, matrix(p, ncol = 1L), as.integer(ncomp), tol)
         T  <- as.matrix(kfitk$scores)
-        uB   <- as.matrix(kfitk$u_basis)
-#        U  <- tryCatch(solve(Kc + diag(u_rdg, nrow(Kc)), T),
-#                       error = function(e) MASS::ginv(Kc + diag(u_rdg, nrow(Kc))) %*% T)
+        uB <- as.matrix(kfitk$u_basis)
         ir <- if (exists('cpp_irls_binomial', mode = 'function')) {
           cpp_irls_binomial(T, ybin, w_class = cw, maxit = itmax, tol = ittol)
         } else {
           ir <- .run_irls(T, ybin, cw, itmax, ittol)
         }
-        ir <- .run_irls(T, ybin, cw, itmax, ittol)
       }
     }
     ir <- .calibrate_weighted_logit(T, ybin, ir, cw, itmax, ittol)
@@ -868,12 +865,14 @@ pls_fit <- function(
       stop("For backend='bigmem' and algorithm='rkhs', both X and y must be big.matrix")
     Xbm <- X
     Ybm <- y
+    chunk_rows <- as.integer(getOption("bigPLSR.rkhs.chunk_rows", 8192L))
+    chunk_cols <- as.integer(getOption("bigPLSR.rkhs.chunk_cols", 8192L))
     fit <- .Call(`_bigPLSR_cpp_kpls_rkhs_bigmem`,
                  Xbm@address, Ybm@address,
-                 as.integer(ncomp), as.integer(chunk_size), as.numeric(tol),
-                 kernel, as.numeric(gamma), as.integer(degree), as.numeric(coef0),
-                 approx, if (is.null(approx_rank)) -1L else as.integer(approx_rank),
-                 scores != "none")
+                 as.integer(ncomp), as.numeric(tol),
+                 as.character(kernel), as.numeric(gamma), as.integer(degree), as.numeric(coef0),
+                 as.character(approx), if (is.null(approx_rank)) -1L else as.integer(approx_rank),
+                 chunk_rows, chunk_cols)
     # finalize
     fit$mode <- if (ncol(y) == 1L) "pls1" else "pls2"
     if (identical(scores, "none")) {
@@ -887,8 +886,8 @@ pls_fit <- function(
     fit$kstats <- .bigPLSR_stream_kstats(
       Xbm,
       kernel = kernel, gamma = gamma, degree = degree, coef0 = coef0,
-      chunk_rows = getOption("bigPLSR.rkhs.chunk_rows", 8192L),
-      chunk_cols = getOption("bigPLSR.rkhs.chunk_cols", 8192L)
+      chunk_rows = chunk_rows,
+      chunk_cols = chunk_cols
     )
     .finalize_pls_fit(.post_scores(fit), "rkhs")
   }
@@ -970,12 +969,22 @@ pls_fit <- function(
     
     # ----- BIGMEM: streaming RKHS KPLS + IRLS -----
     Xbm <- X
-    fit0 <- cpp_kpls_rkhs_bigmem(
-      Xbm@address, matrix(ybin, ncol = 1L), as.integer(ncomp),
-      tol, kernel, gamma, degree, coef0,
-      approx      = "none", approx_rank = 0L,
-      chunk_rows  = getOption("bigPLSR.klogitpls.chunk_rows", 8192L),
-      chunk_cols  = getOption("bigPLSR.klogitpls.chunk_cols", 8192L)
+    chunk_rows <- as.integer(getOption("bigPLSR.klogitpls.chunk_rows", 8192L))
+    chunk_cols <- as.integer(getOption("bigPLSR.klogitpls.chunk_cols", 8192L))
+    fit0 <- .Call(
+      `_bigPLSR_cpp_kpls_rkhs_bigmem`,
+      Xbm@address,
+      matrix(ybin, ncol = 1L),
+      as.integer(ncomp),
+      as.numeric(tol),
+      as.character(kernel),
+      as.numeric(gamma),
+      as.integer(degree),
+      as.numeric(coef0),
+      as.character("none"),
+      as.integer(0L),
+      chunk_rows,
+      chunk_cols
     )
     T  <- as.matrix(fit0$scores)
     A  <- ncol(T)
@@ -985,26 +994,31 @@ pls_fit <- function(
     } else {
       ir <- .run_irls(T, ybin, cw, itmax, ittol)
     }
-    ir <- .run_irls(T, ybin, cw, itmax, ittol)
-    # optional alternations #TODO for bigmem here is the dense code
-    # if (alt_it > 0L) {
-    #   for (kk in seq_len(alt_it)) {
-    #     eta <- drop(cbind(1, T) %*% c(ir$b, ir$beta))
-    #     p   <- 1/(1+exp(-eta))
-    #     # Re-use **Kc** (centered Gram train)
-    #     kfitk <- cpp_kpls_from_gram(Kc, matrix(p, ncol = 1L), as.integer(ncomp), tol)
-    #     T  <- as.matrix(kfitk$scores)
-    #     uB   <- as.matrix(kfitk$u_basis)
-    #     #        U  <- tryCatch(solve(Kc + diag(u_rdg, nrow(Kc)), T),
-    #     #                       error = function(e) MASS::ginv(Kc + diag(u_rdg, nrow(Kc))) %*% T)
-    #     ir <- if (exists('cpp_irls_binomial', mode = 'function')) {
-    #       cpp_irls_binomial(T, ybin, w_class = cw, maxit = itmax, tol = ittol)
-    #     } else {
-    #       ir <- .run_irls(T, ybin, cw, itmax, ittol)
-    #     }
-    #     ir <- .run_irls(T, ybin, cw, itmax, ittol)
-    #   }
-    # }
+    last_u_basis <- fit0$u_basis %||% NULL
+    if (alt_it > 0L) {
+      for (kk in seq_len(alt_it)) {
+        eta <- drop(cbind(1, T) %*% c(ir$b, ir$beta))
+        p   <- .sigmoid(eta)
+        fitk <- .Call(
+          `_bigPLSR_cpp_kpls_rkhs_bigmem`,
+          Xbm@address,
+          matrix(p, ncol = 1L),
+          as.integer(ncomp),
+          as.numeric(tol),
+          as.character(kernel),
+          as.numeric(gamma),
+          as.integer(degree),
+          as.numeric(coef0),
+          as.character("none"),
+          as.integer(0L),
+          chunk_rows,
+          chunk_cols
+        )
+        T <- as.matrix(fitk$scores)
+        last_u_basis <- fitk$u_basis %||% last_u_basis
+        ir <- .run_irls(T, ybin, cw, itmax, ittol)
+      }
+    }
     # Build object; bigmem predict can stream cross-kernel later if needed
     ir <- .calibrate_weighted_logit(T, ybin, ir, cw, itmax, ittol)
     obj <- list(
@@ -1015,14 +1029,14 @@ pls_fit <- function(
       intercept    = ir$b,
       latent_coef  = ir$beta,
       class_weights = if (length(cw)) cw else NULL,
-      u_basis      = fit0$u_basis %||% NULL,   # if C++ provides it; else NULL
+      u_basis      = last_u_basis,
       kernel       = kernel, gamma = gamma, degree = degree, coef0 = coef0,
       # Precomputed centering stats for HKH using the training kernel
       kstats       = fit0$kstats %||% .bigPLSR_stream_kstats(
         Xbm,
         kernel = kernel, gamma = gamma, degree = degree, coef0 = coef0,
-        chunk_rows = getOption("bigPLSR.klogitpls.chunk_rows", 8192L),
-        chunk_cols = getOption("bigPLSR.klogitpls.chunk_cols", 8192L)
+        chunk_rows = chunk_rows,
+        chunk_cols = chunk_cols
       ) %||% NULL,
       # Training reference for streamed prediction
       X_ref       = bigmemory::describe(Xbm),

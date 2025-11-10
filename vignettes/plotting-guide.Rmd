@@ -64,17 +64,17 @@ plot_pls_biplot(fit, comps = c(1, 2), groups = groups,
 
 ```{r bootstrap}
 boot <- pls_bootstrap(X, Y, ncomp = 2, R = 30, type = "xy",
-                      parallel = FALSE, seed = 99)
+                      parallel = "none", seed = 99)
 summary_boot <- summarise_pls_bootstrap(boot)
 ```
 
 ```{r bootstrap-coef}
-plot_pls_bootstrap_coefficients(summary_boot) +
+plot_pls_bootstrap_coefficients(boot) +
   ggtitle("Bootstrap coefficient intervals")
 ```
 
 ```{r bootstrap-scores}
-plot_pls_bootstrap_scores(summary_boot) +
+plot_pls_bootstrap_scores(boot$) +
   ggtitle("Bootstrap score dispersion")
 ```
 

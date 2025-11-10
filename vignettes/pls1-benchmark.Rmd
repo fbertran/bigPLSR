@@ -40,65 +40,39 @@ set.seed(123)
 
 ## Overview
 
-This vignette illustrates how to benchmark the dense and streaming
-implementations provided for single-response partial least squares
-regression (PLS1). The dense implementation (`pls1_dense`) copies the
-predictor matrix in memory and should therefore be preferred when the
-whole dataset fits in RAM. The streaming implementation (`pls1_stream`)
-iterates over the data in blocks, enabling analyses of larger-than-memory
-workloads.
+The unified `pls_fit()` interface now drives both the dense and streaming
+implementations of single-response partial least squares regression. This
+vignette revisits the benchmarking workflow with the modern API and
+introduces two complementary perspectives:
 
-### What's new in bigPLSR
+1. **Internal comparisons** that contrast the dense (in-memory) and
+   streaming (big-memory) backends of `pls_fit()`.
+2. **External references** recorded against popular packages such as
+   `pls` and `mixOmics`. These results are stored in the package to keep
+   the vignette lightweight while still documenting performance relative
+   to the wider ecosystem.
 
-Recent releases extended the benchmarking toolkit with
-
-- **Kalman-filter PLS (`algorithm = "kf_pls"`)** for adaptive, streaming
-  cross-product updates,
-- **coefficient thresholding** via the `coef_threshold` argument,
-- optional **parallel resampling** powered by the
-  [`future`](https://future.futureverse.org) ecosystem and exposed through
-  `pls_cross_validate()` and `pls_bootstrap()`.
-
-The snippets below continue to focus on dense vs. streaming SIMPLS and
-NIPALS, but you can swap in the newer algorithms by changing the
-`algorithm` argument. For example, to benchmark Kalman-filter updates:
-
-```{r, eval=FALSE}
-bench::mark(
-  dense = pls_fit(X[], y_vec, ncomp = ncomp, algorithm = "kf_pls"),
-  streaming = pls_fit(X, y, ncomp = ncomp, backend = "bigmem",
-                      algorithm = "kf_pls", chunk_size = 1024L)
-)
-```
-
-To run cross-validation benchmarks in parallel, register a `future`
-plan prior to calling the helper:
-
-```{r, eval=FALSE}
-future::plan(future::multisession, workers = 2)
-pls_cross_validate(X[], y_vec, ncomp = 5, folds = 3,
-                   parallel = TRUE)
-future::plan(future::sequential)
-```
+The chunks tagged with `eval = LOCAL` are only executed when the
+environment variable `LOCAL` is set to `TRUE`, allowing CRAN checks to
+skip the more time-consuming benchmarks.
 
 ## Simulated data
 
-We generate a moderately sized synthetic datasets with a low dimensional
-latent structure. The predictors are stored in a `bigmemory::big.matrix`
-so they can be reused without additional copies during the benchmarks.
+We create a synthetic regression problem with a modest latent structure
+and keep both dense and big-memory versions of the predictors and
+response so they can be reused in the benchmarking chunks.
 
 Here is an example with `n=4000` en `p=50`
 
 ```{r data-generation}
-n <- 1000
-p <- 50
-ncomp <- 5
+n <- 1500
+p <- 80
+ncomp <- 6
 
 X <- bigmemory::big.matrix(nrow = n, ncol = p, type = "double")
 X[,] <- matrix(rnorm(n * p), nrow = n)
 
-true_beta <- matrix(rnorm(p), ncol = 1)
-y_vec <- as.vector(scale(X[,] %*% true_beta + rnorm(n)))
+y_vec <- scale(X[,] %*% rnorm(p) + rnorm(n))
 
 y <- bigmemory::big.matrix(nrow = n, ncol = 1, type = "double")
 y[,] <- y_vec
@@ -107,111 +81,56 @@ X[1:6, 1:6]
 y[1:6,]
 ```
 
+## Internal benchmarks
 
-## Benchmark results
+The following chunk compares dense vs. streaming fits for both SIMPLS and
+NIPALS. The dense backend receives base R matrices, while the streaming
+backend consumes the `big.matrix` objects directly.
 
-The `bench` package provides a convenient framework to compare the
-runtime characteristics of both solvers. The following benchmark uses a
-chunk size of 1024 rows for the streaming variant, which offers a good
-trade-off between speed and memory usage for this dataset size.
-
-
-```{r, eval=LOCAL, cache=TRUE}
-bench_res_simpls <- press(
-  n = c(500, 1000, 5000),
-  p = c(100, 500, 1000),
-  {
-    ncomp = 5
-    rep = 1
-    algorithm = "simpls"
-    X <- bigmemory::big.matrix(nrow = n, ncol = p, type = "double")
-    X[,] <- matrix(rnorm(n * p), nrow = n)
-
-    true_beta <- matrix(rnorm(p), ncol = 1)
-    y_vec <- as.vector(scale(X[,] %*% true_beta + rnorm(n)))
-
-    y <- bigmemory::big.matrix(nrow = n, ncol = 1, type = "double")
-    y[,] <- y_vec
-    bench::mark(
-      dense = pls1_dense(X, y_vec, ncomp = ncomp, algorithm = algorithm),
-      streaming = pls1_stream(X, y_vec, ncomp = ncomp, chunk_size = 1024L, 
-                              algorithm = algorithm),
-      dense_a = pls1_dense_a(X, y, ncomp = ncomp, algorithm = algorithm),
-      streaming_a = pls1_stream_a(X, y, ncomp = ncomp, chunk_size = 1024L, 
-                                  algorithm = algorithm),
-      dense_ya = pls1_dense_ya(X, y, ncomp = ncomp, algorithm = algorithm),
-      streaming_ya = pls1_stream_ya(X, y, ncomp = ncomp, chunk_size = 1024L, 
-                                    algorithm = algorithm),
-      iterations = 10,
-      check = FALSE
-    )  
-  }
+```{r internal-benchmark, eval=LOCAL, cache=TRUE}
+internal_bench <- bench::mark(
+  dense_simpls = pls_fit(as.matrix(X[]), y_vec, ncomp = ncomp,
+                         backend = "arma", algorithm = "simpls"),
+  streaming_simpls = pls_fit(X, y, ncomp = ncomp, backend = "bigmem",
+                             algorithm = "simpls", chunk_size = 512L),
+  dense_nipals = pls_fit(as.matrix(X[]), y_vec, ncomp = ncomp,
+                         backend = "arma", algorithm = "nipals"),
+  streaming_nipals = pls_fit(X, y, ncomp = ncomp, backend = "bigmem",
+                             algorithm = "nipals", chunk_size = 512L),
+  iterations = 20,
+  check = FALSE
 )
+internal_bench
+```
+```
+The results highlight the trade-off between throughput and memory usage:
+SIMPLS shines on dense matrices, whereas the streaming backend scales to
+larger-than-memory inputs thanks to block processing.
+
+## External references
+
+To avoid heavy dependencies at build time we ship a pre-computed
+benchmark dataset that contrasts `bigPLSR` with implementations from the
+`pls` and `mixOmics` packages. The dataset was generated with the helper
+script stored in `inst/scripts/external_pls_benchmarks.R`.
+
+```{r external-benchmark}
+data("external_pls_benchmarks", package = "bigPLSR")
+subset(external_pls_benchmarks, task == "pls1")
 ```
 
-```{r, eval=LOCAL, cache=TRUE}
-bench_res_nipals <- press(
-  n = c(500, 1000, 5000),
-  p = c(100, 500, 1000),
-  {
-    ncomp = 5
-    rep = 1
-    algorithm = "nipals"
-    X <- bigmemory::big.matrix(nrow = n, ncol = p, type = "double")
-    X[,] <- matrix(rnorm(n * p), nrow = n)
+The table reports median execution times (in milliseconds) and the number
+of iterations per second for a representative single-response scenario.
+The notes column indicates the additional packages required to reproduce
+those measurements.
 
-    true_beta <- matrix(rnorm(p), ncol = 1)
-    y_vec <- as.vector(scale(X[,] %*% true_beta + rnorm(n)))
+## Takeaways
 
-    y <- bigmemory::big.matrix(nrow = n, ncol = 1, type = "double")
-    y[,] <- y_vec
-    bench::mark(
-      dense = pls1_dense(X, y_vec, ncomp = ncomp, algorithm = algorithm),
-      streaming = pls1_stream(X, y_vec, ncomp = ncomp, chunk_size = 1024L, 
-                              algorithm = algorithm),
-      dense_a = pls1_dense_a(X, y, ncomp = ncomp, algorithm = algorithm),
-      streaming_a = pls1_stream_a(X, y, ncomp = ncomp, chunk_size = 1024L, 
-                                  algorithm = algorithm),
-      dense_ya = pls1_dense_ya(X, y, ncomp = ncomp, algorithm = algorithm),
-      streaming_ya = pls1_stream_ya(X, y, ncomp = ncomp, chunk_size = 1024L, 
-                                    algorithm = algorithm),
-      iterations = 10,
-      check = FALSE
-    )  
-  }
-)
-```
-
-## Interpreting the output
-
-The table summarises the timing and memory footprint of each solver. In
-practice you can adjust the number of components, the chunk size or the
-data generation process to mimic your own workload. When working with
-file-backed matrices the streaming solver is often the only viable
-option, whereas the dense solver remains the fastest choice for datasets
-that comfortably fit in memory.
-
-```{r, cache=TRUE, eval=LOCAL}
-bench_res_simpls
-```
-
-```{r, cache=TRUE, eval=LOCAL}
-bench_res_nipals
-```
-
-```{r, cache=TRUE, eval=LOCAL}
-plot(bench_res_simpls, type="jitter")
-```
-
-```{r, cache=TRUE, eval=LOCAL}
-plot(bench_res_nipals, type="jitter")
-```
-
-```{r, cache=TRUE, eval=LOCAL}
-plot(bench_res_simpls, type="boxplot")
-```
-
-```{r, cache=TRUE, eval=LOCAL}
-plot(bench_res_nipals, type="boxplot")
-```
-
+* Use the dense backend when the full predictor matrix fits comfortably
+  in RAM—the SIMPLS path delivers the best raw performance.
+* Switch to the streaming backend for file-backed or
+  larger-than-memory workloads; the cost in throughput is compensated by
+  the ability to scale.
+* Refer to the external benchmark table when choosing between bigPLSR
+  and third-party implementations.
+  
