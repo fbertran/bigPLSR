@@ -74,6 +74,46 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// cpp_kf_pls_state_new
+SEXP cpp_kf_pls_state_new(int p, int m, int ncomp, double lambda, double q_proc, double r_meas);
+RcppExport SEXP _bigPLSR_cpp_kf_pls_state_new(SEXP pSEXP, SEXP mSEXP, SEXP ncompSEXP, SEXP lambdaSEXP, SEXP q_procSEXP, SEXP r_measSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< int >::type p(pSEXP);
+    Rcpp::traits::input_parameter< int >::type m(mSEXP);
+    Rcpp::traits::input_parameter< int >::type ncomp(ncompSEXP);
+    Rcpp::traits::input_parameter< double >::type lambda(lambdaSEXP);
+    Rcpp::traits::input_parameter< double >::type q_proc(q_procSEXP);
+    Rcpp::traits::input_parameter< double >::type r_meas(r_measSEXP);
+    rcpp_result_gen = Rcpp::wrap(cpp_kf_pls_state_new(p, m, ncomp, lambda, q_proc, r_meas));
+    return rcpp_result_gen;
+END_RCPP
+}
+// cpp_kf_pls_state_update
+void cpp_kf_pls_state_update(SEXP state_xptr, Rcpp::NumericMatrix X_, Rcpp::RObject Y_);
+RcppExport SEXP _bigPLSR_cpp_kf_pls_state_update(SEXP state_xptrSEXP, SEXP X_SEXP, SEXP Y_SEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type state_xptr(state_xptrSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type X_(X_SEXP);
+    Rcpp::traits::input_parameter< Rcpp::RObject >::type Y_(Y_SEXP);
+    cpp_kf_pls_state_update(state_xptr, X_, Y_);
+    return R_NilValue;
+END_RCPP
+}
+// cpp_kf_pls_state_fit
+Rcpp::List cpp_kf_pls_state_fit(SEXP state_xptr, double tol);
+RcppExport SEXP _bigPLSR_cpp_kf_pls_state_fit(SEXP state_xptrSEXP, SEXP tolSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type state_xptr(state_xptrSEXP);
+    Rcpp::traits::input_parameter< double >::type tol(tolSEXP);
+    rcpp_result_gen = Rcpp::wrap(cpp_kf_pls_state_fit(state_xptr, tol));
+    return rcpp_result_gen;
+END_RCPP
+}
 // cpp_kpls_rkhs_xy_dense
 Rcpp::List cpp_kpls_rkhs_xy_dense(Rcpp::NumericMatrix X_, Rcpp::RObject Y_, int ncomp, double tol, std::string kernel_x, double gamma_x, int degree_x, double coef0_x, std::string kernel_y, double gamma_y, int degree_y, double coef0_y, double lambda_x, double lambda_y);
 RcppExport SEXP _bigPLSR_cpp_kpls_rkhs_xy_dense(SEXP X_SEXP, SEXP Y_SEXP, SEXP ncompSEXP, SEXP tolSEXP, SEXP kernel_xSEXP, SEXP gamma_xSEXP, SEXP degree_xSEXP, SEXP coef0_xSEXP, SEXP kernel_ySEXP, SEXP gamma_ySEXP, SEXP degree_ySEXP, SEXP coef0_ySEXP, SEXP lambda_xSEXP, SEXP lambda_ySEXP) {
@@ -428,6 +468,9 @@ static const R_CallMethodDef CallEntries[] = {
     {"_bigPLSR_cpp_kernel_pls", (DL_FUNC) &_bigPLSR_cpp_kernel_pls, 5},
     {"_bigPLSR_cpp_kf_pls_dense", (DL_FUNC) &_bigPLSR_cpp_kf_pls_dense, 6},
     {"_bigPLSR_cpp_kf_pls_bigmem", (DL_FUNC) &_bigPLSR_cpp_kf_pls_bigmem, 7},
+    {"_bigPLSR_cpp_kf_pls_state_new", (DL_FUNC) &_bigPLSR_cpp_kf_pls_state_new, 6},
+    {"_bigPLSR_cpp_kf_pls_state_update", (DL_FUNC) &_bigPLSR_cpp_kf_pls_state_update, 3},
+    {"_bigPLSR_cpp_kf_pls_state_fit", (DL_FUNC) &_bigPLSR_cpp_kf_pls_state_fit, 2},
     {"_bigPLSR_cpp_kpls_rkhs_xy_dense", (DL_FUNC) &_bigPLSR_cpp_kpls_rkhs_xy_dense, 14},
     {"_bigPLSR_cpp_klogit_pls_fit", (DL_FUNC) &_bigPLSR_cpp_klogit_pls_fit, 5},
     {"_bigPLSR_cpp_klogit_pls_dense", (DL_FUNC) &_bigPLSR_cpp_klogit_pls_dense, 9},

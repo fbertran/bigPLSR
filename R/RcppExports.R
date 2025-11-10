@@ -37,6 +37,18 @@ cpp_kf_pls_bigmem <- function(X_ptr, Y_ptr, ncomp, chunk_rows, tol, lambda, q_pr
     .Call(`_bigPLSR_cpp_kf_pls_bigmem`, X_ptr, Y_ptr, ncomp, chunk_rows, tol, lambda, q_proc)
 }
 
+cpp_kf_pls_state_new <- function(p, m, ncomp, lambda = 0.99, q_proc = 0.0, r_meas = 0.0) {
+    .Call(`_bigPLSR_cpp_kf_pls_state_new`, p, m, ncomp, lambda, q_proc, r_meas)
+}
+
+cpp_kf_pls_state_update <- function(state_xptr, X_, Y_) {
+    invisible(.Call(`_bigPLSR_cpp_kf_pls_state_update`, state_xptr, X_, Y_))
+}
+
+cpp_kf_pls_state_fit <- function(state_xptr, tol = 1e-8) {
+    .Call(`_bigPLSR_cpp_kf_pls_state_fit`, state_xptr, tol)
+}
+
 cpp_kpls_rkhs_xy_dense <- function(X_, Y_, ncomp, tol, kernel_x, gamma_x, degree_x, coef0_x, kernel_y, gamma_y, degree_y, coef0_y, lambda_x, lambda_y) {
     .Call(`_bigPLSR_cpp_kpls_rkhs_xy_dense`, X_, Y_, ncomp, tol, kernel_x, gamma_x, degree_x, coef0_x, kernel_y, gamma_y, degree_y, coef0_y, lambda_x, lambda_y)
 }

@@ -2,6 +2,9 @@
 
 S3method(predict,big_plsr)
 S3method(summary,big_plsr)
+export(kf_pls_state_fit)
+export(kf_pls_state_new)
+export(kf_pls_state_update)
 export(plot_pls_biplot)
 export(plot_pls_individuals)
 export(plot_pls_variables)
