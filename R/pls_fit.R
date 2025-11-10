@@ -79,7 +79,7 @@ pls_fit <- function(
     coef0 = 0.0,
     approx = c("none","nystrom","rff"),
     approx_rank = NULL,
-    class_weights = NULL    
+    class_weights = NULL
 ) {
   backend   <- match.arg(backend)
   mode      <- match.arg(mode)
@@ -110,8 +110,40 @@ pls_fit <- function(
   klogit_maxit   <- getOption("bigPLSR.klogitpls.max_irls_iter", 50L)
   klogit_alt     <- getOption("bigPLSR.klogitpls.alt_updates",    0L)
   klogit_tol     <- getOption("bigPLSR.klogitpls.tol_irls",       1e-8)
-  class_weights <- getOption("bigPLSR.klogitpls.class_weights", NULL)
+
+  # KF-PLS knobs (default values; can be overridden in dots / options)
+  kf_lambda <- getOption("bigPLSR.kf.lambda", 0.995)
+  kf_qproc  <- getOption("bigPLSR.kf.q_proc", 1e-6)
   
+  # ---- class_weights: DO NOT use match.arg() here ---------------------------
+  # Accept: numeric length-2 vector c(w0, w1), or named vector with class names.
+  normalize_class_weights <- function(y_vec, cw) {
+    if (is.null(cw)) return(numeric(0))
+    if (!is.numeric(cw)) {
+      stop("class_weights must be a numeric vector of length 2 (w0, w1) or a named numeric vector keyed by class labels.", call. = FALSE)
+    }
+    if (length(cw) != 2L) {
+      stop("class_weights must have length 2: c(weight_for_class0, weight_for_class1).", call. = FALSE)
+    }
+    # If y is factor with 2 levels, allow names to map to levels
+    if (is.factor(y_vec)) {
+      lev <- levels(y_vec)
+      if (length(lev) != 2L) stop("klogitpls requires a binary response (factor with 2 levels).", call. = FALSE)
+      if (!is.null(names(cw)) && all(lev %in% names(cw))) {
+        cw <- as.numeric(cw[lev])
+      } else if (!is.null(names(cw)) && all(c("0","1") %in% names(cw))) {
+        cw <- as.numeric(cw[c("0","1")])
+      } else {
+        # Unnamed numeric vector assumed order is c(w0, w1) for lev[1], lev[2]
+        cw <- as.numeric(cw)
+      }
+    } else {
+      # y numeric → assume 0/1 mapping; order c(w0, w1)
+      cw <- as.numeric(cw)
+    }
+    cw
+  }
+
   # -------------------- Auto-selection helper --------------------
   .mem_bytes <- function() {
     gb <- getOption("bigPLSR.mem_budget_gb", 8)
@@ -370,151 +402,6 @@ pls_fit <- function(
     .maybe_threshold(fit)
   }
   
-  .sigmoid <- function(eta) 1/(1+exp(-pmin(eta, 35)))
-  .irls_binomial <- function(T, y, w_class = NULL, maxit = 50L, tol = 1e-8) {
-    # y: numeric 0/1 vector
-    n <- nrow(T); A <- ncol(T)
-    M <- cbind(1, T)                     # intercept + scores
-    beta <- rep(0, A); b <- 0
-    for (it in seq_len(maxit)) {
-      eta <- drop(M %*% c(b, beta))
-      p   <- .sigmoid(eta)
-      p   <- pmin(pmax(p, 1e-8), 1-1e-8)
-      w   <- p*(1-p)
-      if (!is.null(w_class)) {
-        # apply class weights
-        w <- w * ifelse(y > 0.5,
-                        w_class[[2]] %||% w_class[["1"]] %||% 1,
-                        w_class[[1]] %||% w_class[["0"]] %||% 1)
-      }
-      z   <- eta + (y - p)/w
-      W   <- sqrt(w)
-      MW  <- M * W
-      zW  <- z * W
-      coef <- tryCatch(solve(crossprod(MW), crossprod(MW, zW)),
-                       error = function(e) NULL)
-      if (is.null(coef)) break
-      b_new    <- coef[1]
-      beta_new <- coef[-1]
-      step <- max(abs(c(b_new - b, beta_new - beta)))
-      b <- b_new; beta <- beta_new
-      if (step < tol) break
-    }
-    list(b = b, beta = beta)
-  }
-  
-  # ---- Kernel Logistic PLS --------------------------------------------------
-  run_dense_klogitpls <- function() {
-    # X: matrix; y: vector/factor(2 lvls)/matrix with 1 column
-    Xr <- if (is_big) as.matrix(X[]) else as.matrix(X)
-    yv <- if (is.matrix(y)) as.numeric(y[,1]) else y
-    if (is.factor(yv)) {
-      lev <- levels(yv)
-      ybin <- as.numeric(yv == lev[2L])
-      classes <- lev
-    } else {
-      ybin <- as.numeric(yv > 0.5)
-      classes <- c("0","1")
-    }
-    # Build Kc once (dense)
-    kernel <- getOption("bigPLSR.klogitpls.kernel", "rbf")
-    gamma  <- getOption("bigPLSR.klogitpls.gamma",  1 / ncol(Xr))
-    degree <- getOption("bigPLSR.klogitpls.degree", 3L)
-    coef0  <- getOption("bigPLSR.klogitpls.coef0",  1.0)
-    K      <- .bigPLSR_make_kernel(Xr, Xr, kernel, gamma, degree, coef0)
-    # call Gram-KPLS in C++ (returns T, u_basis, etc.)
-    fit0 <- cpp_kpls_from_gram(K, matrix(ybin, ncol = 1L), as.integer(ncomp), tol)
-    T    <- as.matrix(fit0$scores)
-    uB   <- as.matrix(fit0$u_basis)      # n x A
-    A    <- ncol(T)
-    ir   <- .irls_binomial(T, ybin, w_class = class_weights,
-                           maxit = klogit_maxit, tol = klogit_tol)
-    # Optional alternations: refresh T using current working response
-    if (klogit_alt > 0L) {
-      for (k in seq_len(klogit_alt)) {
-        eta <- drop(cbind(1, T) %*% c(ir$b, ir$beta))
-        p   <- .sigmoid(eta)
-        fitk <- cpp_kpls_from_gram(K, matrix(p, ncol = 1L), as.integer(ncomp), tol)
-        T    <- as.matrix(fitk$scores)
-        uB   <- as.matrix(fitk$u_basis)
-        ir   <- .irls_binomial(T, ybin, w_class = class_weights,
-                               maxit = klogit_maxit, tol = klogit_tol)
-      }
-    }
-    obj <- list(
-      algorithm   = "klogitpls",
-      family      = "binomial",
-      ncomp       = A,
-      classes     = classes,
-      intercept   = ir$b,
-      latent_coef = ir$beta,
-      # RKHS projection bits
-      u_basis     = uB,
-      kernel_x    = kernel, gamma_x = gamma, degree_x = degree, coef0_x = coef0,
-      # store X (gated by size) so we can build K(new, train)
-      Xtrain      = if (.bigPLSR_should_store_X(X)) Xr else NULL
-    )
-    class(obj) <- unique(c("big_plsr", class(obj)))
-    obj
-  }
-  
-  run_bigmem_klogitpls <- function() {
-    if (!inherits(X, "big.matrix")) stop("For backend='bigmem', X must be a big.matrix")
-    Xbm <- X
-    yv  <- if (inherits(y, "big.matrix")) as.numeric(y[,1]) else as.numeric(y)
-    if (is.factor(yv)) {
-      lev <- levels(yv)
-      ybin <- as.numeric(yv == lev[2L]); classes <- lev
-    } else { ybin <- as.numeric(yv > 0.5); classes <- c("0","1") }
-    kernel <- getOption("bigPLSR.klogitpls.kernel", "rbf")
-    gamma  <- getOption("bigPLSR.klogitpls.gamma",  1 / ncol(Xbm))
-    degree <- getOption("bigPLSR.klogitpls.degree", 3L)
-    coef0  <- getOption("bigPLSR.klogitpls.coef0",  1.0)
-    # Use the streaming RKHS solver (returns scores + u_basis)
-    fit0 <- cpp_kpls_rkhs_bigmem(
-      Xbm@address, matrix(ybin, ncol = 1L), as.integer(ncomp),
-      tol, kernel, gamma, degree, coef0,
-      approx = "none", approx_rank = 0L,
-      chunk_rows = getOption("bigPLSR.klogitpls.chunk_rows", 8192L),
-      chunk_cols = getOption("bigPLSR.klogitpls.chunk_cols", 8192L)
-    )
-    T  <- as.matrix(fit0$scores)
-    uB <- as.matrix(fit0$u_basis)
-    A  <- ncol(T)
-    ir <- .irls_binomial(T, ybin, w_class = class_weights,
-                         maxit = klogit_maxit, tol = klogit_tol)
-    if (klogit_alt > 0L) {
-      for (k in seq_len(klogit_alt)) {
-        eta <- drop(cbind(1, T) %*% c(ir$b, ir$beta))
-        p   <- .sigmoid(eta)
-        fitk <- cpp_kpls_rkhs_bigmem(
-          Xbm@address, matrix(p, ncol = 1L), as.integer(ncomp),
-          tol, kernel, gamma, degree, coef0,
-          approx = "none", approx_rank = 0L,
-          chunk_rows = getOption("bigPLSR.klogitpls.chunk_rows", 8192L),
-          chunk_cols = getOption("bigPLSR.klogitpls.chunk_cols", 8192L)
-        )
-        T  <- as.matrix(fitk$scores)
-        uB <- as.matrix(fitk$u_basis)
-        ir <- .irls_binomial(T, ybin, w_class = class_weights,
-                             maxit = klogit_maxit, tol = klogit_tol)
-      }
-    }
-    obj <- list(
-      algorithm   = "klogitpls",
-      family      = "binomial",
-      ncomp       = A,
-      classes     = classes,
-      intercept   = ir$b,
-      latent_coef = ir$beta,
-      u_basis     = uB,
-      kernel_x    = kernel, gamma_x = gamma, degree_x = degree, coef0_x = coef0,
-      Xtrain      = NULL  # not stored for bigmem (use streaming predict later if needed)
-    )
-    class(obj) <- unique(c("big_plsr", class(obj)))
-    obj
-  }
-  
   run_dense_rkhs <- function() {
     # Dense: build centered K, call dual RKHS-PLS core
     Xr <- if (is_big) as.matrix(X[]) else as.matrix(X)
@@ -537,19 +424,6 @@ pls_fit <- function(
     } else if (identical(scores, "none")) fit$scores <- NULL
         if (.bigPLSR_should_store_X(Xr)) fit$X <- Xr
     .finalize_pls_fit(.post_scores(fit), "rkhs")
-  }
-  
-  run_dense_klogitpls <- function() {
-    Xr <- if (is_big) as.matrix(X[]) else as.matrix(X)
-    yr <- if (inherits(y, "big.matrix")) as.numeric(y[,1]) else as.numeric(y)
-    cw <- if (is.null(class_weights)) numeric() else as.numeric(class_weights)
-    fit <- .Call(`_bigPLSR_cpp_klogit_pls_dense`,
-                 Xr, yr, as.integer(ncomp), as.numeric(tol),
-                 kernel, as.numeric(gamma), as.integer(degree), as.numeric(coef0),
-                 cw)
-    fit$mode <- "pls1"
-        if (.bigPLSR_should_store_X(Xr)) fit$X <- Xr
-    .finalize_pls_fit(.post_scores(fit), "klogitpls")
   }
   
   run_dense_sparse_kpls <- function() {
@@ -587,6 +461,154 @@ pls_fit <- function(
     # store X only if small enough (helps precompute cross-kernels quickly)
     if (.bigPLSR_should_store_X(Xr)) fit$X <- Xr
     .finalize_pls_fit(.post_scores(fit), "rkhs_xy")
+  }
+  
+  # .sigmoid <- function(eta) 1/(1+exp(-pmin(eta, 35)))
+  # .irls_binomial <- function(T, y, w_class = NULL, maxit = 50L, tol = 1e-8) {
+  #   # y: numeric 0/1 vector
+  #   n <- nrow(T); A <- ncol(T)
+  #   M <- cbind(1, T)                     # intercept + scores
+  #   beta <- rep(0, A); b <- 0
+  #   for (it in seq_len(maxit)) {
+  #     eta <- drop(M %*% c(b, beta))
+  #     p   <- .sigmoid(eta)
+  #     p   <- pmin(pmax(p, 1e-8), 1-1e-8)
+  #     w   <- p*(1-p)
+  #     if (!is.null(w_class)) {
+  #       # apply class weights
+  #       w <- w * ifelse(y > 0.5,
+  #                       w_class[[2]] %||% w_class[["1"]] %||% 1,
+  #                       w_class[[1]] %||% w_class[["0"]] %||% 1)
+  #     }
+  #     z   <- eta + (y - p)/w
+  #     W   <- sqrt(w)
+  #     MW  <- M * W
+  #     zW  <- z * W
+  #     coef <- tryCatch(solve(crossprod(MW), crossprod(MW, zW)),
+  #                      error = function(e) NULL)
+  #     if (is.null(coef)) break
+  #     b_new    <- coef[1]
+  #     beta_new <- coef[-1]
+  #     step <- max(abs(c(b_new - b, beta_new - beta)))
+  #     b <- b_new; beta <- beta_new
+  #     if (step < tol) break
+  #   }
+  #   list(b = b, beta = beta)
+  # }
+  
+  # ---- Kernel RKHS Logistic PLS (dense) -----------------------
+  run_dense_klogitpls <- function() {
+    # inputs
+    Xr <- if (is_big) as.matrix(X[]) else as.matrix(X)
+    yv <- if (is.matrix(y)) as.numeric(y[, 1]) else if (inherits(y, "big.matrix")) as.numeric(y[,1]) else as.numeric(y)
+    # Prepare binary y and classes
+    if (is.factor(yv)) {
+      lev  <- levels(yv)
+      if (length(lev) != 2L) stop("klogitpls requires a binary response (factor with 2 levels).", call. = FALSE)
+      ybin <- as.numeric(yv == lev[2L])
+      classes <- lev
+    } else {
+      ybin <- as.numeric(as.numeric(yv) > 0.5)
+      classes <- c("0","1")
+    }
+    cw <- normalize_class_weights(if (is.factor(y)) y else factor(ybin, levels = c(0,1), labels = classes), class_weights)
+    
+    # hyper-params (allow ... overrides if present, else options, else defaults)
+    k   <- if (exists("dots", inherits = FALSE)) dots$kernel else NULL
+    ga  <- if (exists("dots", inherits = FALSE)) dots$gamma  else NULL
+    de  <- if (exists("dots", inherits = FALSE)) dots$degree else NULL
+    c0  <- if (exists("dots", inherits = FALSE)) dots$coef0  else NULL
+    kernel <- k  %||% getOption("bigPLSR.klogitpls.kernel", "rbf")
+    gamma  <- ga %||% getOption("bigPLSR.klogitpls.gamma",  1 / ncol(Xr))
+    degree <- de %||% getOption("bigPLSR.klogitpls.degree", 3L)
+    coef0  <- c0 %||% getOption("bigPLSR.klogitpls.coef0",  1.0)
+    # IRLS controls / class weights
+    cw     <- if (exists("class_weights", inherits = FALSE) && !is.null(class_weights)) as.numeric(class_weights) else numeric()
+    itmax  <- if (exists("klogit_maxit", inherits = FALSE)) klogit_maxit else getOption("bigPLSR.klogitpls.maxit", 50L)
+    ittol  <- if (exists("klogit_tol",   inherits = FALSE)) klogit_tol   else getOption("bigPLSR.klogitpls.tol",   1e-8)
+    alt_it <- if (exists("klogit_alt",   inherits = FALSE)) klogit_alt   else getOption("bigPLSR.klogitpls.alt",   0L)
+    u_rdg  <- getOption("bigPLSR.klogitpls.u_ridge", 1e-10)
+    
+    # ----- DENSE: build Gram, do KPLS (scores), build u_basis, IRLS -----
+    K      <- .bigPLSR_make_kernel(Xr, Xr, kernel, gamma, degree, coef0)
+    
+    # --- Centering Train (HKH): stats + centered Gram ---
+    r_train <- colMeans(K)
+    g_train <- mean(K)
+    Kc      <- .bigPLSR_center_cross_kernel(K, r_train = r_train, g_train = g_train)
+
+    # KPLS scores from Gram (centered inside C++; if not, compute T then still OK)
+    kfit0  <- cpp_kpls_from_gram(Kc, matrix(ybin, ncol = 1L), as.integer(ncomp), tol)
+    T      <- as.matrix(kfit0$scores)
+    A      <- ncol(T)
+    if (A < 1L) stop("klogitpls: no component extracted")
+    uB     <- as.matrix(kfit0$u_basis)
+#    U      <- tryCatch(solve(Kc + diag(u_rdg, nrow(Kc)), T),
+#                   error = function(e) MASS::ginv(Kc + diag(u_rdg, nrow(Kc))) %*% T)
+    # IRLS on scores
+    ir <- if (exists('cpp_irls_binomial', mode = 'function')) {
+      cpp_irls_binomial(T, ybin, w_class = cw, maxit = itmax, tol = ittol)
+    } else {
+      .irls_binomial(T, ybin, w_class = cw, maxit = itmax, tol = ittol)
+    }
+    # optional alternations
+    if (alt_it > 0L) {
+      for (kk in seq_len(alt_it)) {
+        eta <- drop(cbind(1, T) %*% c(ir$b, ir$beta))
+        p   <- 1/(1+exp(-eta))
+        # Re-use **Kc** (centered Gram train)
+        kfitk <- cpp_kpls_from_gram(Kc, matrix(p, ncol = 1L), as.integer(ncomp), tol)
+        T  <- as.matrix(kfitk$scores)
+        uB   <- as.matrix(fitk$u_basis)
+#        U  <- tryCatch(solve(Kc + diag(u_rdg, nrow(Kc)), T),
+#                       error = function(e) MASS::ginv(Kc + diag(u_rdg, nrow(Kc))) %*% T)
+        ir <- .irls_binomial(T, ybin, w_class = cw, maxit = itmax, tol = ittol)
+      }
+    }
+    obj <- list(
+      algorithm    = "klogitpls",
+      family       = "binomial",
+      ncomp        = A,
+      classes      = classes,
+      intercept    = ir$b,
+      latent_coef  = ir$beta,
+      u_basis      = uB %||% NULL,
+      # store kernel params & centering stats for predict
+      kernel       = kernel, gamma = gamma, degree = degree, coef0 = coef0,
+      kstats_x     = list(r = r_train, g = g_train),
+      X            = if (.bigPLSR_should_store_X(Xr)) Xr else NULL,
+      scores       = T,
+      mode         = "pls1"
+    )
+    return(.finalize_pls_fit(.post_scores(obj), "klogitpls"))
+  }
+  
+  # ---- KF-PLS (EWMA cross-products, SIMPLS extraction) ----------------------
+  run_dense_kf_pls <- function() {
+    Xr <- if (is_big) as.matrix(X[]) else as.matrix(X)
+    Yr <- if (inherits(y, "big.matrix")) {
+      if (mode == "pls2" && ncol(y) > 1L) as.matrix(y[, , drop = FALSE]) else as.numeric(y[,1])
+    } else {
+      if (mode == "pls2" && is.matrix(y) && ncol(y) > 1L) as.matrix(y) else as.numeric(y)
+    }
+    fit <- cpp_kf_pls_dense(Xr, Yr, as.integer(ncomp),
+                            tol = tol, lambda = kf_lambda, q_proc = kf_qproc)
+    fit$mode <- if (is.matrix(Yr) && ncol(Yr) > 1L) "pls2" else "pls1"
+    # Compute scores if requested: T = (X - mu) %*% W_eff
+    if (scores != "none" && !is.null(fit$x_weights) && !is.null(fit$x_loadings)) {
+      Xc <- sweep(Xr, 2L, fit$x_means, "-")
+      Rmat <- crossprod(fit$x_loadings, fit$x_weights)
+      Rinv <- tryCatch(solve(Rmat), error = function(e) NULL)
+      W_eff <- if (!is.null(Rinv)) fit$x_weights %*% Rinv else fit$x_weights
+      Tmat <- Xc %*% W_eff
+      fit$scores <- if (identical(scores, "r")) Tmat else {
+        # big: lift to filebacked if requested
+        Tmat
+      }
+    } else {
+      fit$scores <- NULL
+    }
+    .finalize_pls_fit(.post_scores(fit), "kf_pls")
   }
   
   # ---- BIGMEM BACKEND -------------------------------------------------------
@@ -771,32 +793,18 @@ pls_fit <- function(
                  kernel, as.numeric(gamma), as.integer(degree), as.numeric(coef0),
                  approx, if (is.null(approx_rank)) -1L else as.integer(approx_rank),
                  scores != "none")
-    # bigmem: scores returned as big or dense depending on request inside C++
-        if (.bigPLSR_should_store_X(X)) fit$X <- X
+    # finalize
+    fit$mode <- if (ncol(Yd) == 1L) "pls1" else "pls2"
+    # Store training descriptor so predict() can stream cross-kernel
+    fit$X_ref <- bigmemory::describe(Xbm)
+    # Precompute & store HKH centering stats r,g for training kernel (streamed)
+    fit$kstats <- .bigPLSR_stream_kstats(
+      Xbm,
+      kernel = kernel, gamma = gamma, degree = degree, coef0 = coef0,
+      chunk_rows = getOption("bigPLSR.rkhs.chunk_rows", 8192L),
+      chunk_cols = getOption("bigPLSR.rkhs.chunk_cols", 8192L)
+    )
     .finalize_pls_fit(.post_scores(fit), "rkhs")
-  }
-  
-  run_bigmem_klogitpls <- function() {
-    if (!inherits(X, "big.matrix")) stop("X must be big.matrix for bigmem klogitpls")
-    yv <- if (inherits(y, "big.matrix")) as.numeric(y[,1]) else as.numeric(y)
-    cw <- if (is.null(class_weights)) numeric() else as.numeric(class_weights)
-    fit <- .Call(`_bigPLSR_cpp_klogit_pls_bigmem`,
-                 X@address, yv,
-                 as.integer(ncomp), as.integer(chunk_size), as.numeric(tol),
-                 kernel, as.numeric(gamma), as.integer(degree), as.numeric(coef0),
-                 cw)
-        if (.bigPLSR_should_store_X(X)) fit$X <- X
-    .finalize_pls_fit(.post_scores(fit), "klogitpls")
-  }
-  
-  run_bigmem_kf_pls <- function() {
-    if (!inherits(X, "big.matrix") || !inherits(y, "big.matrix"))
-      stop("For backend='bigmem' and algorithm='kf_pls', both X and y must be big.matrix")
-    fit <- .Call(`_bigPLSR_cpp_kf_pls_stream`,
-                 X@address, y@address,
-                 as.integer(ncomp), as.integer(chunk_size), as.numeric(tol))
-        if (.bigPLSR_should_store_X(X)) fit$X <- X
-    .finalize_pls_fit(.post_scores(fit), "kf_pls")
   }
   
   run_bigmem_kernelpls <- function(kind) {
@@ -844,6 +852,119 @@ pls_fit <- function(
     if (.bigPLSR_should_store_X(X)) fit$X <- X
     .finalize_pls_fit(.post_scores(fit), kind)
   }
+  
+  # ---- Kernel RKHS Logistic PLS (bigmem) -----------------------
+  run_bigmem_klogitpls <- function() {
+    if (!inherits(X, "big.matrix")) stop("For backend='bigmem', X must be a big.matrix")
+    yv <- if (is.matrix(y)) as.numeric(y[, 1]) else if (inherits(y, "big.matrix")) as.numeric(y[,1]) else as.numeric(y)
+    if (is.factor(yv)) {
+      lev <- levels(yv)
+      if (length(lev) != 2L) stop("klogitpls requires a binary response (factor with 2 levels).", call. = FALSE)
+      ybin <- as.numeric(yv == lev[2L]); classes <- lev
+      cw <- normalize_class_weights(yv, class_weights)
+    } else {
+      ybin <- as.numeric(yv > 0.5); classes <- c("0","1")
+      cw <- normalize_class_weights(factor(ybin, levels = c(0,1), labels = classes), class_weights)
+    }
+    # hyper-params (allow ... overrides if present, else options, else defaults)
+    k   <- if (exists("dots", inherits = FALSE)) dots$kernel else NULL
+    ga  <- if (exists("dots", inherits = FALSE)) dots$gamma  else NULL
+    de  <- if (exists("dots", inherits = FALSE)) dots$degree else NULL
+    c0  <- if (exists("dots", inherits = FALSE)) dots$coef0  else NULL
+    kernel <- k  %||% getOption("bigPLSR.klogitpls.kernel", "rbf")
+    gamma  <- ga %||% getOption("bigPLSR.klogitpls.gamma",  1 / ncol(Xr))
+    degree <- de %||% getOption("bigPLSR.klogitpls.degree", 3L)
+    coef0  <- c0 %||% getOption("bigPLSR.klogitpls.coef0",  1.0)
+    # IRLS controls / class weights
+    cw     <- if (exists("class_weights", inherits = FALSE) && !is.null(class_weights)) as.numeric(class_weights) else numeric()
+    itmax  <- if (exists("klogit_maxit", inherits = FALSE)) klogit_maxit else getOption("bigPLSR.klogitpls.maxit", 50L)
+    ittol  <- if (exists("klogit_tol",   inherits = FALSE)) klogit_tol   else getOption("bigPLSR.klogitpls.tol",   1e-8)
+    alt_it <- if (exists("klogit_alt",   inherits = FALSE)) klogit_alt   else getOption("bigPLSR.klogitpls.alt",   0L)
+    u_rdg  <- getOption("bigPLSR.klogitpls.u_ridge", 1e-10)
+    
+    # ----- BIGMEM: streaming RKHS KPLS + IRLS -----
+    Xbm <- X
+    fit0 <- cpp_kpls_rkhs_bigmem(
+      Xbm@address, matrix(ybin, ncol = 1L), as.integer(ncomp),
+      tol, kernel, gamma, degree, coef0,
+      approx      = "none", approx_rank = 0L,
+      chunk_rows  = getOption("bigPLSR.klogitpls.chunk_rows", 8192L),
+      chunk_cols  = getOption("bigPLSR.klogitpls.chunk_cols", 8192L)
+    )
+    T  <- as.matrix(fit0$scores)
+    A  <- ncol(T)
+    if (A < 1L) stop("klogitpls (bigmem): no component extracted")
+    ir <- if (exists('cpp_irls_binomial', mode = 'function')) {
+      cpp_irls_binomial(T, ybin, w_class = cw, maxit = itmax, tol = ittol)
+    } else {
+      .irls_binomial(T, ybin, w_class = cw, maxit = itmax, tol = ittol)
+    }
+    # Build object; bigmem predict can stream cross-kernel later if needed
+    obj <- list(
+      algorithm    = "klogitpls",
+      family       = "binomial",
+      ncomp        = A,
+      classes      = classes,
+      intercept    = ir$b,
+      latent_coef  = ir$beta,
+      u_basis      = fit0$u_basis %||% NULL,   # if C++ provides it; else NULL
+      kernel       = kernel, gamma = gamma, degree = degree, coef0 = coef0,
+      kstats       = fit0$kstats %||% NULL,
+      # Training reference for streamed prediction
+      X_ref       = bigmemory::describe(Xbm),
+      # Precomputed centering stats for HKH using the training kernel
+      kstats      = .bigPLSR_stream_kstats(
+        Xbm,
+        kernel = kernel, gamma = gamma, degree = degree, coef0 = coef0,
+        chunk_rows = getOption("bigPLSR.klogitpls.chunk_rows", 8192L),
+        chunk_cols = getOption("bigPLSR.klogitpls.chunk_cols", 8192L)
+      ),
+      scores       = T,
+      mode         = "pls1"
+    )
+    return(.finalize_pls_fit(.post_scores(obj), "klogitpls"))
+  }
+  
+
+  run_bigmem_kf_pls <- function() {
+    if (!inherits(X, "big.matrix") || !inherits(y, "big.matrix"))
+      stop("For backend='bigmem', both X and y must be big.matrix for kf_pls")
+    fit <- cpp_kf_pls_bigmem(X@address, y@address, as.integer(ncomp),
+                             as.integer(chunk_size), tol = tol,
+                             lambda = kf_lambda, q_proc = kf_qproc)
+    fit$mode <- if (ncol(y) > 1L) "pls2" else "pls1"
+    # Stream scores if requested via existing kernel
+    
+    if (scores != "none" && !is.null(fit$x_weights) && !is.null(fit$x_loadings)) {
+      local_sink <- NULL
+      if (identical(scores, "big")) {
+        if (is.null(scores_bm)) {
+          local_sink <- bigmemory::filebacked.big.matrix(
+            nrow = nrow(X), ncol = as.integer(fit$ncomp), type = "double",
+            backingfile = if (is.null(scores_backingfile)) "scores.bin" else scores_backingfile,
+            backingpath = if (is.null(scores_backingpath)) getwd() else scores_backingpath,
+            descriptorfile = if (is.null(scores_descriptorfile)) "scores.desc" else scores_descriptorfile
+          )
+        } else if (inherits(scores_bm, "big.matrix")) {
+          local_sink <- scores_bm
+        } else if (inherits(scores_bm, "big.matrix.descriptor")) {
+          local_sink <- bigmemory::attach.big.matrix(scores_bm)
+        }
+      }
+      Rmat <- crossprod(fit$x_loadings, fit$x_weights)
+      Rinv <- tryCatch(solve(Rmat), error = function(e) NULL)
+      W_eff <- if (!is.null(Rinv)) fit$x_weights %*% Rinv else fit$x_weights
+      # existing C++ streamer: _bigPLSR_cpp_stream_scores_given_W
+      fit$scores <- .Call(`_bigPLSR_cpp_stream_scores_given_W`,
+                          X@address, W_eff, fit$x_means,
+                          as.integer(chunk_size),
+                          if (is.null(local_sink)) NULL else local_sink, 
+                          identical(scores, "big"))
+    } else {
+      fit$scores <- NULL
+    }
+    .finalize_pls_fit(.post_scores(fit), "kf_pls")
+  }
 
   # ---- Dispatch on algorithm -------------------------------------------------
   if (backend == "arma") {
@@ -861,6 +982,8 @@ pls_fit <- function(
       return(run_dense_rkhs())
     } else if (algo_in == "klogitpls") {
       return(run_dense_klogitpls())
+    } else if (algo_in == "kf_pls") {
+      return(run_dense_kf_pls())
     } else if (algo_in == "sparse_kpls") {
       return(run_dense_sparse_kpls())
     } else if (algo_in == "rkhs_xy") {
@@ -895,6 +1018,8 @@ pls_fit <- function(
       return(run_bigmem_nipals())
     } else if (algo_in == "klogitpls") {
       return(run_bigmem_klogitpls())
+    } else if (algo_in == "kf_pls") {
+      return(run_bigmem_kf_pls())
     } else if (algo_in == "kernelpls") {
       return(run_bigmem_kernelpls("kernel"))
     } else if (algo_in == "widekernelpls") {
@@ -1006,25 +1131,42 @@ pls_fit <- function(
   n <= getOption("bigPLSR.store_Kstats_max_n", 6000L)
 }
 
-.bigPLSR_make_kernel <- function(A, B, kernel = "rbf", gamma = NULL, degree = 3L, coef0 = 1) {
+.bigPLSR_make_kernel <- function(A, B, kernel = "rbf",
+                                 gamma = 1 / pmax(1, ncol(A)),
+                                 degree = 3L, coef0 = 1) {
+  # accepte une fonction kernel(A,B) ou un nom de noyau
+  if (is.function(kernel)) return(kernel(A, B))
+  kernel <- tolower(as.character(kernel)[1L])
   A <- as.matrix(A); B <- as.matrix(B)
   if (is.null(gamma)) gamma <- 1 / ncol(A)
-  k <- tolower(kernel)
-  if (k %in% c("linear")) return(A %*% t(B))
-  if (k %in% c("rbf","gaussian")) {
-    an <- rowSums(A * A); bn <- rowSums(B * B)
-    D2 <- outer(an, bn, "+") - 2 * (A %*% t(B))
-    return(exp(-gamma * D2))
-  }
-  if (k %in% c("poly","polynomial")) {
-    G <- A %*% t(B)
-    return((gamma * G + coef0)^degree)
-  }
-  if (k == "tanh") {
-    G <- A %*% t(B)
-    return(tanh(gamma * G + coef0))
-  }
-  stop("Unknown kernel: ", kernel)
+  switch(tolower(kernel),
+         "linear" = A %*% t(B),
+         "rbf"    = {
+           an <- rowSums(A * A)
+           bn <- rowSums(B * B)
+           D2 <- outer(an, bn, "+") - 2 * (A %*% t(B))
+           exp(-gamma * D2)
+         },
+         "gaussian" = {
+           an <- rowSums(A * A)
+           bn <- rowSums(B * B)
+           D2 <- outer(an, bn, "+") - 2 * (A %*% t(B))
+           exp(-gamma * D2)
+         },
+         "poly" = {
+           G <- A %*% t(B)
+           (gamma * G + coef0)^degree
+         },
+         "polynomial" = {
+           G <- A %*% t(B)
+           (gamma * G + coef0)^degree
+         },
+         "tanh" = {
+           G <- A %*% t(B)
+           tanh(gamma * G + coef0)
+         },
+         stop("Unknown kernel: ", kernel)
+  )
 }
 
 .bigPLSR_try_store_kstats <- function(fit, X, kernel, gamma, degree, coef0, force = FALSE) {
@@ -1037,4 +1179,29 @@ pls_fit <- function(
   fit$k_colmeans  <- colMeans(K)
   fit$k_grandmean <- mean(K)
   fit
+}
+
+.bigPLSR_stream_kstats <- function(Xbm,
+                                   kernel, gamma, degree, coef0,
+                                   chunk_rows = getOption("bigPLSR.predict.chunk_rows", 8192L),
+                                   chunk_cols = getOption("bigPLSR.predict.chunk_cols", 8192L)) {
+  Xbm <- if (inherits(Xbm, "big.matrix.descriptor")) bigmemory::attach.big.matrix(Xbm) else Xbm
+  stopifnot(inherits(Xbm, "big.matrix"))
+  n <- nrow(Xbm)
+  col_sum <- numeric(n)
+  total_sum <- 0
+  r_seq <- seq.int(1L, n, by = chunk_rows)
+  c_seq <- seq.int(1L, n, by = chunk_cols)
+  for (r0 in r_seq) {
+    r1 <- min(n, r0 + chunk_rows - 1L)
+    Xr <- as.matrix(Xbm[r0:r1, , drop = FALSE])
+    for (c0 in c_seq) {
+      c1 <- min(n, c0 + chunk_cols - 1L)
+      Xc <- as.matrix(Xbm[c0:c1, , drop = FALSE])
+      Kblk <- .bigPLSR_make_kernel(Xr, Xc, kernel, gamma, degree, coef0)
+      col_sum[c0:c1] <- col_sum[c0:c1] + colSums(Kblk)
+      total_sum <- total_sum + sum(Kblk)
+    }
+  }
+  list(r = col_sum / n, g = total_sum / (n * n))
 }

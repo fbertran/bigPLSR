@@ -4,7 +4,13 @@
 \alias{predict.big_plsr}
 \title{Predict method for big_plsr objects}
 \usage{
-\method{predict}{big_plsr}(object, newdata, ncomp = NULL, type = c("response", "scores"), ...)
+\method{predict}{big_plsr}(
+  object,
+  newdata,
+  ncomp = NULL,
+  type = c("response", "scores", "prob", "class"),
+  ...
+)
 }
 \arguments{
 \item{object}{A fitted PLS model produced by \code{\link[=pls_fit]{pls_fit()}}.}

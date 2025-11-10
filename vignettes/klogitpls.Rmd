@@ -1,0 +1,47 @@
+---
+title: "klogitpls"
+shorttitle: "klogitpls"
+author:
+- name: "Frédéric Bertrand"
+  affiliation:
+  - Cedric, Cnam, Paris
+  email: frederic.bertrand@lecnam.net
+date: "`r Sys.Date()`"
+output:
+  rmarkdown::html_vignette:
+    toc: true
+vignette: >
+  %\VignetteIndexEntry{klogitpls}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+## Kernel Logistic PLS (klogitpls)
+
+We first extract latent scores with Kernel PLS (KPLS):
+
+\[
+T = K_c U,
+\]
+
+where \(K_c = H K(X,X) H\) is the centered Gram matrix and the columns of \(U\) are the dual score directions (KPLS deflation).
+
+We then fit a logistic link in the latent space using IRLS:
+
+\[
+\eta = \beta_0 + T \beta, \qquad p = \sigma(\eta),
+\]
+\[
+W = \mathrm{diag}(p (1-p)), \qquad z = \eta + \frac{y - p}{p(1-p)}.
+\]
+
+At each iteration, solve the weighted least squares system for \([\beta_0, \beta]\):
+\[
+(\tilde{M}^\top \tilde{M}) \theta = \tilde{M}^\top \tilde{z}, \quad \tilde{M} = W^{1/2}[1, T], \ \tilde{z} = W^{1/2} z.
+\]
+
+Optionally, we **alternate**: replace \(y\) by \(p\) and recompute KPLS to refresh \(T\) for a few steps.  
+Prediction on new data uses the centered cross-kernel \(K_c(X_\*, X)\) and the stored KPLS basis \(U\):
+\[
+T_\* = K_c(X_\*, X) \, U, \qquad \hat{p}_\* = \sigma\!\big(\beta_0 + T_\* \beta\big).
+\]

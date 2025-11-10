@@ -11,6 +11,21 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
+// cpp_irls_binomial
+Rcpp::List cpp_irls_binomial(const arma::mat& T, const Rcpp::IntegerVector& ybin, Rcpp::Nullable<Rcpp::NumericVector> w_class, int maxit, double tol);
+RcppExport SEXP _bigPLSR_cpp_irls_binomial(SEXP TSEXP, SEXP ybinSEXP, SEXP w_classSEXP, SEXP maxitSEXP, SEXP tolSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type T(TSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector& >::type ybin(ybinSEXP);
+    Rcpp::traits::input_parameter< Rcpp::Nullable<Rcpp::NumericVector> >::type w_class(w_classSEXP);
+    Rcpp::traits::input_parameter< int >::type maxit(maxitSEXP);
+    Rcpp::traits::input_parameter< double >::type tol(tolSEXP);
+    rcpp_result_gen = Rcpp::wrap(cpp_irls_binomial(T, ybin, w_class, maxit, tol));
+    return rcpp_result_gen;
+END_RCPP
+}
 // cpp_kernel_pls
 Rcpp::List cpp_kernel_pls(const arma::mat& X, const arma::mat& Y, int ncomp, double tol, bool wide);
 RcppExport SEXP _bigPLSR_cpp_kernel_pls(SEXP XSEXP, SEXP YSEXP, SEXP ncompSEXP, SEXP tolSEXP, SEXP wideSEXP) {
@@ -26,18 +41,36 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// cpp_kf_pls_stream
-SEXP cpp_kf_pls_stream(SEXP X_ptr, SEXP Y_ptr, int ncomp, int chunk, double tol);
-RcppExport SEXP _bigPLSR_cpp_kf_pls_stream(SEXP X_ptrSEXP, SEXP Y_ptrSEXP, SEXP ncompSEXP, SEXP chunkSEXP, SEXP tolSEXP) {
+// cpp_kf_pls_dense
+Rcpp::List cpp_kf_pls_dense(Rcpp::NumericMatrix X_, Rcpp::RObject Y_, int ncomp, double tol, double lambda, double q_proc);
+RcppExport SEXP _bigPLSR_cpp_kf_pls_dense(SEXP X_SEXP, SEXP Y_SEXP, SEXP ncompSEXP, SEXP tolSEXP, SEXP lambdaSEXP, SEXP q_procSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type X_(X_SEXP);
+    Rcpp::traits::input_parameter< Rcpp::RObject >::type Y_(Y_SEXP);
+    Rcpp::traits::input_parameter< int >::type ncomp(ncompSEXP);
+    Rcpp::traits::input_parameter< double >::type tol(tolSEXP);
+    Rcpp::traits::input_parameter< double >::type lambda(lambdaSEXP);
+    Rcpp::traits::input_parameter< double >::type q_proc(q_procSEXP);
+    rcpp_result_gen = Rcpp::wrap(cpp_kf_pls_dense(X_, Y_, ncomp, tol, lambda, q_proc));
+    return rcpp_result_gen;
+END_RCPP
+}
+// cpp_kf_pls_bigmem
+Rcpp::List cpp_kf_pls_bigmem(SEXP X_ptr, SEXP Y_ptr, int ncomp, int chunk_rows, double tol, double lambda, double q_proc);
+RcppExport SEXP _bigPLSR_cpp_kf_pls_bigmem(SEXP X_ptrSEXP, SEXP Y_ptrSEXP, SEXP ncompSEXP, SEXP chunk_rowsSEXP, SEXP tolSEXP, SEXP lambdaSEXP, SEXP q_procSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< SEXP >::type X_ptr(X_ptrSEXP);
     Rcpp::traits::input_parameter< SEXP >::type Y_ptr(Y_ptrSEXP);
     Rcpp::traits::input_parameter< int >::type ncomp(ncompSEXP);
-    Rcpp::traits::input_parameter< int >::type chunk(chunkSEXP);
+    Rcpp::traits::input_parameter< int >::type chunk_rows(chunk_rowsSEXP);
     Rcpp::traits::input_parameter< double >::type tol(tolSEXP);
-    rcpp_result_gen = Rcpp::wrap(cpp_kf_pls_stream(X_ptr, Y_ptr, ncomp, chunk, tol));
+    Rcpp::traits::input_parameter< double >::type lambda(lambdaSEXP);
+    Rcpp::traits::input_parameter< double >::type q_proc(q_procSEXP);
+    rcpp_result_gen = Rcpp::wrap(cpp_kf_pls_bigmem(X_ptr, Y_ptr, ncomp, chunk_rows, tol, lambda, q_proc));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -62,24 +95,6 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< double >::type lambda_x(lambda_xSEXP);
     Rcpp::traits::input_parameter< double >::type lambda_y(lambda_ySEXP);
     rcpp_result_gen = Rcpp::wrap(cpp_kpls_rkhs_xy_dense(X_, Y_, ncomp, tol, kernel_x, gamma_x, degree_x, coef0_x, kernel_y, gamma_y, degree_y, coef0_y, lambda_x, lambda_y));
-    return rcpp_result_gen;
-END_RCPP
-}
-// cpp_irls_binomial
-Rcpp::List cpp_irls_binomial(const arma::mat& T, const arma::vec& y, arma::vec beta, const arma::vec& sample_w, double lambda, int maxit, double tol, const Rcpp::Nullable<Rcpp::NumericVector>& class_weights_opt);
-RcppExport SEXP _bigPLSR_cpp_irls_binomial(SEXP TSEXP, SEXP ySEXP, SEXP betaSEXP, SEXP sample_wSEXP, SEXP lambdaSEXP, SEXP maxitSEXP, SEXP tolSEXP, SEXP class_weights_optSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const arma::mat& >::type T(TSEXP);
-    Rcpp::traits::input_parameter< const arma::vec& >::type y(ySEXP);
-    Rcpp::traits::input_parameter< arma::vec >::type beta(betaSEXP);
-    Rcpp::traits::input_parameter< const arma::vec& >::type sample_w(sample_wSEXP);
-    Rcpp::traits::input_parameter< double >::type lambda(lambdaSEXP);
-    Rcpp::traits::input_parameter< int >::type maxit(maxitSEXP);
-    Rcpp::traits::input_parameter< double >::type tol(tolSEXP);
-    Rcpp::traits::input_parameter< const Rcpp::Nullable<Rcpp::NumericVector>& >::type class_weights_opt(class_weights_optSEXP);
-    rcpp_result_gen = Rcpp::wrap(cpp_irls_binomial(T, y, beta, sample_w, lambda, maxit, tol, class_weights_opt));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -409,10 +424,11 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
+    {"_bigPLSR_cpp_irls_binomial", (DL_FUNC) &_bigPLSR_cpp_irls_binomial, 5},
     {"_bigPLSR_cpp_kernel_pls", (DL_FUNC) &_bigPLSR_cpp_kernel_pls, 5},
-    {"_bigPLSR_cpp_kf_pls_stream", (DL_FUNC) &_bigPLSR_cpp_kf_pls_stream, 5},
+    {"_bigPLSR_cpp_kf_pls_dense", (DL_FUNC) &_bigPLSR_cpp_kf_pls_dense, 6},
+    {"_bigPLSR_cpp_kf_pls_bigmem", (DL_FUNC) &_bigPLSR_cpp_kf_pls_bigmem, 7},
     {"_bigPLSR_cpp_kpls_rkhs_xy_dense", (DL_FUNC) &_bigPLSR_cpp_kpls_rkhs_xy_dense, 14},
-    {"_bigPLSR_cpp_irls_binomial", (DL_FUNC) &_bigPLSR_cpp_irls_binomial, 8},
     {"_bigPLSR_cpp_klogit_pls_fit", (DL_FUNC) &_bigPLSR_cpp_klogit_pls_fit, 5},
     {"_bigPLSR_cpp_klogit_pls_dense", (DL_FUNC) &_bigPLSR_cpp_klogit_pls_dense, 9},
     {"_bigPLSR_cpp_klogit_pls_bigmem", (DL_FUNC) &_bigPLSR_cpp_klogit_pls_bigmem, 10},

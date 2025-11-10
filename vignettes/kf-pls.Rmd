@@ -1,0 +1,55 @@
+---
+title: "KF-PLS: Streaming PLS with Kalman-style updates"
+shorttitle: "KF-PLS: Streaming PLS with Kalman-style updates"
+author:
+- name: "Frédéric Bertrand"
+  affiliation:
+  - Cedric, Cnam, Paris
+  email: frederic.bertrand@lecnam.net
+date: "`r Sys.Date()`"
+output:
+  rmarkdown::html_vignette:
+    toc: true
+vignette: >
+  %\VignetteIndexEntry{KF-PLS: Streaming PLS with Kalman-style updates}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```r
+library(bigPLSR)
+set.seed(1)
+```
+
+## Idea
+
+We maintain exponentially-weighted cross-products
+\[
+\mathbf{C}_{xx} \leftarrow \lambda\,\mathbf{C}_{xx} + \mathbf{X}_b^\top\mathbf{X}_b + q\,\mathbf{I},\qquad
+\mathbf{C}_{xy} \leftarrow \lambda\,\mathbf{C}_{xy} + \mathbf{X}_b^\top\mathbf{Y}_b,
+\]
+over mini-batches \(b\) of rows, where \(0<\lambda\le 1\) is a forgetting factor and \(q\ge 0\) a small process-noise ridge.
+At any time we extract latent components via **SIMPLS** on \((\mathbf{C}_{xx},\mathbf{C}_{xy})\).
+This is stable, fast, and matches a Kalman-style tracking of slowly varying covariance structure.
+
+## API
+
+```r
+fit <- pls_fit(X, Y, ncomp = 3,
+               backend   = "arma"  # or "bigmem"
+               ,algorithm = "kf_pls",
+               scores    = "r",
+               tol = 1e-8,
+               # tuning:
+               # options(bigPLSR.kf.lambda = 0.995,
+               #         bigPLSR.kf.q_proc = 1e-6)
+)
+```
+
+On **bigmem**, cross-products are streamed in row chunks; scores \( \mathbf{T} \) are produced via the package's chunked score kernel.
+
+## Notes
+
+- \(\lambda\to 1\) and \(q\to 0\) recovers batch SIMPLS.
+- Smaller \(\lambda\) emphasizes recent batches (concept drift).
+- \(q\) stabilizes ill-conditioned \( \mathbf{C}_{xx} \) on very high-dimensional data.

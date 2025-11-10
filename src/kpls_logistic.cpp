@@ -15,7 +15,7 @@ static inline void ensure_double_bigmatrix(const BigMatrix& M, const char* nm){
 }
 
 // pull a row subset (1-based indices from R) from a BigMatrix into an R matrix
-static inline NumericMatrix rows_from_bigmatrix(BigMatrix& BM,
+[[maybe_unused]] static inline NumericMatrix rows_from_bigmatrix(BigMatrix& BM,
                                                 const IntegerVector& idx_1based){
   const std::size_t ni = idx_1based.size();
   const std::size_t p  = BM.ncol();
@@ -32,6 +32,7 @@ static inline NumericMatrix rows_from_bigmatrix(BigMatrix& BM,
   }
   return out;
 }
+
 
 // ---------- 3) Kernel logistic PLS (skeleton) -------------------------------
 //
