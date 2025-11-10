@@ -463,38 +463,109 @@ pls_fit <- function(
     .finalize_pls_fit(.post_scores(fit), "rkhs_xy")
   }
   
-  # .sigmoid <- function(eta) 1/(1+exp(-pmin(eta, 35)))
-  # .irls_binomial <- function(T, y, w_class = NULL, maxit = 50L, tol = 1e-8) {
-  #   # y: numeric 0/1 vector
-  #   n <- nrow(T); A <- ncol(T)
-  #   M <- cbind(1, T)                     # intercept + scores
-  #   beta <- rep(0, A); b <- 0
-  #   for (it in seq_len(maxit)) {
-  #     eta <- drop(M %*% c(b, beta))
-  #     p   <- .sigmoid(eta)
-  #     p   <- pmin(pmax(p, 1e-8), 1-1e-8)
-  #     w   <- p*(1-p)
-  #     if (!is.null(w_class)) {
-  #       # apply class weights
-  #       w <- w * ifelse(y > 0.5,
-  #                       w_class[[2]] %||% w_class[["1"]] %||% 1,
-  #                       w_class[[1]] %||% w_class[["0"]] %||% 1)
-  #     }
-  #     z   <- eta + (y - p)/w
-  #     W   <- sqrt(w)
-  #     MW  <- M * W
-  #     zW  <- z * W
-  #     coef <- tryCatch(solve(crossprod(MW), crossprod(MW, zW)),
-  #                      error = function(e) NULL)
-  #     if (is.null(coef)) break
-  #     b_new    <- coef[1]
-  #     beta_new <- coef[-1]
-  #     step <- max(abs(c(b_new - b, beta_new - beta)))
-  #     b <- b_new; beta <- beta_new
-  #     if (step < tol) break
-  #   }
-  #   list(b = b, beta = beta)
-  # }
+  .sigmoid <- function(eta) {
+    p <- 1 / (1 + exp(-eta))
+    pmin(pmax(p, 1e-12), 1 - 1e-12)
+  }
+  
+  .irls_binomial <- function(T, y, w_class = NULL, maxit = 50L, tol = 1e-8) {
+    y <- as.numeric(y > 0.5)
+    n <- nrow(T); A <- ncol(T)
+    M <- cbind(1, T)
+    theta <- numeric(A + 1L)
+    converged <- FALSE
+    it <- 0L
+    for (it in seq_len(maxit)) {
+      eta <- drop(M %*% theta)
+      p   <- .sigmoid(eta)
+      w   <- p * (1 - p)
+      if (!is.null(w_class) && length(w_class) >= 2L) {
+        w <- w * ifelse(y > 0.5,
+                        w_class[[2]] %||% w_class[["1"]] %||% w_class[[2]],
+                        w_class[[1]] %||% w_class[["0"]] %||% w_class[[1]])
+      }
+      z <- eta + (y - p) / pmax(w, 1e-12)
+      W <- sqrt(w)
+      MW <- M * W
+      zW <- z * W
+      coef <- tryCatch(
+        solve(crossprod(MW), crossprod(MW, zW)),
+        error = function(e) NULL
+      )
+      if (is.null(coef)) break
+      step <- max(abs(coef - theta))
+      theta <- coef
+      if (step < tol) {
+        converged <- TRUE
+        break
+      }
+    }
+    list(
+      beta = if (A > 0L) theta[-1L] else numeric(),
+      b = theta[1L],
+      fitted = .sigmoid(drop(M %*% theta)),
+      iter = it,
+      converged = converged
+    )
+  }
+  
+  .run_irls <- function(T, ybin, cw, maxit, tol) {
+    w_class <- if (length(cw) == 0L) NULL else cw
+    if (exists("cpp_irls_binomial", mode = "function")) {
+      cpp_irls_binomial(T, ybin, w_class = w_class, maxit = maxit, tol = tol)
+    } else {
+      .irls_binomial(T, ybin, w_class = w_class, maxit = maxit, tol = tol)
+    }
+  }
+  
+  .calibrate_weighted_logit <- function(T, ybin, ir_w, cw, maxit, tol) {
+    if (length(cw) == 0L) return(ir_w)
+    pos <- ybin > 0.5
+    neg <- !pos
+    if (!any(pos) || !any(neg)) return(ir_w)
+    
+    base <- .run_irls(T, ybin, numeric(0), maxit, tol)
+    design <- cbind(1, T)
+    eta_w <- drop(design %*% c(ir_w$b, ir_w$beta))
+    eta_base <- drop(design %*% c(base$b, base$beta))
+    p_neg_w <- .sigmoid(eta_w[neg])
+    p_neg_base <- .sigmoid(eta_base[neg])
+    p_pos_w <- .sigmoid(eta_w[pos])
+    p_pos_base <- .sigmoid(eta_base[pos])
+    if (mean(p_neg_w) <= mean(p_neg_base) + 1e-8) return(ir_w)
+    
+    find_root <- function(fun) {
+      upper <- 1
+      val <- fun(upper)
+      iter <- 0L
+      while (is.finite(val) && val > 0 && iter < 25L) {
+        upper <- upper * 2
+        val <- fun(upper)
+        iter <- iter + 1L
+      }
+      if (!is.finite(val) || val > 0) return(NA_real_)
+      tryCatch(stats::uniroot(fun, lower = 0, upper = upper)$root, error = function(e) NA_real_)
+    }
+    
+    root_neg <- find_root(function(delta) mean(.sigmoid(eta_w[neg] - delta)) - mean(p_neg_base))
+    if (!is.finite(root_neg) || root_neg <= 0) return(ir_w)
+    
+    root_pos <- if (mean(p_pos_w) > mean(p_pos_base) + 1e-8) {
+      find_root(function(delta) mean(.sigmoid(eta_w[pos] - delta)) - mean(p_pos_base))
+    } else {
+      NA_real_
+    }
+    
+    delta <- root_neg
+    if (is.finite(root_pos) && root_pos > 0) {
+      delta <- min(delta, 0.999 * root_pos)
+    }
+    if (!is.finite(delta) || delta <= 0) return(ir_w)
+    
+    ir_w$b <- ir_w$b - delta
+    ir_w$fitted <- .sigmoid(eta_w - delta)
+    ir_w
+  }
   
   # ---- Kernel RKHS Logistic PLS (dense) -----------------------
   run_dense_klogitpls <- function() {
@@ -549,8 +620,9 @@ pls_fit <- function(
     ir <- if (exists('cpp_irls_binomial', mode = 'function')) {
       cpp_irls_binomial(T, ybin, w_class = cw, maxit = itmax, tol = ittol)
     } else {
-      .irls_binomial(T, ybin, w_class = cw, maxit = itmax, tol = ittol)
+      ir <- .run_irls(T, ybin, cw, itmax, ittol)
     }
+    ir <- .run_irls(T, ybin, cw, itmax, ittol)
     # optional alternations
     if (alt_it > 0L) {
       for (kk in seq_len(alt_it)) {
@@ -562,9 +634,15 @@ pls_fit <- function(
         uB   <- as.matrix(kfitk$u_basis)
 #        U  <- tryCatch(solve(Kc + diag(u_rdg, nrow(Kc)), T),
 #                       error = function(e) MASS::ginv(Kc + diag(u_rdg, nrow(Kc))) %*% T)
-        ir <- .irls_binomial(T, ybin, w_class = cw, maxit = itmax, tol = ittol)
+        ir <- if (exists('cpp_irls_binomial', mode = 'function')) {
+          cpp_irls_binomial(T, ybin, w_class = cw, maxit = itmax, tol = ittol)
+        } else {
+          ir <- .run_irls(T, ybin, cw, itmax, ittol)
+        }
+        ir <- .run_irls(T, ybin, cw, itmax, ittol)
       }
     }
+    ir <- .calibrate_weighted_logit(T, ybin, ir, cw, itmax, ittol)
     obj <- list(
       algorithm    = "klogitpls",
       family       = "binomial",
@@ -572,6 +650,7 @@ pls_fit <- function(
       classes      = classes,
       intercept    = ir$b,
       latent_coef  = ir$beta,
+      class_weights = if (length(cw)) cw else NULL,
       u_basis      = uB %||% NULL,
       # store kernel params & centering stats for predict
       kernel       = kernel, gamma = gamma, degree = degree, coef0 = coef0,
@@ -787,14 +866,21 @@ pls_fit <- function(
   run_bigmem_rkhs <- function() {
     if (!inherits(X, "big.matrix") || !inherits(y, "big.matrix"))
       stop("For backend='bigmem' and algorithm='rkhs', both X and y must be big.matrix")
+    Xbm <- X
+    Ybm <- y
     fit <- .Call(`_bigPLSR_cpp_kpls_rkhs_bigmem`,
-                 X@address, y@address,
+                 Xbm@address, Ybm@address,
                  as.integer(ncomp), as.integer(chunk_size), as.numeric(tol),
                  kernel, as.numeric(gamma), as.integer(degree), as.numeric(coef0),
                  approx, if (is.null(approx_rank)) -1L else as.integer(approx_rank),
                  scores != "none")
     # finalize
-    fit$mode <- if (ncol(Yd) == 1L) "pls1" else "pls2"
+    fit$mode <- if (ncol(y) == 1L) "pls1" else "pls2"
+    if (identical(scores, "none")) {
+      fit$scores <- NULL
+    } else if (identical(scores, "r") && inherits(fit$scores, "big.matrix")) {
+      fit$scores <- as.matrix(fit$scores[])
+    }
     # Store training descriptor so predict() can stream cross-kernel
     fit$X_ref <- bigmemory::describe(Xbm)
     # Precompute & store HKH centering stats r,g for training kernel (streamed)
@@ -897,9 +983,30 @@ pls_fit <- function(
     ir <- if (exists('cpp_irls_binomial', mode = 'function')) {
       cpp_irls_binomial(T, ybin, w_class = cw, maxit = itmax, tol = ittol)
     } else {
-      .irls_binomial(T, ybin, w_class = cw, maxit = itmax, tol = ittol)
+      ir <- .run_irls(T, ybin, cw, itmax, ittol)
     }
+    ir <- .run_irls(T, ybin, cw, itmax, ittol)
+    # optional alternations #TODO for bigmem here is the dense code
+    # if (alt_it > 0L) {
+    #   for (kk in seq_len(alt_it)) {
+    #     eta <- drop(cbind(1, T) %*% c(ir$b, ir$beta))
+    #     p   <- 1/(1+exp(-eta))
+    #     # Re-use **Kc** (centered Gram train)
+    #     kfitk <- cpp_kpls_from_gram(Kc, matrix(p, ncol = 1L), as.integer(ncomp), tol)
+    #     T  <- as.matrix(kfitk$scores)
+    #     uB   <- as.matrix(kfitk$u_basis)
+    #     #        U  <- tryCatch(solve(Kc + diag(u_rdg, nrow(Kc)), T),
+    #     #                       error = function(e) MASS::ginv(Kc + diag(u_rdg, nrow(Kc))) %*% T)
+    #     ir <- if (exists('cpp_irls_binomial', mode = 'function')) {
+    #       cpp_irls_binomial(T, ybin, w_class = cw, maxit = itmax, tol = ittol)
+    #     } else {
+    #       ir <- .run_irls(T, ybin, cw, itmax, ittol)
+    #     }
+    #     ir <- .run_irls(T, ybin, cw, itmax, ittol)
+    #   }
+    # }
     # Build object; bigmem predict can stream cross-kernel later if needed
+    ir <- .calibrate_weighted_logit(T, ybin, ir, cw, itmax, ittol)
     obj <- list(
       algorithm    = "klogitpls",
       family       = "binomial",
@@ -907,10 +1014,11 @@ pls_fit <- function(
       classes      = classes,
       intercept    = ir$b,
       latent_coef  = ir$beta,
+      class_weights = if (length(cw)) cw else NULL,
       u_basis      = fit0$u_basis %||% NULL,   # if C++ provides it; else NULL
       kernel       = kernel, gamma = gamma, degree = degree, coef0 = coef0,
       # Precomputed centering stats for HKH using the training kernel
-      kstats       = fit0$kstats %||% bigPLSR_stream_kstats(
+      kstats       = fit0$kstats %||% .bigPLSR_stream_kstats(
         Xbm,
         kernel = kernel, gamma = gamma, degree = degree, coef0 = coef0,
         chunk_rows = getOption("bigPLSR.klogitpls.chunk_rows", 8192L),

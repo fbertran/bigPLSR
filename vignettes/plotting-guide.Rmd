@@ -1,0 +1,83 @@
+---
+title: "Visualising PLS Fits with bigPLSR"
+shorttitle: "Visualising PLS Fits"
+author:
+- name: "Frédéric Bertrand"
+  affiliation:
+  - Cedric, Cnam, Paris
+  email: frederic.bertrand@lecnam.net
+date: "`r Sys.Date()`"
+output:
+  rmarkdown::html_vignette:
+    toc: true
+vignette: >
+  %\VignetteIndexEntry{Visualising PLS Fits with bigPLSR}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include=FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.path = "figures/plots-", dpi = 150,
+                      fig.width = 6, fig.height = 4,
+                      message = FALSE, warning = FALSE)
+```
+
+```{r setup}
+library(bigPLSR)
+library(ggplot2)
+set.seed(101)
+```
+
+## Example data
+
+```{r data}
+n <- 80; p <- 6
+X <- matrix(rnorm(n * p), n, p)
+Y <- scale(X[, 1:2] %*% matrix(c(0.7, -0.4, 0.5, 0.8), 2, 2) + rnorm(n * 2, sd = 0.15))
+
+groups <- factor(rep(LETTERS[1:4], length.out = n))
+fit <- pls_fit(X, Y, ncomp = 3, scores = "r")
+```
+
+## Score plots with ellipses
+
+```{r scores-ellipse}
+plot_pls_individuals(fit, comps = c(1, 2), groups = groups,
+                     ellipse = TRUE, ellipse_level = 0.90) +
+  ggtitle("Component scores with 90% ellipses")
+```
+
+## Variable correlations and biplots
+
+```{r variables}
+plot_pls_variables(fit, comps = c(1, 2)) +
+  ggtitle("Correlation circle")
+```
+
+```{r biplot}
+plot_pls_biplot(fit, comps = c(1, 2), groups = groups,
+                ellipse = TRUE, ellipse_level = 0.90) +
+  ggtitle("Biplot with grouped individuals")
+```
+
+## Bootstrap summaries
+
+```{r bootstrap}
+boot <- pls_bootstrap(X, Y, ncomp = 2, R = 30, type = "xy",
+                      parallel = FALSE, seed = 99)
+summary_boot <- summarise_pls_bootstrap(boot)
+```
+
+```{r bootstrap-coef}
+plot_pls_bootstrap_coefficients(summary_boot) +
+  ggtitle("Bootstrap coefficient intervals")
+```
+
+```{r bootstrap-scores}
+plot_pls_bootstrap_scores(summary_boot) +
+  ggtitle("Bootstrap score dispersion")
+```
+
+All plotting helpers run in a few seconds for datasets of this size.
+The bootstrap example uses 30 replicates to stay well within a
+CRAN-friendly budget.

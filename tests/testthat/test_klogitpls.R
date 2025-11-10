@@ -75,9 +75,9 @@ test_that("klogitpls (dense RBF) learns a non-linear boundary", {
   opts <- options(
     bigPLSR.klogitpls.kernel="rbf", bigPLSR.klogitpls.gamma=0.7,
     bigPLSR.klogitpls.degree=3L,    bigPLSR.klogitpls.coef0=1.0,
-    bigPLSR.klogitpls.max_irls_iter=50L, bigPLSR.klogitpls.alt_updates=1L
+    bigPLSR.klogitpls.max_irls_iter=50L, bigPLSR.klogitpls.alt_updates=5L
   ); on.exit(options(opts), add=TRUE)
-  fit <- pls_fit(Xtr, ytr, ncomp=3, backend="arma", algorithm="klogitpls")
+  fit <- pls_fit(Xtr, ytr, ncomp=1, backend="arma", algorithm="klogitpls")
   pr  <- predict(fit, Xte)
   p1  <- pr
   auc_like <- cor(p1, yte) # cheap monotone metric

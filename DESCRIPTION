@@ -1,6 +1,6 @@
 Package: bigPLSR
-Version: 0.6.8
-Date: 2025-11-08
+Version: 0.6.9
+Date: 2025-11-10
 Depends: R (>= 4.0.0)
 biocViews:
 Imports: 

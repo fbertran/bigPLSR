@@ -1,6 +1,6 @@
 ---
-title: "klogitpls"
-shorttitle: "klogitpls"
+title: "Kernel Logistic PLS"
+shorttitle: "Kernel Logistic PLS"
 author:
 - name: "Frédéric Bertrand"
   affiliation:
@@ -11,7 +11,7 @@ output:
   rmarkdown::html_vignette:
     toc: true
 vignette: >
-  %\VignetteIndexEntry{klogitpls}
+  %\VignetteIndexEntry{Kernel Logistic PLS}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---

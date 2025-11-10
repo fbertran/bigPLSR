@@ -48,6 +48,39 @@ whole dataset fits in RAM. The streaming implementation (`pls1_stream`)
 iterates over the data in blocks, enabling analyses of larger-than-memory
 workloads.
 
+### What's new in bigPLSR
+
+Recent releases extended the benchmarking toolkit with
+
+- **Kalman-filter PLS (`algorithm = "kf_pls"`)** for adaptive, streaming
+  cross-product updates,
+- **coefficient thresholding** via the `coef_threshold` argument,
+- optional **parallel resampling** powered by the
+  [`future`](https://future.futureverse.org) ecosystem and exposed through
+  `pls_cross_validate()` and `pls_bootstrap()`.
+
+The snippets below continue to focus on dense vs. streaming SIMPLS and
+NIPALS, but you can swap in the newer algorithms by changing the
+`algorithm` argument. For example, to benchmark Kalman-filter updates:
+
+```{r, eval=FALSE}
+bench::mark(
+  dense = pls_fit(X[], y_vec, ncomp = ncomp, algorithm = "kf_pls"),
+  streaming = pls_fit(X, y, ncomp = ncomp, backend = "bigmem",
+                      algorithm = "kf_pls", chunk_size = 1024L)
+)
+```
+
+To run cross-validation benchmarks in parallel, register a `future`
+plan prior to calling the helper:
+
+```{r, eval=FALSE}
+future::plan(future::multisession, workers = 2)
+pls_cross_validate(X[], y_vec, ncomp = 5, folds = 3,
+                   parallel = TRUE)
+future::plan(future::sequential)
+```
+
 ## Simulated data
 
 We generate a moderately sized synthetic datasets with a low dimensional

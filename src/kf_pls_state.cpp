@@ -4,112 +4,6 @@ using namespace Rcpp;
 // [[Rcpp::depends(RcppArmadillo)]]
 // [[Rcpp::plugins(cpp17)]]
 
-// ---------- Minimal SIMPLS-from-cross helper (pure C++) --------------------
-// If you already have a shared helper, replace this with your header include.
-static Rcpp::List simpls_from_cross_arma(const arma::mat& XtX,
-                                         const arma::mat& XtY,
-                                         const arma::rowvec& x_means,
-                                         const arma::rowvec& y_means,
-                                         int ncomp,
-                                         double tol)
-{
-  const arma::uword p = XtX.n_rows;
-  const arma::uword m = XtY.n_cols;
-  ncomp = std::max(0, std::min<int>(ncomp, std::min<arma::uword>(p, XtX.n_cols)));
-  
-  arma::mat W(p, ncomp, arma::fill::zeros);
-  arma::mat P(p, ncomp, arma::fill::zeros);
-  arma::mat Q(m, ncomp, arma::fill::zeros);
-  
-  arma::mat V = arma::eye<arma::mat>(p, p);           // deflation projector
-  arma::mat S = XtY;                                   // p x m   (C_xy)
-  arma::mat C = XtX;                                   // p x p   (C_xx)
-  
-  int used = 0;
-  for (int a = 0; a < ncomp; ++a) {
-    // dominant vector of S S^T under C metric -> eig of C^{-1} S S^T
-    arma::mat Cinvt;
-    arma::mat Csym = 0.5 * (C + C.t());
-    bool ok = arma::inv_sympd(Cinvt, Csym);
-    if (!ok) { // damp if needed
-      arma::mat Creg = Csym + 1e-10 * arma::eye<arma::mat>(p, p);
-      ok = arma::inv_sympd(Cinvt, Creg);
-    }
-    if (!ok) break;
-    
-    arma::mat A = Cinvt * (S * S.t());                 // p x p
-    A = 0.5 * (A + A.t());                             // enforce symmetry
-    arma::vec eigval; arma::mat eigvec;
-    ok = arma::eig_sym(eigval, eigvec, A);
-    if (!ok || eigval.n_elem == 0) break;
-    arma::uword idx = eigval.n_elem - 1;
-    arma::vec w = eigvec.col(idx);
-    double wn = arma::norm(w, 2.0);
-    if (!std::isfinite(wn) || wn <= tol) break;
-    w /= wn;
-    
-    arma::vec t = (XtX * w);                           // proxy for scores direction
-    double tn = arma::norm(t, 2.0);
-    if (!std::isfinite(tn) || tn <= tol) break;
-    t /= tn;
-    
-    arma::vec pvec = XtX * w;                          // p x 1
-    double denom = arma::as_scalar(w.t() * pvec);
-    if (!std::isfinite(denom) || std::fabs(denom) <= tol) break;
-    
-    arma::rowvec qvec = (w.t() * XtY) / denom;         // 1 x m
-    
-    W.col(a) = w;
-    P.col(a) = pvec / denom;                           // standard scaling
-    Q.col(a) = qvec.t();
-    // Deflation in X-space:
-    arma::mat Pw = P.col(a) * W.col(a).t();            // p x p
-    V = V - Pw;
-    // Update moments under deflation:
-    C = V.t() * XtX * V;
-    C = 0.5 * (C + C.t());
-    S = V.t() * XtY;
-    
-    used++;
-  }
-  
-  if (used == 0) {
-    return List::create(
-      _["coefficients"] = NumericMatrix(p, m),
-      _["intercept"]    = y_means,
-      _["x_weights"]    = R_NilValue,
-      _["x_loadings"]   = R_NilValue,
-      _["y_loadings"]   = R_NilValue,
-      _["scores"]       = R_NilValue,
-      _["x_means"]      = x_means,
-      _["y_means"]      = y_means,
-      _["ncomp"]        = 0
-    );
-  }
-  
-  W  = W.cols(0, used-1);
-  P  = P.cols(0, used-1);
-  Q  = Q.cols(0, used-1);
-  
-  arma::mat R = P.t() * W;                             // A x A
-  R = 0.5 * (R + R.t());
-  arma::mat Rinv; arma::inv(Rinv, R);
-  arma::mat beta = W * Rinv * Q.t();                   // p x m
-  arma::rowvec intercept = y_means - x_means * beta;   // 1 x m
-  
-  return List::create(
-    _["coefficients"] = beta,
-    _["intercept"]    = intercept,
-    _["x_weights"]    = W,
-    _["x_loadings"]   = P,
-    _["y_loadings"]   = Q,
-    _["scores"]       = R_NilValue, // compute later if needed
-    _["x_means"]      = x_means,
-    _["y_means"]      = y_means,
-    _["ncomp"]        = used
-  );
-}
-
 // ---------- KF-PLS minimal state -------------------------------------------
 struct KFPLSState {
   int p{0}, m{0}, A{0};
@@ -194,6 +88,7 @@ void cpp_kf_pls_state_update(SEXP state_xptr,
   // Forgetting + process noise on Cxx, forgetting on Cxy
   S.Cxx = S.lambda * S.Cxx + Xc.t() * Xc;
   if (S.q_proc > 0.0) S.Cxx += S.q_proc * arma::eye<arma::mat>(S.p, S.p);
+  S.Cxx = 0.5 * (S.Cxx + S.Cxx.t());
   S.Cxy = S.lambda * S.Cxy + Xc.t() * Yc;
   
   // (Optional branch (ii): Kalman update on a parameter vector theta with R)
@@ -207,8 +102,22 @@ Rcpp::List cpp_kf_pls_state_fit(SEXP state_xptr,
   Rcpp::XPtr<KFPLSState> xp(state_xptr);
   KFPLSState& S = *xp;
   
-  // Build batch SIMPLS from the current EWMA moments
-  Rcpp::List fit = simpls_from_cross_arma(S.Cxx, S.Cxy, S.mu_x, S.mu_y, S.A, tol);
+  arma::mat Cxx_sym = 0.5 * (S.Cxx + S.Cxx.t());
+  
+  Rcpp::NumericMatrix XtX(Cxx_sym.n_rows, Cxx_sym.n_cols);
+  std::copy(Cxx_sym.begin(), Cxx_sym.end(), XtX.begin());
+  
+  Rcpp::NumericMatrix XtY(S.Cxy.n_rows, S.Cxy.n_cols);
+  std::copy(S.Cxy.begin(), S.Cxy.end(), XtY.begin());
+  
+  Rcpp::NumericVector xmean(S.mu_x.begin(), S.mu_x.end());
+  Rcpp::NumericVector ymean(S.mu_y.begin(), S.mu_y.end());
+  
+  Rcpp::Environment ns = Rcpp::Environment::namespace_env("bigPLSR");
+  Rcpp::Function simpls = ns["cpp_simpls_from_cross"];
+  
+  Rcpp::List fit = simpls(XtX, XtY, xmean, ymean,
+                          Rcpp::wrap(S.A), Rcpp::wrap(tol));
   
   // Tag algorithm to integrate with your R predict() flow
   fit.push_back(Rcpp::String("kf_pls"), "algorithm");

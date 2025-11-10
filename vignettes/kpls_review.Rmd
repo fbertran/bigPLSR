@@ -1,6 +1,15 @@
 ---
 title: "Kernel and Streaming PLS Methods in bigPLSR"
-output: rmarkdown::html_vignette
+shorttitle: "Kernel and Streaming PLS Methods"
+author:
+- name: "Frédéric Bertrand"
+  affiliation:
+  - Cedric, Cnam, Paris
+  email: frederic.bertrand@lecnam.net
+date: "`r Sys.Date()`"
+output:
+  rmarkdown::html_vignette:
+    toc: true
 vignette: >
   %\VignetteIndexEntry{Kernel and Streaming PLS Methods in bigPLSR}
   %\VignetteEngine{knitr::rmarkdown}
@@ -24,6 +33,65 @@ and define the Gram matrix \(K_X = \Phi_X \Phi_X^\top\) where
 \((K_X)_{ij} = k(x_i, x_j)\). The centering operator
 \(H = I_n - \frac{1}{n}\mathbf{1}\mathbf{1}^\top\) yields a centered Gram
 \(\tilde K_X = H K_X H\).
+
+## Pseudo-code for bigPLSR algorithms
+
+The package implements several complementary extraction schemes. The
+following pseudo-code summarises the core loops.
+
+### SIMPLS (dense/bigmem)
+
+1. Compute centered cross-products \(C_{xx} = X^\top X\),
+   \(C_{xy} = X^\top Y\).
+2. Initialise orthonormal basis \(V = []\).
+3. For each component \(a = 1..A\):
+   - Deflate \(C_{xy}\) in the subspace spanned by \(V\).
+   - Extract \(q_a\) as the dominant eigenvector of
+     \(C_{xy}^\top C_{xy}\).
+   - Compute \(w_a = C_{xy} q_a\) and normalise under the
+     \(C_{xx}\)-metric.
+   - Obtain loadings \(p_a = C_{xx} w_a\) and regression weights
+     \(c_a = C_{xy}^\top w_a\).
+   - Expand \(V \leftarrow [V, p_a]\).
+4. Form \(W = [w_a]\), \(P = [p_a]\), \(Q = [c_a]\) and compute
+   regression coefficients \(B = W (P^\top W)^{-1} Q^\top\).
+
+### NIPALS (dense/streamed)
+
+1. Initialise \(t_a\) from \(Y\) (or \(X\)).
+2. Iterate until convergence:
+   - \(w_a = X^\top t_a / (t_a^\top t_a)\), normalise \(w_a\).
+   - \(t_a = X w_a\).
+   - \(c_a = Y^\top t_a / (t_a^\top t_a)\).
+   - \(u_a = Y c_a\) (for multi-response).
+3. Deflate \(X \leftarrow X - t_a p_a^\top\),
+   \(Y \leftarrow Y - t_a q_a^\top\) and repeat for the next component.
+
+### Kernel PLS / RKHS (dense & streamed)
+
+1. Form (or stream) the centered Gram matrix \(\tilde K_X\).
+2. At each iteration extract a dual weight \(\alpha_a\) maximising
+   covariance with \(Y\).
+3. Obtain the score \(t_a = \tilde K_X \alpha_a\), regress \(Y\)
+   on \(t_a\) to get \(q_a\) and deflate in the \(\tilde K_X\) metric.
+4. Accumulate \(\alpha_a\), \(q_a\) and the orthonormal basis for
+   subsequent deflation steps.
+
+### Double RKHS ( `algorithm = "rkhs_xy"` )
+
+1. Build (or approximate) Gram matrices for \(X\) and \(Y\).
+2. Extract dual directions \(\alpha_a\) and \(\beta_a\) so that the
+   score pair \((t_a, u_a)\) maximises covariance under both kernels.
+3. Use ridge-regularised projections to obtain regression weights.
+4. Store kernel centering statistics for prediction.
+
+### Kalman-filter PLS (`algorithm = "kf_pls"`)
+
+1. Maintain exponentially weighted means \(\mu_x, \mu_y\).
+2. Update cross-products \(C_{xx}, C_{xy}\) with forgetting factor
+   \(\lambda\) and optional process noise.
+3. Periodically call SIMPLS on the smoothed moments to recover
+   regression coefficients consistent with the streamed state.
 
 Common kernels:
 

@@ -1,3 +1,12 @@
+# bigPLSR 0.6.9
+
+* Stabilised kernel logistic PLS class weighting, reinstated IRLS fallbacks and
+  improved dense/big-memory parity.
+* Reworked the Kalman-filter state helper to reuse the SIMPLS backend, ensuring
+  identical coefficients/intercepts to batch fits.
+* Added dedicated RKHS/RKHS-XY and plotting vignettes, and refreshed the PLS1/PLS2
+  benchmarking guides with notes on the new algorithms and parallel helpers.
+  
 # bigPLSR 0.6.8
 
 * Added optional `future`-powered parallel execution to `pls_cross_validate()`
@@ -10,11 +19,13 @@
   bootstrap diagnostics.
   
 # bigPLSR 0.6.7
+
 * kernelpls on backend='bigmem' now uses streaming XXᵗ/column paths; the previous 
   dense fallback was removed. Control with options(bigPLSR.kpls_gram = 'rows'|'cols'|'auto') 
   and bigPLSR.chunk_rows, bigPLSR.chunk_cols.
 
 # bigPLSR 0.6.6
+
 * Vignettes: *Kernel and Streaming PLS Methods*, *Automatic Algorithm Selection*.
 * Stub C++ entry points for RKHS / kernel logistic / sparse KPLS / KF-PLS.
 

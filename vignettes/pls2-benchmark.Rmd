@@ -45,6 +45,35 @@ solvers for multi-response partial least squares regression (PLS2).
 This vignette demonstrates how to benchmark both variants on a synthetic
 dataset featuring three correlated response variables.
 
+### Recent additions
+
+Beyond the dense and streaming SIMPLS/NIPALS solvers, bigPLSR now ships
+with Kalman-filter PLS (`algorithm = "kf_pls"`), double-RKHS modelling
+(`algorithm = "rkhs_xy"`) and optional coefficient thresholding. The
+resampling helpers (`pls_cross_validate()`, `pls_bootstrap()`) can also
+leverage the [`future`](https://future.futureverse.org) ecosystem for
+parallel execution.
+
+To benchmark these variants simply change the `algorithm` parameter in
+the chunks below, for example:
+
+```{r, eval=FALSE}
+bench::mark(
+  dense = pls_fit(X[], Y_mat, ncomp = ncomp, algorithm = "rkhs_xy"),
+  streaming = pls_fit(X, Y, ncomp = ncomp, backend = "bigmem",
+                      algorithm = "kf_pls", chunk_size = 1024L)
+)
+```
+
+and remember to reset your `future` plan after enabling parallelism:
+
+```{r, eval=FALSE}
+future::plan(future::multisession, workers = 2)
+pls_cross_validate(X[], Y_mat, ncomp = 4, folds = 3,
+                   parallel = TRUE)
+future::plan(future::sequential)
+```
+
 ## Simulated data
 
 ```{r data-generation}
