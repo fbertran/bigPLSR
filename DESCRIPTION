@@ -13,13 +13,15 @@ LinkingTo:
   BH,
   bigmemory
 Suggests:
+  bench,
+  future,
+  future.apply,
+  knitr,
   pls,
   plsRglm,
-  testthat (>= 3.0.0),
-  bench,
-  knitr,
   rmarkdown,
-  RhpcBLASctl
+  RhpcBLASctl,
+  testthat (>= 3.0.0)
 VignetteBuilder: knitr
 Title: Partial Least Squares Regression Models with Big Matrices 
 Authors@R: c(

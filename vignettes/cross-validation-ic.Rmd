@@ -1,0 +1,113 @@
+---
+title: "Cross-validation and Information Criteria in bigPLSR"
+shorttitle: "Cross-validation and Information Criteria in bigPLSR"
+author:
+- name: "Frédéric Bertrand"
+  affiliation:
+  - Cedric, Cnam, Paris
+  email: frederic.bertrand@lecnam.net
+date: "`r Sys.Date()`"
+output:
+  rmarkdown::html_vignette:
+    toc: true
+vignette: >
+  %\VignetteIndexEntry{Cross-validation and Information Criteria in bigPLSR}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+set.seed(2025)
+```
+
+## Overview
+
+This vignette illustrates how to evaluate partial least squares (PLS) models
+with repeated cross-validation and information criteria using the new parallel
+helpers available in `bigPLSR`.
+
+We generate a small synthetic data set so the examples run quickly even when the
+vignette is built during package installation.
+
+```{r data}
+library(bigPLSR)
+n <- 120; p <- 8
+X <- matrix(rnorm(n * p), n, p)
+eta <- X[, 1] - 0.8 * X[, 2] + 0.5 * X[, 3]
+y <- eta + rnorm(n, sd = 0.4)
+```
+
+## Cross-validation
+
+The `pls_cross_validate()` function now accepts a `parallel` argument. Setting
+`parallel = "future"` evaluates the folds concurrently by relying on the
+[`future`](https://future.futureverse.org/) ecosystem. You are free to configure
+any execution plan you like before calling the helper. Below we keep the
+sequential default to avoid introducing run-time dependencies during the build
+process.
+
+```{r cv}
+cv_res <- pls_cross_validate(X, y, ncomp = 4, folds = 6,
+                             metrics = c("rmse", "r2"),
+                             parallel = "none")
+head(cv_res$details)
+```
+
+Aggregating the metrics provides a quick overview of the predictive performance
+per number of components:
+
+```{r cv-summary}
+cv_res$summary
+```
+
+The cross-validation table is convenient for downstream selection. For example,
+we can pick the component count that minimises the RMSE:
+
+```{r cv-select}
+pls_cv_select(cv_res, metric = "rmse")
+```
+
+## Information criteria
+
+Information criteria complement cross-validation by trading off goodness of fit
+with model complexity. The helper `pls_information_criteria()` computes the RSS,
+RMSE, AIC and BIC across components:
+
+```{r ic}
+fit <- pls_fit(X, y, ncomp = 4, scores = "r")
+ic_tbl <- pls_information_criteria(fit, X, y)
+ic_tbl
+```
+
+For convenience the wrapper `pls_select_components()` selects the best
+components according to the requested criteria:
+
+```{r ic-select}
+pls_select_components(fit, X, y, criteria = c("aic", "bic"))
+```
+
+## Parallel execution with `future`
+
+If you wish to parallelise cross-validation, configure a plan before calling the
+helper. The example below assumes a multicore environment and therefore is not
+run during vignette building:
+
+```{r future-example, eval=FALSE}
+future::plan(future::multisession, workers = 2)
+cv_parallel <- pls_cross_validate(X, y, ncomp = 4, folds = 6,
+                                  metrics = c("rmse", "mae"),
+                                  parallel = "future",
+                                  future_seed = TRUE)
+future::plan(future::sequential)
+```
+
+The `future_seed` argument ensures reproducible bootstrap samples even when
+multiple workers are used.
+
+## Summary
+
+The refreshed cross-validation workflow exposes a consistent interface for
+sequential and parallel execution, while the information-criteria helpers offer
+another perspective on component selection. The combination lets you
+systematically tune your PLS models for both accuracy and parsimony.

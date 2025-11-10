@@ -4,7 +4,17 @@
 \alias{plot_pls_individuals}
 \title{Plot individual scores}
 \usage{
-plot_pls_individuals(object, comps = c(1L, 2L), labels = NULL, ...)
+plot_pls_individuals(
+  object,
+  comps = c(1L, 2L),
+  labels = NULL,
+  groups = NULL,
+  ellipse = TRUE,
+  ellipse_level = 0.95,
+  ellipse_n = 200L,
+  group_col = NULL,
+  ...
+)
 }
 \arguments{
 \item{object}{A fitted PLS model with scores.}
@@ -12,6 +22,20 @@ plot_pls_individuals(object, comps = c(1L, 2L), labels = NULL, ...)
 \item{comps}{Components to plot (length two).}
 
 \item{labels}{Optional character vector of point labels.}
+
+\item{groups}{Optional factor or character vector defining groups for
+individuals. When supplied, group-specific colours are used and, if
+\code{ellipse = TRUE}, confidence ellipses are drawn for each group.}
+
+\item{ellipse}{Logical; draw group confidence ellipses when \code{groups} are
+provided.}
+
+\item{ellipse_level}{Confidence level for the ellipses (between 0 and 1).}
+
+\item{ellipse_n}{Number of points used to draw each ellipse.}
+
+\item{group_col}{Optional vector of colours for the groups. Recycled as
+needed.}
 
 \item{...}{Additional plotting parameters passed to \code{\link[graphics:plot.default]{graphics::plot()}}.}
 }

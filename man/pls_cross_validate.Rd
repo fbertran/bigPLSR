@@ -13,7 +13,9 @@ pls_cross_validate(
   algorithm = c("simpls", "nipals", "kernelpls", "widekernelpls"),
   backend = "arma",
   metrics = c("rmse", "mae", "r2"),
-  seed = NULL
+  seed = NULL,
+  parallel = c("none", "future"),
+  future_seed = TRUE
 )
 }
 \arguments{

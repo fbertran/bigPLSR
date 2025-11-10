@@ -512,7 +512,7 @@ pls_fit <- function(
       classes <- c("0","1")
     }
     cw <- normalize_class_weights(if (is.factor(y)) y else factor(ybin, levels = c(0,1), labels = classes), class_weights)
-    
+
     # hyper-params (allow ... overrides if present, else options, else defaults)
     k   <- if (exists("dots", inherits = FALSE)) dots$kernel else NULL
     ga  <- if (exists("dots", inherits = FALSE)) dots$gamma  else NULL
@@ -523,7 +523,7 @@ pls_fit <- function(
     degree <- de %||% getOption("bigPLSR.klogitpls.degree", 3L)
     coef0  <- c0 %||% getOption("bigPLSR.klogitpls.coef0",  1.0)
     # IRLS controls / class weights
-    cw     <- if (exists("class_weights", inherits = FALSE) && !is.null(class_weights)) as.numeric(class_weights) else numeric()
+#    cw     <- if (exists("class_weights", inherits = FALSE) && !is.null(class_weights)) as.numeric(class_weights) else numeric()
     itmax  <- if (exists("klogit_maxit", inherits = FALSE)) klogit_maxit else getOption("bigPLSR.klogitpls.maxit", 50L)
     ittol  <- if (exists("klogit_tol",   inherits = FALSE)) klogit_tol   else getOption("bigPLSR.klogitpls.tol",   1e-8)
     alt_it <- if (exists("klogit_alt",   inherits = FALSE)) klogit_alt   else getOption("bigPLSR.klogitpls.alt",   0L)
@@ -559,7 +559,7 @@ pls_fit <- function(
         # Re-use **Kc** (centered Gram train)
         kfitk <- cpp_kpls_from_gram(Kc, matrix(p, ncol = 1L), as.integer(ncomp), tol)
         T  <- as.matrix(kfitk$scores)
-        uB   <- as.matrix(fitk$u_basis)
+        uB   <- as.matrix(kfitk$u_basis)
 #        U  <- tryCatch(solve(Kc + diag(u_rdg, nrow(Kc)), T),
 #                       error = function(e) MASS::ginv(Kc + diag(u_rdg, nrow(Kc))) %*% T)
         ir <- .irls_binomial(T, ybin, w_class = cw, maxit = itmax, tol = ittol)
@@ -872,11 +872,11 @@ pls_fit <- function(
     de  <- if (exists("dots", inherits = FALSE)) dots$degree else NULL
     c0  <- if (exists("dots", inherits = FALSE)) dots$coef0  else NULL
     kernel <- k  %||% getOption("bigPLSR.klogitpls.kernel", "rbf")
-    gamma  <- ga %||% getOption("bigPLSR.klogitpls.gamma",  1 / ncol(Xr))
+    gamma  <- ga %||% getOption("bigPLSR.klogitpls.gamma",  1 / ncol(X))
     degree <- de %||% getOption("bigPLSR.klogitpls.degree", 3L)
     coef0  <- c0 %||% getOption("bigPLSR.klogitpls.coef0",  1.0)
     # IRLS controls / class weights
-    cw     <- if (exists("class_weights", inherits = FALSE) && !is.null(class_weights)) as.numeric(class_weights) else numeric()
+#    cw     <- if (exists("class_weights", inherits = FALSE) && !is.null(class_weights)) as.numeric(class_weights) else numeric()
     itmax  <- if (exists("klogit_maxit", inherits = FALSE)) klogit_maxit else getOption("bigPLSR.klogitpls.maxit", 50L)
     ittol  <- if (exists("klogit_tol",   inherits = FALSE)) klogit_tol   else getOption("bigPLSR.klogitpls.tol",   1e-8)
     alt_it <- if (exists("klogit_alt",   inherits = FALSE)) klogit_alt   else getOption("bigPLSR.klogitpls.alt",   0L)
@@ -909,16 +909,15 @@ pls_fit <- function(
       latent_coef  = ir$beta,
       u_basis      = fit0$u_basis %||% NULL,   # if C++ provides it; else NULL
       kernel       = kernel, gamma = gamma, degree = degree, coef0 = coef0,
-      kstats       = fit0$kstats %||% NULL,
-      # Training reference for streamed prediction
-      X_ref       = bigmemory::describe(Xbm),
       # Precomputed centering stats for HKH using the training kernel
-      kstats      = .bigPLSR_stream_kstats(
+      kstats       = fit0$kstats %||% bigPLSR_stream_kstats(
         Xbm,
         kernel = kernel, gamma = gamma, degree = degree, coef0 = coef0,
         chunk_rows = getOption("bigPLSR.klogitpls.chunk_rows", 8192L),
         chunk_cols = getOption("bigPLSR.klogitpls.chunk_cols", 8192L)
-      ),
+      ) %||% NULL,
+      # Training reference for streamed prediction
+      X_ref       = bigmemory::describe(Xbm),
       scores       = T,
       mode         = "pls1"
     )

@@ -369,7 +369,8 @@ predict.big_plsr <- function(object, newdata, ncomp = NULL,
     kstat <- object$kstats
     if (is.null(kstat)) {
       # dense fallback for small Xtrain
-      Ktr <- .bigPLSR_make_kernel(as.matrix(Xtr), as.matrix(Xtr), kernel, gamma, degree, coef0)
+      Ktr <- .bigPLSR_make_kernel(as.matrix(Xtr), as.matrix(Xtr),
+                                  kp$kernel, kp$gamma, kp$degree, kp$coef0)
       kstat <- list(r = colMeans(Ktr), g = mean(Ktr), n = nrow(Ktr))
     }
     if (is.null(kstat$r) || is.null(kstat$g)) {

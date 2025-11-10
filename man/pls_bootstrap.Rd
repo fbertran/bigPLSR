@@ -12,7 +12,11 @@ pls_bootstrap(
   algorithm = c("simpls", "nipals", "kernelpls", "widekernelpls"),
   backend = "arma",
   conf = 0.95,
-  seed = NULL
+  seed = NULL,
+  type = c("xy", "xt"),
+  parallel = c("none", "future"),
+  future_seed = TRUE,
+  return_scores = FALSE
 )
 }
 \arguments{

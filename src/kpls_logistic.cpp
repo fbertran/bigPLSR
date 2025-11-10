@@ -81,7 +81,8 @@ SEXP cpp_klogit_pls_dense(const arma::mat& X,
                           int ncomp, double tol,
                           std::string kernel, double gamma, int degree, double coef0,
                           arma::vec class_weights){
-  const arma::uword n = X.n_rows, p = X.n_cols;
+  const arma::uword n = X.n_rows;
+  [[maybe_unused]]  const arma::uword p = X.n_cols;
   if (y.n_elem != n) stop("y length must match nrow(X)");
   arma::rowvec xm = arma::mean(X,0);
   arma::mat beta_latent(ncomp>0?ncomp:1,1,arma::fill::zeros);

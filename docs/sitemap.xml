@@ -3,6 +3,8 @@
 <url><loc>https://fbertran.github.io/bigPLSR/articles/auto-backend.html</loc></url>
 <url><loc>https://fbertran.github.io/bigPLSR/articles/bigPLSR-auto-selection.html</loc></url>
 <url><loc>https://fbertran.github.io/bigPLSR/articles/bigPLSR-kpls-streaming.html</loc></url>
+<url><loc>https://fbertran.github.io/bigPLSR/articles/bootstrap-strategies.html</loc></url>
+<url><loc>https://fbertran.github.io/bigPLSR/articles/cross-validation-ic.html</loc></url>
 <url><loc>https://fbertran.github.io/bigPLSR/articles/double-rkhs-pls.html</loc></url>
 <url><loc>https://fbertran.github.io/bigPLSR/articles/index.html</loc></url>
 <url><loc>https://fbertran.github.io/bigPLSR/articles/kf-pls.html</loc></url>
@@ -22,6 +24,7 @@
 <url><loc>https://fbertran.github.io/bigPLSR/reference/index.html</loc></url>
 <url><loc>https://fbertran.github.io/bigPLSR/reference/kf_pls_state_fit.html</loc></url>
 <url><loc>https://fbertran.github.io/bigPLSR/reference/plot_pls_biplot.html</loc></url>
+<url><loc>https://fbertran.github.io/bigPLSR/reference/plot_pls_bootstrap_coefficients.html</loc></url>
 <url><loc>https://fbertran.github.io/bigPLSR/reference/plot_pls_individuals.html</loc></url>
 <url><loc>https://fbertran.github.io/bigPLSR/reference/plot_pls_variables.html</loc></url>
 <url><loc>https://fbertran.github.io/bigPLSR/reference/plot_pls_vip.html</loc></url>
@@ -45,6 +48,7 @@
 <url><loc>https://fbertran.github.io/bigPLSR/reference/pls_vip.html</loc></url>
 <url><loc>https://fbertran.github.io/bigPLSR/reference/predict.big_plsr.html</loc></url>
 <url><loc>https://fbertran.github.io/bigPLSR/reference/sim_data.html</loc></url>
+<url><loc>https://fbertran.github.io/bigPLSR/reference/summarise_pls_bootstrap.html</loc></url>
 <url><loc>https://fbertran.github.io/bigPLSR/reference/summary.big_plsr.html</loc></url>
 </urlset>
 

@@ -29,14 +29,16 @@ static Rcpp::List simpls_from_cross_arma(const arma::mat& XtX,
   for (int a = 0; a < ncomp; ++a) {
     // dominant vector of S S^T under C metric -> eig of C^{-1} S S^T
     arma::mat Cinvt;
-    bool ok = arma::inv_sympd(Cinvt, C);
+    arma::mat Csym = 0.5 * (C + C.t());
+    bool ok = arma::inv_sympd(Cinvt, Csym);
     if (!ok) { // damp if needed
-      arma::mat Creg = C + 1e-10 * arma::eye<arma::mat>(p, p);
+      arma::mat Creg = Csym + 1e-10 * arma::eye<arma::mat>(p, p);
       ok = arma::inv_sympd(Cinvt, Creg);
     }
     if (!ok) break;
     
     arma::mat A = Cinvt * (S * S.t());                 // p x p
+    A = 0.5 * (A + A.t());                             // enforce symmetry
     arma::vec eigval; arma::mat eigvec;
     ok = arma::eig_sym(eigval, eigvec, A);
     if (!ok || eigval.n_elem == 0) break;
@@ -65,6 +67,7 @@ static Rcpp::List simpls_from_cross_arma(const arma::mat& XtX,
     V = V - Pw;
     // Update moments under deflation:
     C = V.t() * XtX * V;
+    C = 0.5 * (C + C.t());
     S = V.t() * XtY;
     
     used++;
@@ -89,6 +92,7 @@ static Rcpp::List simpls_from_cross_arma(const arma::mat& XtX,
   Q  = Q.cols(0, used-1);
   
   arma::mat R = P.t() * W;                             // A x A
+  R = 0.5 * (R + R.t());
   arma::mat Rinv; arma::inv(Rinv, R);
   arma::mat beta = W * Rinv * Q.t();                   // p x m
   arma::rowvec intercept = y_means - x_means * beta;   // 1 x m
@@ -128,7 +132,7 @@ struct KFPLSState {
       Cxy(arma::mat(p_, m_, arma::fill::zeros)) {}
 };
 
-static void kf_state_finalizer(KFPLSState* ptr) {
+[[maybe_unused]] static void kf_state_finalizer(KFPLSState* ptr) {
   if (ptr) delete ptr;
 }
 

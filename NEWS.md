@@ -1,3 +1,14 @@
+# bigPLSR 0.6.8
+
+* Added optional `future`-powered parallel execution to `pls_cross_validate()`
+  and `pls_bootstrap()`.
+* Extended `pls_bootstrap()` with (X, Y) and (X, T) strategies, percentile and
+  BCa confidence intervals, numerical summaries, and coefficient boxplots.
+* Added group-aware score plotting with confidence ellipses in
+  `plot_pls_individuals()`.
+* Added vignettes covering cross-validation/information-criteria workflows and
+  bootstrap diagnostics.
+  
 # bigPLSR 0.6.7
 * kernelpls on backend='bigmem' now uses streaming XXᵗ/column paths; the previous 
   dense fallback was removed. Control with options(bigPLSR.kpls_gram = 'rows'|'cols'|'auto') 

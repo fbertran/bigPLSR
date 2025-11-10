@@ -22,12 +22,12 @@
 #' 
 "_PACKAGE"
 
-#' @importFrom graphics abline arrows axis layout legend plot segments text 
-#' @importFrom grDevices dev.new
-#' @importFrom stats as.formula is.empty.model model.matrix model.response model.weights quantile rexp runif var
+#' @importFrom graphics abline arrows axis layout lines legend plot segments text 
+#' @importFrom grDevices dev.new hcl.colors
+#' @importFrom stats as.formula cov is.empty.model model.matrix model.response model.weights qchisq quantile rexp runif var
 #' @importFrom utils read.csv
 #' @import bigmemory
 #' @useDynLib bigPLSR, .registration = TRUE
 #' @importFrom Rcpp evalCpp
-#' @import bigalgebra
+# #' @import bigalgebra
 NULL
