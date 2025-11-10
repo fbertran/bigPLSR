@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">bigPLSR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.6.7</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.6.8</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -22,6 +22,8 @@
     <li><a class="dropdown-item" href="../articles/bigPLSR-auto-selection.html">Automatic Algorithm Selection in bigPLSR</a></li>
     <li><a class="dropdown-item" href="../articles/bigPLSR-kpls-streaming.html">Streaming Kernel PLS in bigPLSR: XX^T and Column-Chunked Variants</a></li>
     <li><a class="dropdown-item" href="../articles/double-rkhs-pls.html">double-rkhs-pls</a></li>
+    <li><a class="dropdown-item" href="../articles/kf-pls.html">KF-PLS: Streaming PLS with Kalman-style updates</a></li>
+    <li><a class="dropdown-item" href="../articles/klogitpls.html">klogitpls</a></li>
     <li><a class="dropdown-item" href="../articles/kpls_review.html">Kernel and Streaming PLS Methods in bigPLSR</a></li>
     <li><a class="dropdown-item" href="../articles/pls1-benchmark.html">Benchmarking PLS1 Implementations</a></li>
     <li><a class="dropdown-item" href="../articles/pls2-benchmark.html">Benchmarking PLS2 Implementations</a></li>
@@ -42,6 +44,10 @@
       <small>Source: <a href="https://github.com/fbertran/bigPLSR/blob/HEAD/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.6.7" id="bigplsr-067">bigPLSR 0.6.7<a class="anchor" aria-label="anchor" href="#bigplsr-067"></a></h2>
+<ul><li>kernelpls on backend=‘bigmem’ now uses streaming XXᵗ/column paths; the previous dense fallback was removed. Control with options(bigPLSR.kpls_gram = ‘rows’|‘cols’|‘auto’) and bigPLSR.chunk_rows, bigPLSR.chunk_cols.</li>
+</ul></div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.6.6" id="bigplsr-066">bigPLSR 0.6.6<a class="anchor" aria-label="anchor" href="#bigplsr-066"></a></h2>
 <ul><li>Vignettes: <em>Kernel and Streaming PLS Methods</em>, <em>Automatic Algorithm Selection</em>.</li>
