@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">bigPLSR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.6.8</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.7.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -33,17 +33,18 @@
 <li class="active nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
-<li><a class="dropdown-item" href="../articles/auto-backend.html">Auto backend usage</a></li>
-    <li><a class="dropdown-item" href="../articles/bigPLSR-auto-selection.html">Automatic Algorithm Selection in bigPLSR</a></li>
+<li><a class="dropdown-item" href="../articles/bigPLSR-auto-selection.html">Automatic Algorithm Selection in bigPLSR</a></li>
     <li><a class="dropdown-item" href="../articles/bigPLSR-kpls-streaming.html">Streaming Kernel PLS in bigPLSR: XX^T and Column-Chunked Variants</a></li>
     <li><a class="dropdown-item" href="../articles/bootstrap-strategies.html">Bootstrap strategies for bigPLSR</a></li>
     <li><a class="dropdown-item" href="../articles/cross-validation-ic.html">Cross-validation and Information Criteria in bigPLSR</a></li>
-    <li><a class="dropdown-item" href="../articles/double-rkhs-pls.html">double-rkhs-pls</a></li>
+    <li><a class="dropdown-item" href="../articles/double-rkhs-pls.html">Double RKHS PLS (rkhs_xy): Theory and Usage</a></li>
     <li><a class="dropdown-item" href="../articles/kf-pls.html">KF-PLS: Streaming PLS with Kalman-style updates</a></li>
-    <li><a class="dropdown-item" href="../articles/klogitpls.html">klogitpls</a></li>
+    <li><a class="dropdown-item" href="../articles/klogitpls.html">Kernel Logistic PLS</a></li>
     <li><a class="dropdown-item" href="../articles/kpls_review.html">Kernel and Streaming PLS Methods in bigPLSR</a></li>
+    <li><a class="dropdown-item" href="../articles/plotting-guide.html">Visualising PLS Fits with bigPLSR</a></li>
     <li><a class="dropdown-item" href="../articles/pls1-benchmark.html">Benchmarking PLS1 Implementations</a></li>
     <li><a class="dropdown-item" href="../articles/pls2-benchmark.html">Benchmarking PLS2 Implementations</a></li>
+    <li><a class="dropdown-item" href="../articles/rkhs-overview.html">RKHS-based Algorithms in bigPLSR</a></li>
   </ul>
 </li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
@@ -67,7 +68,14 @@
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>Kernel and Streaming PLS Methods in bigPLSR</h1>
-            
+                        <h4 data-toc-skip class="author">Frédéric
+Bertrand</h4>
+            <address class="author_afil">
+      Cedric, Cnam,
+Paris<br><a class="author_email" href="mailto:#"></a><a href="mailto:frederic.bertrand@lecnam.net" class="email">frederic.bertrand@lecnam.net</a>
+      </address>
+                  
+            <h4 data-toc-skip class="date">2025-11-11</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/fbertran/bigPLSR/blob/HEAD/vignettes/kpls_review.Rmd" class="external-link"><code>vignettes/kpls_review.Rmd</code></a></small>
       <div class="d-none name"><code>kpls_review.Rmd</code></div>
@@ -102,6 +110,143 @@ The centering operator
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>H</mi><mo>=</mo><msub><mi>I</mi><mi>n</mi></msub><mo>−</mo><mfrac><mn>1</mn><mi>n</mi></mfrac><mn>𝟏</mn><msup><mn>𝟏</mn><mi>⊤</mi></msup></mrow><annotation encoding="application/x-tex">H = I_n - \frac{1}{n}\mathbf{1}\mathbf{1}^\top</annotation></semantics></math>
 yields a centered Gram
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mover><mi>K</mi><mo accent="true">̃</mo></mover><mi>X</mi></msub><mo>=</mo><mi>H</mi><msub><mi>K</mi><mi>X</mi></msub><mi>H</mi></mrow><annotation encoding="application/x-tex">\tilde K_X = H K_X H</annotation></semantics></math>.</p>
+</div>
+<div class="section level2">
+<h2 id="pseudo-code-for-bigplsr-algorithms">Pseudo-code for bigPLSR algorithms<a class="anchor" aria-label="anchor" href="#pseudo-code-for-bigplsr-algorithms"></a>
+</h2>
+<p>The package implements several complementary extraction schemes. The
+following pseudo-code summarises the core loops.</p>
+<div class="section level3">
+<h3 id="simpls-densebigmem">SIMPLS (dense/bigmem)<a class="anchor" aria-label="anchor" href="#simpls-densebigmem"></a>
+</h3>
+<ol style="list-style-type: decimal">
+<li>Compute centered cross-products
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>C</mi><mrow><mi>x</mi><mi>x</mi></mrow></msub><mo>=</mo><msup><mi>X</mi><mi>⊤</mi></msup><mi>X</mi></mrow><annotation encoding="application/x-tex">C_{xx} = X^\top X</annotation></semantics></math>,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>C</mi><mrow><mi>x</mi><mi>y</mi></mrow></msub><mo>=</mo><msup><mi>X</mi><mi>⊤</mi></msup><mi>Y</mi></mrow><annotation encoding="application/x-tex">C_{xy} = X^\top Y</annotation></semantics></math>.</li>
+<li>Initialise orthonormal basis
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>V</mi><mo>=</mo><mrow><mo stretchy="true" form="prefix">[</mo><mo stretchy="true" form="postfix">]</mo></mrow></mrow><annotation encoding="application/x-tex">V = []</annotation></semantics></math>.</li>
+<li>For each component
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mo>=</mo><mn>1</mn><mi>.</mi><mi>.</mi><mi>A</mi></mrow><annotation encoding="application/x-tex">a = 1..A</annotation></semantics></math>:
+<ul>
+<li>Deflate
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>C</mi><mrow><mi>x</mi><mi>y</mi></mrow></msub><annotation encoding="application/x-tex">C_{xy}</annotation></semantics></math>
+in the subspace spanned by
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>V</mi><annotation encoding="application/x-tex">V</annotation></semantics></math>.</li>
+<li>Extract
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>q</mi><mi>a</mi></msub><annotation encoding="application/x-tex">q_a</annotation></semantics></math>
+as the dominant eigenvector of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msubsup><mi>C</mi><mrow><mi>x</mi><mi>y</mi></mrow><mi>⊤</mi></msubsup><msub><mi>C</mi><mrow><mi>x</mi><mi>y</mi></mrow></msub></mrow><annotation encoding="application/x-tex">C_{xy}^\top C_{xy}</annotation></semantics></math>.</li>
+<li>Compute
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>w</mi><mi>a</mi></msub><mo>=</mo><msub><mi>C</mi><mrow><mi>x</mi><mi>y</mi></mrow></msub><msub><mi>q</mi><mi>a</mi></msub></mrow><annotation encoding="application/x-tex">w_a = C_{xy} q_a</annotation></semantics></math>
+and normalise under the
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>C</mi><mrow><mi>x</mi><mi>x</mi></mrow></msub><annotation encoding="application/x-tex">C_{xx}</annotation></semantics></math>-metric.</li>
+<li>Obtain loadings
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>p</mi><mi>a</mi></msub><mo>=</mo><msub><mi>C</mi><mrow><mi>x</mi><mi>x</mi></mrow></msub><msub><mi>w</mi><mi>a</mi></msub></mrow><annotation encoding="application/x-tex">p_a = C_{xx} w_a</annotation></semantics></math>
+and regression weights
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>c</mi><mi>a</mi></msub><mo>=</mo><msubsup><mi>C</mi><mrow><mi>x</mi><mi>y</mi></mrow><mi>⊤</mi></msubsup><msub><mi>w</mi><mi>a</mi></msub></mrow><annotation encoding="application/x-tex">c_a = C_{xy}^\top w_a</annotation></semantics></math>.</li>
+<li>Expand
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>V</mi><mo>←</mo><mrow><mo stretchy="true" form="prefix">[</mo><mi>V</mi><mo>,</mo><msub><mi>p</mi><mi>a</mi></msub><mo stretchy="true" form="postfix">]</mo></mrow></mrow><annotation encoding="application/x-tex">V \leftarrow [V, p_a]</annotation></semantics></math>.</li>
+</ul>
+</li>
+<li>Form
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>W</mi><mo>=</mo><mrow><mo stretchy="true" form="prefix">[</mo><msub><mi>w</mi><mi>a</mi></msub><mo stretchy="true" form="postfix">]</mo></mrow></mrow><annotation encoding="application/x-tex">W = [w_a]</annotation></semantics></math>,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>P</mi><mo>=</mo><mrow><mo stretchy="true" form="prefix">[</mo><msub><mi>p</mi><mi>a</mi></msub><mo stretchy="true" form="postfix">]</mo></mrow></mrow><annotation encoding="application/x-tex">P = [p_a]</annotation></semantics></math>,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>Q</mi><mo>=</mo><mrow><mo stretchy="true" form="prefix">[</mo><msub><mi>c</mi><mi>a</mi></msub><mo stretchy="true" form="postfix">]</mo></mrow></mrow><annotation encoding="application/x-tex">Q = [c_a]</annotation></semantics></math>
+and compute regression coefficients
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>B</mi><mo>=</mo><mi>W</mi><msup><mrow><mo stretchy="true" form="prefix">(</mo><msup><mi>P</mi><mi>⊤</mi></msup><mi>W</mi><mo stretchy="true" form="postfix">)</mo></mrow><mrow><mi>−</mi><mn>1</mn></mrow></msup><msup><mi>Q</mi><mi>⊤</mi></msup></mrow><annotation encoding="application/x-tex">B = W (P^\top W)^{-1} Q^\top</annotation></semantics></math>.</li>
+</ol>
+</div>
+<div class="section level3">
+<h3 id="nipals-densestreamed">NIPALS (dense/streamed)<a class="anchor" aria-label="anchor" href="#nipals-densestreamed"></a>
+</h3>
+<ol style="list-style-type: decimal">
+<li>Initialise
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>t</mi><mi>a</mi></msub><annotation encoding="application/x-tex">t_a</annotation></semantics></math>
+from
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>Y</mi><annotation encoding="application/x-tex">Y</annotation></semantics></math>
+(or
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>X</mi><annotation encoding="application/x-tex">X</annotation></semantics></math>).</li>
+<li>Iterate until convergence:
+<ul>
+<li>
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>w</mi><mi>a</mi></msub><mo>=</mo><msup><mi>X</mi><mi>⊤</mi></msup><msub><mi>t</mi><mi>a</mi></msub><mi>/</mi><mrow><mo stretchy="true" form="prefix">(</mo><msubsup><mi>t</mi><mi>a</mi><mi>⊤</mi></msubsup><msub><mi>t</mi><mi>a</mi></msub><mo stretchy="true" form="postfix">)</mo></mrow></mrow><annotation encoding="application/x-tex">w_a = X^\top t_a / (t_a^\top t_a)</annotation></semantics></math>,
+normalise
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>w</mi><mi>a</mi></msub><annotation encoding="application/x-tex">w_a</annotation></semantics></math>.</li>
+<li>
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>t</mi><mi>a</mi></msub><mo>=</mo><mi>X</mi><msub><mi>w</mi><mi>a</mi></msub></mrow><annotation encoding="application/x-tex">t_a = X w_a</annotation></semantics></math>.</li>
+<li>
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>c</mi><mi>a</mi></msub><mo>=</mo><msup><mi>Y</mi><mi>⊤</mi></msup><msub><mi>t</mi><mi>a</mi></msub><mi>/</mi><mrow><mo stretchy="true" form="prefix">(</mo><msubsup><mi>t</mi><mi>a</mi><mi>⊤</mi></msubsup><msub><mi>t</mi><mi>a</mi></msub><mo stretchy="true" form="postfix">)</mo></mrow></mrow><annotation encoding="application/x-tex">c_a = Y^\top t_a / (t_a^\top t_a)</annotation></semantics></math>.</li>
+<li>
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>u</mi><mi>a</mi></msub><mo>=</mo><mi>Y</mi><msub><mi>c</mi><mi>a</mi></msub></mrow><annotation encoding="application/x-tex">u_a = Y c_a</annotation></semantics></math>
+(for multi-response).</li>
+</ul>
+</li>
+<li>Deflate
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>X</mi><mo>←</mo><mi>X</mi><mo>−</mo><msub><mi>t</mi><mi>a</mi></msub><msubsup><mi>p</mi><mi>a</mi><mi>⊤</mi></msubsup></mrow><annotation encoding="application/x-tex">X \leftarrow X - t_a p_a^\top</annotation></semantics></math>,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>Y</mi><mo>←</mo><mi>Y</mi><mo>−</mo><msub><mi>t</mi><mi>a</mi></msub><msubsup><mi>q</mi><mi>a</mi><mi>⊤</mi></msubsup></mrow><annotation encoding="application/x-tex">Y \leftarrow Y - t_a q_a^\top</annotation></semantics></math>
+and repeat for the next component.</li>
+</ol>
+</div>
+<div class="section level3">
+<h3 id="kernel-pls-rkhs-dense-streamed">Kernel PLS / RKHS (dense &amp; streamed)<a class="anchor" aria-label="anchor" href="#kernel-pls-rkhs-dense-streamed"></a>
+</h3>
+<ol style="list-style-type: decimal">
+<li>Form (or stream) the centered Gram matrix
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mover><mi>K</mi><mo accent="true">̃</mo></mover><mi>X</mi></msub><annotation encoding="application/x-tex">\tilde K_X</annotation></semantics></math>.</li>
+<li>At each iteration extract a dual weight
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>α</mi><mi>a</mi></msub><annotation encoding="application/x-tex">\alpha_a</annotation></semantics></math>
+maximising covariance with
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>Y</mi><annotation encoding="application/x-tex">Y</annotation></semantics></math>.</li>
+<li>Obtain the score
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>t</mi><mi>a</mi></msub><mo>=</mo><msub><mover><mi>K</mi><mo accent="true">̃</mo></mover><mi>X</mi></msub><msub><mi>α</mi><mi>a</mi></msub></mrow><annotation encoding="application/x-tex">t_a = \tilde K_X \alpha_a</annotation></semantics></math>,
+regress
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>Y</mi><annotation encoding="application/x-tex">Y</annotation></semantics></math>
+on
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>t</mi><mi>a</mi></msub><annotation encoding="application/x-tex">t_a</annotation></semantics></math>
+to get
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>q</mi><mi>a</mi></msub><annotation encoding="application/x-tex">q_a</annotation></semantics></math>
+and deflate in the
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mover><mi>K</mi><mo accent="true">̃</mo></mover><mi>X</mi></msub><annotation encoding="application/x-tex">\tilde K_X</annotation></semantics></math>
+metric.</li>
+<li>Accumulate
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>α</mi><mi>a</mi></msub><annotation encoding="application/x-tex">\alpha_a</annotation></semantics></math>,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>q</mi><mi>a</mi></msub><annotation encoding="application/x-tex">q_a</annotation></semantics></math>
+and the orthonormal basis for subsequent deflation steps.</li>
+</ol>
+</div>
+<div class="section level3">
+<h3 id="double-rkhs-algorithm-rkhs_xy">Double RKHS ( <code>algorithm = "rkhs_xy"</code> )<a class="anchor" aria-label="anchor" href="#double-rkhs-algorithm-rkhs_xy"></a>
+</h3>
+<ol style="list-style-type: decimal">
+<li>Build (or approximate) Gram matrices for
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>X</mi><annotation encoding="application/x-tex">X</annotation></semantics></math>
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>Y</mi><annotation encoding="application/x-tex">Y</annotation></semantics></math>.</li>
+<li>Extract dual directions
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>α</mi><mi>a</mi></msub><annotation encoding="application/x-tex">\alpha_a</annotation></semantics></math>
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>β</mi><mi>a</mi></msub><annotation encoding="application/x-tex">\beta_a</annotation></semantics></math>
+so that the score pair
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="true" form="prefix">(</mo><msub><mi>t</mi><mi>a</mi></msub><mo>,</mo><msub><mi>u</mi><mi>a</mi></msub><mo stretchy="true" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(t_a, u_a)</annotation></semantics></math>
+maximises covariance under both kernels.</li>
+<li>Use ridge-regularised projections to obtain regression weights.</li>
+<li>Store kernel centering statistics for prediction.</li>
+</ol>
+</div>
+<div class="section level3">
+<h3 id="kalman-filter-pls-algorithm-kf_pls">Kalman-filter PLS (<code>algorithm = "kf_pls"</code>)<a class="anchor" aria-label="anchor" href="#kalman-filter-pls-algorithm-kf_pls"></a>
+</h3>
+<ol style="list-style-type: decimal">
+<li>Maintain exponentially weighted means
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>μ</mi><mi>x</mi></msub><mo>,</mo><msub><mi>μ</mi><mi>y</mi></msub></mrow><annotation encoding="application/x-tex">\mu_x, \mu_y</annotation></semantics></math>.</li>
+<li>Update cross-products
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>C</mi><mrow><mi>x</mi><mi>x</mi></mrow></msub><mo>,</mo><msub><mi>C</mi><mrow><mi>x</mi><mi>y</mi></mrow></msub></mrow><annotation encoding="application/x-tex">C_{xx}, C_{xy}</annotation></semantics></math>
+with forgetting factor
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>λ</mi><annotation encoding="application/x-tex">\lambda</annotation></semantics></math>
+and optional process noise.</li>
+<li>Periodically call SIMPLS on the smoothed moments to recover
+regression coefficients consistent with the streamed state.</li>
+</ol>
 <p>Common kernels:</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mtable><mtr><mtd columnalign="right" style="text-align: right"><mtext mathvariant="normal">Linear:</mtext><mspace width="1.0em"></mspace></mtd><mtd columnalign="left" style="text-align: left"><mi>k</mi><mrow><mo stretchy="true" form="prefix">(</mo><mi>x</mi><mo>,</mo><mi>z</mi><mo stretchy="true" form="postfix">)</mo></mrow><mo>=</mo><msup><mi>x</mi><mi>⊤</mi></msup><mi>z</mi></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right"><mtext mathvariant="normal">RBF:</mtext><mspace width="1.0em"></mspace></mtd><mtd columnalign="left" style="text-align: left"><mi>k</mi><mrow><mo stretchy="true" form="prefix">(</mo><mi>x</mi><mo>,</mo><mi>z</mi><mo stretchy="true" form="postfix">)</mo></mrow><mo>=</mo><mo>exp</mo><mrow><mo stretchy="true" form="prefix">(</mo><mi>−</mi><mi>γ</mi><mo stretchy="false" form="postfix">∥</mo><mi>x</mi><mo>−</mo><mi>z</mi><msup><mo stretchy="false" form="postfix">∥</mo><mn>2</mn></msup><mo stretchy="true" form="postfix">)</mo></mrow></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right"><mtext mathvariant="normal">Polynomial:</mtext><mspace width="1.0em"></mspace></mtd><mtd columnalign="left" style="text-align: left"><mi>k</mi><mrow><mo stretchy="true" form="prefix">(</mo><mi>x</mi><mo>,</mo><mi>z</mi><mo stretchy="true" form="postfix">)</mo></mrow><mo>=</mo><msup><mrow><mo stretchy="true" form="prefix">(</mo><mi>γ</mi><mspace width="0.167em"></mspace><msup><mi>x</mi><mi>⊤</mi></msup><mi>z</mi><mo>+</mo><msub><mi>c</mi><mn>0</mn></msub><mo stretchy="true" form="postfix">)</mo></mrow><mi>d</mi></msup></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right"><mtext mathvariant="normal">Sigmoid:</mtext><mspace width="1.0em"></mspace></mtd><mtd columnalign="left" style="text-align: left"><mi>k</mi><mrow><mo stretchy="true" form="prefix">(</mo><mi>x</mi><mo>,</mo><mi>z</mi><mo stretchy="true" form="postfix">)</mo></mrow><mo>=</mo><mo>tanh</mo><mrow><mo stretchy="true" form="prefix">(</mo><mi>γ</mi><mspace width="0.167em"></mspace><msup><mi>x</mi><mi>⊤</mi></msup><mi>z</mi><mo>+</mo><msub><mi>c</mi><mn>0</mn></msub><mo stretchy="true" form="postfix">)</mo></mrow><mi>.</mi></mtd></mtr></mtable><annotation encoding="application/x-tex">
 \begin{aligned}
@@ -111,6 +256,7 @@ yields a centered Gram
 \text{Sigmoid:}\quad&amp; k(x,z) = \tanh(\gamma\,x^\top z + c_0).
 \end{aligned}
 </annotation></semantics></math></p>
+</div>
 <div class="section level3">
 <h3 id="centering-the-gram-matrix">Centering the Gram matrix<a class="anchor" aria-label="anchor" href="#centering-the-gram-matrix"></a>
 </h3>

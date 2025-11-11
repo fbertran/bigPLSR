@@ -380,7 +380,13 @@ SEXP cpp_kpls_rkhs_bigmem(SEXP X_ptr,
   
   // Read/center Y (stream-friendly accumulation; but we keep it simple here)
   arma::mat Ya;
-  if (Rf_isMatrix(Y)) {
+  if (TYPEOF(Y) == EXTPTRSXP) {
+    Rcpp::XPtr<BigMatrix> Ybm(Y);
+    ensure_double_matrix(*Ybm, "Y");
+    if ((arma::uword)Ybm->nrow() != n) stop("Y and X have incompatible rows");
+    double* yptr = static_cast<double*>(Ybm->matrix());
+    Ya = arma::mat(yptr, Ybm->nrow(), Ybm->ncol(), false, true);
+  } else if (Rf_isMatrix(Y)) {
     Rcpp::NumericMatrix Ym(Y);
     if ((arma::uword)Ym.nrow() != n) stop("Y and X have incompatible rows");
     Ya = arma::mat(Ym.begin(), Ym.nrow(), Ym.ncol(), false, true);

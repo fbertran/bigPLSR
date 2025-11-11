@@ -308,6 +308,15 @@ plot_pls_variables <- function(object, comps = c(1L, 2L), circle = TRUE,
 #' @param circle Logical; draw a correlation circle behind loadings.
 #' @param circle_col Colour of the circle guide.
 #' @param arrow_col Colour for loading arrows.
+#' @param groups Optional factor or character vector defining groups for
+#'   individuals. When supplied, group-specific colours are used and, if
+#'   `ellipse = TRUE`, confidence ellipses are drawn for each group.
+#' @param ellipse Logical; draw group confidence ellipses when `groups` are
+#'   provided.
+#' @param ellipse_level Confidence level for group ellipses (between 0 and 1).
+#' @param ellipse_n Number of points used to draw each ellipse.
+#' @param group_col Optional vector of colours for the groups. Recycled as
+#'   needed.
 #' @param ... Additional arguments passed to [graphics::plot()].
 #' @export
 #' @examples
@@ -318,7 +327,9 @@ plot_pls_variables <- function(object, comps = c(1L, 2L), circle = TRUE,
 #' plot_pls_biplot(fit)
 plot_pls_biplot <- function(object, comps = c(1L, 2L), scale_variables = 1,
                             circle = TRUE, circle_col = "grey85",
-                            arrow_col = "firebrick", ...) {
+                            arrow_col = "firebrick", groups = NULL,
+                            ellipse = TRUE, ellipse_level = 0.95,
+                            ellipse_n = 200L, group_col = NULL, ...) {
   if (length(comps) != 2L) {
     stop("`comps` must contain exactly two components", call. = FALSE)
   }
@@ -337,9 +348,67 @@ plot_pls_biplot <- function(object, comps = c(1L, 2L), scale_variables = 1,
   xr <- range(scores[, comps[1]])
   yr <- range(scores[, comps[2]])
   lim <- max(abs(c(xr, yr))) * 1.1
-  graphics::plot(scores[, comps[1]], scores[, comps[2]], xlab = paste0("Comp ", comps[1]),
-                 ylab = paste0("Comp ", comps[2]), xlim = c(-lim, lim), ylim = c(-lim, lim), ...)
-  graphics::abline(h = 0, v = 0, col = "grey90", lty = 3)
+  xi <- scores[, comps[1]]
+  yi <- scores[, comps[2]]
+  dots <- list(...)
+  base_args <- list(
+    x = xi,
+    y = yi,
+    xlab = paste0("Comp ", comps[1]),
+    ylab = paste0("Comp ", comps[2]),
+    xlim = c(-lim, lim),
+    ylim = c(-lim, lim)
+  )
+  lvl <- NULL
+  if (!is.null(groups)) {
+    groups <- as.factor(groups)
+    if (length(groups) != length(xi)) {
+      stop("Length of `groups` must match the number of observations", call. = FALSE)
+    }
+    lvl <- levels(groups)
+    if (is.null(group_col)) {
+      group_col <- grDevices::hcl.colors(length(lvl), palette = "Dark2")
+    }
+    if (length(group_col) < length(lvl)) {
+      group_col <- rep_len(group_col, length(lvl))
+    }
+    if (!"col" %in% names(dots)) {
+      base_args$col <- group_col[groups]
+    }
+  }
+  if (!"pch" %in% names(dots)) {
+    base_args$pch <- 19
+  }
+  if (length(dots)) {
+    base_args <- utils::modifyList(base_args, dots)
+  }
+  base_args$col <- base_args$col %||% graphics::par("col")
+  base_args$type <- base_args$type %||% "p"
+  do.call(graphics::plot.default, base_args)
+  # If custom dots included axis/labels etc. they are already handled via ... above.
+  # The call to plot.default ensures compatibility with named arguments.
+  if (!is.null(groups) && isTRUE(ellipse) && ellipse_level > 0 && ellipse_level < 1) {
+    draw_ellipse <- function(x, y, level, npt, col) {
+      if (length(x) < 3L) return()
+      Sigma <- stats::cov(cbind(x, y))
+      if (any(!is.finite(Sigma))) return()
+      eig <- tryCatch(stats::eigen(Sigma, symmetric = TRUE), error = function(e) NULL)
+      if (is.null(eig)) return()
+      vals <- pmax(eig$values, 0)
+      if (all(vals == 0)) return()
+      radii <- sqrt(stats::qchisq(level, df = 2) * vals)
+      angle <- seq(0, 2 * pi, length.out = npt)
+      circle <- rbind(cos(angle), sin(angle))
+      coords <- t(eig$vectors %*% (radii * circle))
+      center <- c(mean(x), mean(y))
+      graphics::lines(coords[, 1] + center[1], coords[, 2] + center[2], col = col, lwd = 2)
+    }
+    for (j in seq_along(lvl)) {
+      idx <- which(groups == lvl[j])
+      draw_ellipse(xi[idx], yi[idx], ellipse_level, ellipse_n, group_col[j])
+    }
+    graphics::legend("topright", legend = lvl, col = group_col, pch = 19, bty = "n")
+  }
   if (isTRUE(circle)) {
     theta <- seq(0, 2 * pi, length.out = 200L)
     graphics::lines(scale_variables * cos(theta), scale_variables * sin(theta), col = circle_col)
@@ -739,6 +808,73 @@ plot_pls_bootstrap_coefficients <- function(boot_result, responses = NULL,
   names(splits) <- labels[keep]
   graphics::boxplot(splits, las = 2, ...)
   graphics::abline(h = 0, col = "grey70", lty = 3)
+  invisible(NULL)
+}
+
+#' Boxplots of bootstrap score distributions
+#'
+#' Visualise the variability of latent scores obtained through
+#' [pls_bootstrap()] when `return_scores = TRUE`.
+#'
+#' @param boot_result Result returned by [pls_bootstrap()].
+#' @param components Optional vector of component indices or names to include.
+#' @param observations Optional vector of observation indices or names to include.
+#' @param ... Additional arguments passed to [graphics::boxplot()].
+#' @importFrom graphics boxplot
+#' @export
+plot_pls_bootstrap_scores <- function(boot_result, components = NULL,
+                                      observations = NULL, ...) {
+  samples <- boot_result$score_samples
+  if (is.null(samples)) {
+    stop("`boot_result` does not contain bootstrap scores; refit with return_scores = TRUE", call. = FALSE)
+  }
+  keep <- !vapply(samples, is.null, logical(1L))
+  samples <- samples[keep]
+  if (!length(samples)) {
+    stop("No bootstrap score samples available", call. = FALSE)
+  }
+  mats <- lapply(samples, function(mat) as.matrix(mat))
+  nobs <- nrow(mats[[1]])
+  ncomp <- ncol(mats[[1]])
+  if (any(vapply(mats, nrow, integer(1L)) != nobs) ||
+      any(vapply(mats, ncol, integer(1L)) != ncomp)) {
+    stop("Inconsistent score dimensions across bootstrap samples", call. = FALSE)
+  }
+  comp_names <- colnames(mats[[1]]) %||% paste0("Comp", seq_len(ncomp))
+  obs_names <- rownames(mats[[1]]) %||%
+    rownames(boot_result$base_fit$scores) %||%
+    paste0("Obs", seq_len(nobs))
+  
+  comp_idx <- if (is.null(components)) {
+    seq_len(ncomp)
+  } else if (is.numeric(components)) {
+    components
+  } else {
+    match(components, comp_names)
+  }
+  if (any(!is.finite(comp_idx)) || any(comp_idx < 1L) || any(comp_idx > ncomp)) {
+    stop("`components` must reference valid component indices or names", call. = FALSE)
+  }
+  obs_idx <- if (is.null(observations)) {
+    seq_len(nobs)
+  } else if (is.numeric(observations)) {
+    observations
+  } else {
+    match(observations, obs_names)
+  }
+  if (any(!is.finite(obs_idx)) || any(obs_idx < 1L) || any(obs_idx > nobs)) {
+    stop("`observations` must reference valid observation indices or names", call. = FALSE)
+  }
+  
+  combos <- expand.grid(obs = obs_idx, comp = comp_idx, KEEP.OUT.ATTRS = FALSE)
+  labels <- paste(obs_names[combos$obs], comp_names[combos$comp], sep = " :: ")
+  splits <- lapply(seq_len(nrow(combos)), function(i) {
+    obs_i <- combos$obs[i]
+    comp_i <- combos$comp[i]
+    vapply(mats, function(mat) mat[obs_i, comp_i], numeric(1L))
+  })
+  names(splits) <- labels
+  graphics::boxplot(splits, las = 2, ...)
   invisible(NULL)
 }
 

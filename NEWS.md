@@ -1,3 +1,10 @@
+# bigPLSR 0.7.0
+
+* Added `plot_pls_bootstrap_scores()` and group-aware ellipses for
+  `plot_pls_biplot()` to visualise latent structures.
+* Exposed `bigPLSR_stream_kstats()` for streamed RKHS centering statistics and
+  corrected the bigmemory RKHS interface to accept dense response blocks.
+
 # bigPLSR 0.6.9
 
 * Stabilised kernel logistic PLS class weighting, reinstated IRLS fallbacks and

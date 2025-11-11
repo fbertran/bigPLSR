@@ -883,7 +883,7 @@ pls_fit <- function(
     # Store training descriptor so predict() can stream cross-kernel
     fit$X_ref <- bigmemory::describe(Xbm)
     # Precompute & store HKH centering stats r,g for training kernel (streamed)
-    fit$kstats <- .bigPLSR_stream_kstats(
+    fit$kstats <- bigPLSR_stream_kstats(
       Xbm,
       kernel = kernel, gamma = gamma, degree = degree, coef0 = coef0,
       chunk_rows = chunk_rows,
@@ -1032,7 +1032,7 @@ pls_fit <- function(
       u_basis      = last_u_basis,
       kernel       = kernel, gamma = gamma, degree = degree, coef0 = coef0,
       # Precomputed centering stats for HKH using the training kernel
-      kstats       = fit0$kstats %||% .bigPLSR_stream_kstats(
+      kstats       = fit0$kstats %||% bigPLSR_stream_kstats(
         Xbm,
         kernel = kernel, gamma = gamma, degree = degree, coef0 = coef0,
         chunk_rows = chunk_rows,
@@ -1302,10 +1302,26 @@ pls_fit <- function(
   fit
 }
 
-.bigPLSR_stream_kstats <- function(Xbm,
-                                   kernel, gamma, degree, coef0,
-                                   chunk_rows = getOption("bigPLSR.predict.chunk_rows", 8192L),
-                                   chunk_cols = getOption("bigPLSR.predict.chunk_cols", 8192L)) {
+#' Streamed centering statistics for RKHS kernels
+#'
+#' Compute the column means and grand mean of the kernel matrix \eqn{K(X, X)}
+#' without materialising it in memory. The input design matrix must be stored as
+#' a \code{bigmemory::big.matrix} (or descriptor), and the kernel is evaluated by
+#' iterating over row/column chunks.
+#'
+#' @param Xbm A \code{bigmemory::big.matrix} (or descriptor) containing the
+#'   training design matrix.
+#' @param kernel Kernel name passed to [stats::kernel()] compatible helpers
+#'   (\code{"linear"}, \code{"rbf"}, \code{"poly"}, \code{"sigmoid"}).
+#' @param gamma,degree,coef0 Kernel hyper-parameters.
+#' @param chunk_rows,chunk_cols Numbers of rows/columns to process per chunk.
+#' @return A list with entries \code{r} (column means) and \code{g}
+#'   (grand mean) of the kernel matrix.
+#' @export
+bigPLSR_stream_kstats <- function(Xbm,
+                                  kernel, gamma, degree, coef0,
+                                  chunk_rows = getOption("bigPLSR.predict.chunk_rows", 8192L),
+                                  chunk_cols = getOption("bigPLSR.predict.chunk_cols", 8192L)) {
   Xbm <- if (inherits(Xbm, "big.matrix.descriptor")) bigmemory::attach.big.matrix(Xbm) else Xbm
   stopifnot(inherits(Xbm, "big.matrix"))
   n <- nrow(Xbm)

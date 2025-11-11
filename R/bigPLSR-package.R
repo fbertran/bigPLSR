@@ -22,10 +22,10 @@
 #' 
 "_PACKAGE"
 
-#' @importFrom graphics abline arrows axis layout lines legend plot segments text 
+#' @importFrom graphics abline arrows axis layout lines legend par plot segments text 
 #' @importFrom grDevices dev.new hcl.colors
 #' @importFrom stats as.formula cov is.empty.model model.matrix model.response model.weights qchisq quantile rexp runif var
-#' @importFrom utils read.csv
+#' @importFrom utils modifyList read.csv
 #' @import bigmemory
 #' @useDynLib bigPLSR, .registration = TRUE
 #' @importFrom Rcpp evalCpp

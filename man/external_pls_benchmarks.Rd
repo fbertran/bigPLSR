@@ -4,22 +4,24 @@
 \alias{external_pls_benchmarks}
 \title{Benchmark results against external PLS implementations}
 \format{
-A data frame with 6 rows and 9 columns:
+A data frame with 144 rows and 10 columns:
 \describe{
   \item{task}{Character vector identifying the task (\code{"pls1"} or \code{"pls2"}).}
   \item{algorithm}{PLS algorithm used for the benchmark (e.g., \code{"simpls"}).}
   \item{package}{Package providing the implementation.}
-  \item{implementation}{Short description of the routine that was benchmarked.}
-  \item{median_time_ms}{Median execution time in milliseconds.}
+  \item{median_time_s}{Median execution time in seconds.}
   \item{itr_per_sec}{Number of iterations per second recorded by \code{bench::mark()}.}
+  \item{mem_alloc_bytes}{Memory usage in bytes recorded by \code{bench::mark()}.}
   \item{n}{Number of observations in the simulated dataset.}
-  \item{p}{Number of predictors in the simulated dataset.}
+  \item{p}{Number of predictors (X) in the simulated dataset.}
+  \item{q}{Number of responses (Y) in the simulated dataset.}
+  \item{ncomp}{Number of extracted components.}
   \item{notes}{Helpful context on dependencies or configuration.}
 }}
 \source{Generated via \code{inst/scripts/external_pls_benchmarks.R}.}
 \description{
-Pre-computed runtime comparisons between \pkg{bigPLSR} and reference
-implementations from the \pkg{pls} and \pkg{mixOmics} packages.
+Pre-computed runtime comparisons between \pkg{bigPLSR} dense and big.memory
+and reference implementations from the \pkg{pls} and \pkg{mixOmics} packages.
 }
 \usage{data(external_pls_benchmarks)}
 \keyword{datasets}

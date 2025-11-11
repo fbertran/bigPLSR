@@ -38,6 +38,7 @@ blocks and persist centering statistics so predictions remain cheap.
 ## Dense example
 
 ```{r dense-example}
+library(bigPLSR)
 set.seed(42)
 n <- 120; p <- 8; m <- 2
 X <- matrix(rnorm(n * p), n, p)
@@ -49,9 +50,11 @@ Y <- cbind(
 fit_rkhs <- pls_fit(X, Y, ncomp = 3, algorithm = "rkhs",
                     kernel = "rbf", gamma = 1 / p, scores = "r")
 
+options(bigPLSR.rkhs_xy.lambda_x = 1e-6)
+options(bigPLSR.rkhs_xy.lambda_y = 1e-6)
+
 fit_rkhs_xy <- pls_fit(X, Y, ncomp = 3, algorithm = "rkhs_xy",
                        kernel = "rbf", gamma = 1 / p,
-                       lambda_x = 1e-6, lambda_y = 1e-6,
                        scores = "none")
 
 head(predict(fit_rkhs, X))

@@ -66,6 +66,7 @@ plot_pls_biplot(fit, comps = c(1, 2), groups = groups,
 boot <- pls_bootstrap(X, Y, ncomp = 2, R = 30, type = "xy",
                       parallel = "none", seed = 99)
 summary_boot <- summarise_pls_bootstrap(boot)
+summary_boot
 ```
 
 ```{r bootstrap-coef}
@@ -74,10 +75,8 @@ plot_pls_bootstrap_coefficients(boot) +
 ```
 
 ```{r bootstrap-scores}
-plot_pls_bootstrap_scores(boot$) +
+boot <- pls_bootstrap(X, Y, ncomp = 2, R = 30, type = "xy", 
+                      parallel = "none", seed = 99, return_scores = TRUE)
+plot_pls_bootstrap_scores(boot) +
   ggtitle("Bootstrap score dispersion")
 ```
-
-All plotting helpers run in a few seconds for datasets of this size.
-The bootstrap example uses 30 replicates to stay well within a
-CRAN-friendly budget.

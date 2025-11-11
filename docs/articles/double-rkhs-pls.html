@@ -5,12 +5,12 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>double-rkhs-pls • bigPLSR</title>
+<title>Double RKHS PLS (rkhs_xy): Theory and Usage • bigPLSR</title>
 <script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <link href="../deps/bootstrap-5.3.1/bootstrap.min.css" rel="stylesheet">
 <script src="../deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="double-rkhs-pls">
+<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Double RKHS PLS (rkhs_xy): Theory and Usage">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">bigPLSR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.6.8</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.7.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -33,17 +33,18 @@
 <li class="active nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
-<li><a class="dropdown-item" href="../articles/auto-backend.html">Auto backend usage</a></li>
-    <li><a class="dropdown-item" href="../articles/bigPLSR-auto-selection.html">Automatic Algorithm Selection in bigPLSR</a></li>
+<li><a class="dropdown-item" href="../articles/bigPLSR-auto-selection.html">Automatic Algorithm Selection in bigPLSR</a></li>
     <li><a class="dropdown-item" href="../articles/bigPLSR-kpls-streaming.html">Streaming Kernel PLS in bigPLSR: XX^T and Column-Chunked Variants</a></li>
     <li><a class="dropdown-item" href="../articles/bootstrap-strategies.html">Bootstrap strategies for bigPLSR</a></li>
     <li><a class="dropdown-item" href="../articles/cross-validation-ic.html">Cross-validation and Information Criteria in bigPLSR</a></li>
-    <li><a class="dropdown-item" href="../articles/double-rkhs-pls.html">double-rkhs-pls</a></li>
+    <li><a class="dropdown-item" href="../articles/double-rkhs-pls.html">Double RKHS PLS (rkhs_xy): Theory and Usage</a></li>
     <li><a class="dropdown-item" href="../articles/kf-pls.html">KF-PLS: Streaming PLS with Kalman-style updates</a></li>
-    <li><a class="dropdown-item" href="../articles/klogitpls.html">klogitpls</a></li>
+    <li><a class="dropdown-item" href="../articles/klogitpls.html">Kernel Logistic PLS</a></li>
     <li><a class="dropdown-item" href="../articles/kpls_review.html">Kernel and Streaming PLS Methods in bigPLSR</a></li>
+    <li><a class="dropdown-item" href="../articles/plotting-guide.html">Visualising PLS Fits with bigPLSR</a></li>
     <li><a class="dropdown-item" href="../articles/pls1-benchmark.html">Benchmarking PLS1 Implementations</a></li>
     <li><a class="dropdown-item" href="../articles/pls2-benchmark.html">Benchmarking PLS2 Implementations</a></li>
+    <li><a class="dropdown-item" href="../articles/rkhs-overview.html">RKHS-based Algorithms in bigPLSR</a></li>
   </ul>
 </li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
@@ -66,8 +67,15 @@
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
 
-      <h1>double-rkhs-pls</h1>
-            
+      <h1>Double RKHS PLS (rkhs_xy): Theory and Usage</h1>
+                        <h4 data-toc-skip class="author">Frédéric
+Bertrand</h4>
+            <address class="author_afil">
+      Cedric, Cnam,
+Paris<br><a class="author_email" href="mailto:#"></a><a href="mailto:frederic.bertrand@lecnam.net" class="email">frederic.bertrand@lecnam.net</a>
+      </address>
+                  
+            <h4 data-toc-skip class="date">2025-11-11</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/fbertran/bigPLSR/blob/HEAD/vignettes/double-rkhs-pls.Rmd" class="external-link"><code>vignettes/double-rkhs-pls.Rmd</code></a></small>
       <div class="d-none name"><code>double-rkhs-pls.Rmd</code></div>
