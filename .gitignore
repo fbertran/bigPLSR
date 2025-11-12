@@ -1,6 +1,7 @@
 add_data
 
 TODO_LIST
+TODO.md
 
 .DS_Store
 src/*.o

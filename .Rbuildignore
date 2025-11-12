@@ -4,6 +4,7 @@
 ^old_R$
 
 ^TODO_LIST$
+^TODO.md$
 
 genlogo.R
 .gitignore
