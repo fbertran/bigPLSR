@@ -2,12 +2,22 @@
 % Please edit documentation in R/kf_pls_state.R
 \name{kf_pls_state_fit}
 \alias{kf_pls_state_fit}
-\title{Stateful PLS Kalman Filter}
+\title{Finalize a KF-PLS state into a fitted model}
 \usage{
 kf_pls_state_fit(state, tol = 1e-08)
 }
+\arguments{
+\item{state}{External pointer created by \code{\link[=kf_pls_state_new]{kf_pls_state_new()}}.}
+
+\item{tol}{Numeric tolerance for the inner SIMPLS step.}
+}
+\value{
+A list with PLS factors and coefficients, classed as \code{big_plsr}.
+}
 \description{
-Stateful PLS Kalman Filter
+Converts the accumulated KF-PLS state into a SIMPLS-equivalent fitted
+model (using the current sufficient statistics). The result is compatible
+with \code{\link[=predict.big_plsr]{predict.big_plsr()}}.
 }
 \examples{
 n <- 200; p <- 30; m <- 2; A <- 3

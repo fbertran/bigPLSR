@@ -2,27 +2,24 @@
 % Please edit documentation in R/pls_analysis.R
 \name{summary.big_plsr}
 \alias{summary.big_plsr}
-\alias{print.summary.big_plsr}
-\title{Summaries for big_plsr objects}
+\title{Summarize a \code{big_plsr} model}
 \usage{
-\method{summary}{big_plsr}(object, X = NULL, Y = NULL, ...)
-
-print.summary.big_plsr(x, ...)
+\method{summary}{big_plsr}(object, ..., X = NULL, Y = NULL)
 }
 \arguments{
 \item{object}{A fitted PLS model.}
 
+\item{...}{Unused.}
+
 \item{X}{Optional design matrix to recompute reconstruction metrics.}
 
 \item{Y}{Optional response matrix/vector.}
-
-\item{...}{Unused.}
 }
 \value{
 An object of class \code{summary.big_plsr}.
 }
 \description{
-Summaries for big_plsr objects
+Summarize a \code{big_plsr} model
 }
 \examples{
 set.seed(123)
@@ -30,9 +27,4 @@ X <- matrix(rnorm(40), nrow = 10)
 y <- X[, 1] - 0.5 * X[, 2] + rnorm(10, sd = 0.1)
 fit <- pls_fit(X, y, ncomp = 2, scores = "r")
 summary(fit)
-set.seed(123)
-X <- matrix(rnorm(40), nrow = 10)
-y <- X[, 1] - 0.5 * X[, 2] + rnorm(10, sd = 0.1)
-fit <- pls_fit(X, y, ncomp = 2, scores = "r")
-print(summary(fit))
 }

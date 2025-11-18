@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">bigPLSR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.6.8</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.7.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -18,17 +18,20 @@
       <ul class="navbar-nav me-auto"><li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/auto-backend.html">Auto backend usage</a></li>
-    <li><a class="dropdown-item" href="../articles/bigPLSR-auto-selection.html">Automatic Algorithm Selection in bigPLSR</a></li>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/bigPLSR-auto-selection.html">Automatic Algorithm Selection in bigPLSR</a></li>
     <li><a class="dropdown-item" href="../articles/bigPLSR-kpls-streaming.html">Streaming Kernel PLS in bigPLSR: XX^T and Column-Chunked Variants</a></li>
     <li><a class="dropdown-item" href="../articles/bootstrap-strategies.html">Bootstrap strategies for bigPLSR</a></li>
     <li><a class="dropdown-item" href="../articles/cross-validation-ic.html">Cross-validation and Information Criteria in bigPLSR</a></li>
-    <li><a class="dropdown-item" href="../articles/double-rkhs-pls.html">double-rkhs-pls</a></li>
+    <li><a class="dropdown-item" href="../articles/double-rkhs-pls.html">Double RKHS PLS (rkhs_xy): Theory and Usage</a></li>
+    <li><a class="dropdown-item" href="../articles/external-pls-benchmarks-long.html">External PLS benchmarks for bigPLSR: detailed analysis</a></li>
+    <li><a class="dropdown-item" href="../articles/external-pls-benchmarks-short.html">Benchmarking bigPLSR against external PLS implementations</a></li>
     <li><a class="dropdown-item" href="../articles/kf-pls.html">KF-PLS: Streaming PLS with Kalman-style updates</a></li>
-    <li><a class="dropdown-item" href="../articles/klogitpls.html">klogitpls</a></li>
+    <li><a class="dropdown-item" href="../articles/klogitpls.html">Kernel Logistic PLS</a></li>
     <li><a class="dropdown-item" href="../articles/kpls_review.html">Kernel and Streaming PLS Methods in bigPLSR</a></li>
+    <li><a class="dropdown-item" href="../articles/plotting-guide.html">Visualising PLS Fits with bigPLSR</a></li>
     <li><a class="dropdown-item" href="../articles/pls1-benchmark.html">Benchmarking PLS1 Implementations</a></li>
     <li><a class="dropdown-item" href="../articles/pls2-benchmark.html">Benchmarking PLS2 Implementations</a></li>
+    <li><a class="dropdown-item" href="../articles/rkhs-overview.html">RKHS-based Algorithms in bigPLSR</a></li>
   </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
@@ -65,7 +68,7 @@
 
 
 <dt id="arg-ybin">ybin<a class="anchor" aria-label="anchor" href="#arg-ybin"></a></dt>
-<dd><p>integer vector of 0,1 labels (length n)</p></dd>
+<dd><p>integer vector of {0,1} labels (length n)</p></dd>
 
 
 <dt id="arg-w-class">w_class<a class="anchor" aria-label="anchor" href="#arg-w-class"></a></dt>

@@ -30,7 +30,10 @@
 #' @param scores_name name for dense scores (or output big.matrix)
 #' @param scores_target one of \code{"auto"}, \code{"new"}, \code{"existing"}
 #' @param scores_bm optional existing big.matrix or descriptor for scores
-#' @param scores_backingfile/backingpath/descriptorfile file-backed sink args
+#' @param scores_backingfile Character; file name for file-backed scores (when `scores="big"`).
+#' @param scores_backingpath  Character; directory for the file-backed scores.
+#'   Defaults to `getwd()` or `tempdir()` in streamed predict, unless overridden.
+#' @param scores_descriptorfile Character; descriptor file name for the file-backed scores.
 #' @param scores_colnames optional character vector for score column names
 #' @param return_scores_descriptor logical; if TRUE and scores is big.matrix, add \code{$scores_descriptor}
 #' @param coef_threshold Optional non-negative value used to hard-threshold
@@ -87,6 +90,9 @@ pls_fit <- function(
   algo_in   <- match.arg(algorithm)
   scores_target <- match.arg(scores_target)
   kernel    <- match.arg(kernel)
+#  gamma    
+#  degree   
+#  coef0    
   approx    <- match.arg(approx)
   if (!is.null(coef_threshold)) {
     if (!is.numeric(coef_threshold) || length(coef_threshold) != 1L || !is.finite(coef_threshold) || coef_threshold < 0) {
@@ -111,7 +117,7 @@ pls_fit <- function(
   klogit_alt     <- getOption("bigPLSR.klogitpls.alt_updates",    0L)
   klogit_tol     <- getOption("bigPLSR.klogitpls.tol_irls",       1e-8)
 
-  # KF-PLS knobs (default values; can be overridden in dots / options)
+  # KF-PLS knobs (default values; can be overridden in options)
   kf_lambda <- getOption("bigPLSR.kf.lambda", 0.995)
   kf_qproc  <- getOption("bigPLSR.kf.q_proc", 1e-6)
   
@@ -213,12 +219,68 @@ pls_fit <- function(
   .rkhs_args <- list(kernel = kernel, gamma = gamma, degree = degree,
                      coef0 = coef0, approx = approx, approx_rank = approx_rank)
   
+  # ---- SIMPLS projection solver selection & helpers -------------------------
+  .simpls_solver <- function() {
+    # Allow tests to select the linear solve used to form W %*% solve(R)
+    # Supported: "chol" (default, fast), "tri", "qr", "solve"
+    m <- getOption("bigPLSR.simpls.solve", "chol")
+    match.arg(tolower(m), c("chol", "tri", "qr", "solve"))
+  }
+  
+  .is_upper_tri <- function(M, tol = 1e-12) {
+    # Cheap check for (near) upper-triangular structure
+    if (!is.matrix(M)) return(FALSE)
+    if (nrow(M) != ncol(M)) return(FALSE)
+    all(abs(M[lower.tri(M)]) <= tol)
+  }
+  
+  # Small helper: maybe build centered X only when scores are actually needed
+  .bigPLSR_center_if_needed <- function(X, mu, need_scores) {
+    if (!isTRUE(need_scores)) return(NULL)     # skip allocation entirely
+    if (is.null(X) || is.null(mu)) return(NULL)
+    sweep(X, 2L, mu, FUN = "-")
+  }
+  # Compute B %*% solve(A) without forming solve(A), honoring solver option.
+  # A is typically R = t(P) %*% W  (ncomp x ncomp), B = W (p x ncomp).
+  .simpls_right_solve <- function(A, B, method = .simpls_solver()) {
+    p <- nrow(B); k <- ncol(B)
+    stopifnot(nrow(A) == ncol(A), ncol(A) == k)
+    meth <- method
+    if (meth == "tri" || (meth == "chol" && .is_upper_tri(A))) {
+      # Fast path: R is (nearly) upper-triangular → use backsolve
+      # X = B %*% R^{-1}  ==  t( backsolve(R, t(B), upper.tri = TRUE, transpose = FALSE) )
+      return(t(backsolve(A, t(B), upper.tri = TRUE, transpose = FALSE)))
+    }
+    if (meth == "chol") {
+      # If not triangular, try normal-equations Cholesky on A'A (square/invertible → OK).
+      # Solve X = B %*% A^{-1} by solving (A'A) Z = A' B' for Z = (A^{-T}) B'
+      # then X = t(Z) = B %*% A^{-1}. This is stable if A is well-conditioned.
+      AtA <- crossprod(A)      # k x k, SPD if A full rank
+      Rch <- try(chol(AtA), silent = TRUE)
+      if (!inherits(Rch, "try-error")) {
+        rhs <- t(A) %*% t(B)                  # k x p
+        Y   <- forwardsolve(t(Rch), rhs)      # solve R' Y = rhs
+        Z   <- backsolve(Rch, Y)              # solve R Z  = Y
+        return(t(Z))                          # X = t(Z)
+      }
+      # Fallback if Cholesky fails
+      meth <- "solve"
+    }
+    if (meth == "qr") {
+      # Solve X A = B ⇒ X = B %*% A^{-1}; implement as X^T = solve(t(A), t(B))
+      return(t(qr.solve(t(A), t(B))))
+    }
+    # Generic fallback
+    B %*% solve(A)
+  }
+  
   # ---- DENSE BACKEND --------------------------------------------------------
   run_dense_simpls <- function() {
+    # ---- Dense inputs
     if (is_big) {
       Xr <- as.matrix(X[])
       yr <- if (inherits(y, "big.matrix")) {
-        if (mode == "pls2" && ncol(y) > 1L) as.matrix(y[, , drop = FALSE]) else as.numeric(y[,1])
+        if (mode == "pls2" && ncol(y) > 1L) as.matrix(y[, , drop = FALSE]) else as.numeric(y[, 1])
       } else {
         if (mode == "pls2" && is.matrix(y) && ncol(y) > 1L) as.matrix(y) else as.numeric(y)
       }
@@ -227,14 +289,31 @@ pls_fit <- function(
       yr <- if (mode == "pls2" && is.matrix(y) && ncol(y) > 1L) as.matrix(y) else as.numeric(y)
     }
     
-    ## Always do SIMPLS on cross-products for parity with pls::simpls.fit
+    # ---- Build cross-products WITHOUT materializing Xc/Yc (major speedup)
+    # Xc'Xc = X'X − n * (mu_x %*% t(mu_x))
+    # Xc'Yc = X'Y − n * (mu_x %*% t(mu_y))
     Y <- if (is.matrix(yr)) yr else matrix(yr, nrow(Xr), 1L)
-    x_means <- colMeans(Xr)
-    y_means <- colMeans(Y)
-    Xc <- sweep(Xr, 2L, x_means, FUN = "-")
-    Yc <- sweep(Y,  2L, y_means, FUN = "-")
-    XtX <- crossprod(Xc)          # p x p
-    XtY <- crossprod(Xc, Yc)      # p x m
+    cross_mode <- .bigPLSR_simpls_cross_mode()
+    if (identical(cross_mode, "dense_cxx") && exists("cpp_dense_cross", mode = "function")) {
+      # Fast path: fused centering + cross-products in C++ (no big Xc/Yc temporaries)
+      use_syrk <- isTRUE(getOption("bigPLSR.simpls.use_syrk", TRUE))
+      cr <- cpp_dense_cross(Xr, Y, use_syrk)      
+      x_means <- as.numeric(cr$x_means)
+      y_means <- as.numeric(cr$y_means)
+      XtX     <- cr$XtX
+      XtY     <- cr$XtY
+      # no Xc needed here; scores will use Xr %*% W_eff - shift
+    } else {
+      # R fallback: explicit centering + crossprod
+      x_means <- colMeans(Xr)
+      y_means <- colMeans(Y)
+      need_scores <- !identical(scores, "none")
+      Xc <- .bigPLSR_center_if_needed(Xr, x_means, need_scores || TRUE)  # we do need Xc for XtX/XtY here
+      Yc <- sweep(Y,  2L, y_means, FUN = "-")
+      XtX <- crossprod(Xc)          # p x p
+      XtY <- crossprod(Xc, Yc)      # p x m
+    }
+    
     fit <- .Call(`_bigPLSR_cpp_simpls_from_cross`,
                  XtX, XtY, x_means, y_means, as.integer(ncomp), tol)
     fit$mode <- if (ncol(Y) == 1L) "pls1" else "pls2"
@@ -242,24 +321,29 @@ pls_fit <- function(
     if (is.null(fit$ncomp) || !is.finite(fit$ncomp) || fit$ncomp <= 0L) {
       if (!is.null(fit$x_weights)) fit$ncomp <- ncol(fit$x_weights)
     }
-    
-    ## Default to PLS-style scores: T = Xc %*% W %*% solve(P'W)
-    if (scores != "none") {
-      # internal escape hatch for developers:
-      style <- getOption("bigPLSR.scores_style", "pls")  # "pls" or "raw" (undocumented)
-      if (!is.null(fit$x_weights) && !is.null(fit$x_loadings)) {
-        Rmat <- crossprod(fit$x_loadings, fit$x_weights)      # ncomp x ncomp
-        Rinv <- tryCatch(solve(Rmat), error = function(e) NULL)
+    ## Default to PLS-style scores, without materialising Xc:
+    ##   T = (X - mu_x) %*% W_eff = X %*% W_eff - 1 %*% (mu_x %*% W_eff)
+    ## Avoid any work if not asked:
+    if (!identical(scores, "none")) {
+      style  <- getOption("bigPLSR.scores_style", "pls")  # "pls" or "raw" (hidden)
+      solver <- .simpls_solver()
+      if (!is.null(fit$x_weights) && !is.null(fit$x_loadings) && identical(style, "pls")) {
+        Rmat  <- crossprod(fit$x_loadings, fit$x_weights)      # k x k, k = ncomp
+        W_eff <- .simpls_right_solve(Rmat, fit$x_weights, method = solver)
       } else {
-        Rinv <- NULL
+        W_eff <- fit$x_weights  # "raw" or missing factors
       }
-      if (identical(style, "pls") && !is.null(Rinv)) {
-        W_eff <- fit$x_weights %*% Rinv
+      # Scores without Xc materialization: T = X %*% W_eff  -  1·(mu_x %*% W_eff)
+      # C++ fused path: T = X W_eff - 1 (mu_x W_eff)
+      if (exists("cpp_dense_scores", mode = "function")) {
+        Tmat <- cpp_dense_scores(Xr, x_means, W_eff)
       } else {
-        W_eff <- fit$x_weights     # "raw" or fallback
+        TW0   <- Xr %*% W_eff
+        shift <- as.numeric(x_means %*% W_eff)
+        # fast column shift:
+        for (j in seq_len(ncol(TW0))) TW0[, j] <- TW0[, j] - shift[j]
+        Tmat <- TW0
       }
-      
-      Tmat <- Xc %*% W_eff
       if (identical(scores, "r")) {
         fit$scores <- Tmat
       } else {
@@ -272,22 +356,25 @@ pls_fit <- function(
           bm[,] <- Tmat
           fit$scores <- bm
         } else if (!is.null(scores_backingfile)) {
+          # CRAN: never write outside tempdir() by default
+          default_path <- getOption("bigPLSR.backingpath_default", tempdir())
           bm <- bigmemory::filebacked.big.matrix(
             nrow = nrow(Tmat), ncol = ncol(Tmat), type = "double",
             backingfile = scores_backingfile,
-            backingpath = if (is.null(scores_backingpath)) getwd() else scores_backingpath,
-            descriptorfile = if (is.null(scores_descriptorfile)) "scores.desc" else scores_descriptorfile
+            backingpath = scores_backingpath %||% default_path,
+            descriptorfile = scores_descriptorfile %||% "scores.desc"
           )
           bm[,] <- Tmat
           fit$scores <- bm
         } else {
           fit$scores <- Tmat
         }
-      }} else {
-        fit$scores <- NULL
       }
+    } else {
+      fit$scores <- NULL
+    }
     fit <- .finalize_pls_fit(.post_scores(fit), "simpls")
-        if (.bigPLSR_should_store_X(X)) fit$X <- Xr
+    if (.bigPLSR_should_store_X(X)) fit$X <- Xr
     .maybe_threshold(fit)
   }
   
@@ -315,6 +402,9 @@ pls_fit <- function(
         if (.bigPLSR_should_store_X(Xr)) fit$X <- Xr
     fit$mode <- mode
     
+    # Ensure means are present (needed for center-free scoring below)
+    if (is.null(fit$x_means)) fit$x_means <- as.numeric(colMeans(Xr))
+    
     # If user asked for "big" scores, copy to a sink.
     if (identical(scores, "big") && !is.null(fit$scores)) {
       Tmat <- as.matrix(fit$scores)
@@ -326,18 +416,60 @@ pls_fit <- function(
         bm[,] <- Tmat
         fit$scores <- bm
       } else if (!is.null(scores_backingfile)) {
+        # CRAN: never write outside tempdir() by default
+        default_path <- getOption("bigPLSR.backingpath_default", tempdir())
         bm <- bigmemory::filebacked.big.matrix(
           nrow = nrow(Tmat), ncol = ncol(Tmat), type = "double",
           backingfile = scores_backingfile,
-          backingpath = if (is.null(scores_backingpath)) getwd() else scores_backingpath,
-          descriptorfile = if (is.null(scores_descriptorfile)) "scores.desc" else scores_descriptorfile
+          backingpath = scores_backingpath %||% default_path,
+          descriptorfile = scores_descriptorfile %||% "scores.desc"
         )
         bm[,] <- Tmat
         fit$scores <- bm
       }
     } else if (identical(scores, "none")) {
       fit$scores <- NULL
+    } else if (is.null(fit$scores)) {
+    # ---- Center-free score formation for NIPALS (no Xc materialization)
+    # Style parity with SIMPLS: optionally orthonormalize via M = solve(P'W)
+    style <- getOption("bigPLSR.scores_style", "pls")
+    if (!is.null(fit$x_weights) && !is.null(fit$x_loadings)) {
+      Rmat <- crossprod(fit$x_loadings, fit$x_weights)
+      Rinv <- tryCatch(solve(Rmat), error = function(e) NULL)
+    } else {
+      Rinv <- NULL
     }
+    if (identical(style, "pls") && !is.null(Rinv)) {
+      W_eff <- fit$x_weights %*% Rinv
+    } else {
+      W_eff <- fit$x_weights
+    }
+    TW0   <- Xr %*% W_eff
+    shift <- as.numeric(fit$x_means %*% W_eff)
+    Tmat  <- sweep(TW0, 2L, shift, FUN = "-")
+    if (identical(scores, "r")) {
+      fit$scores <- Tmat
+    } else {
+      # scores == "big"
+      if (!is.null(scores_bm) && inherits(scores_bm, "big.matrix")) {
+        scores_bm[,] <- Tmat; fit$scores <- scores_bm
+      } else if (!is.null(scores_bm) && inherits(scores_bm, "big.matrix.descriptor")) {
+        bm <- bigmemory::attach.big.matrix(scores_bm); bm[,] <- Tmat; fit$scores <- bm
+      } else if (!is.null(scores_backingfile)) {
+        # CRAN: never write outside tempdir() by default
+        default_path <- getOption("bigPLSR.backingpath_default", tempdir())
+        bm <- bigmemory::filebacked.big.matrix(
+          nrow = nrow(Tmat), ncol = ncol(Tmat), type = "double",
+          backingfile = scores_backingfile,
+          backingpath = scores_backingpath %||% default_path,
+          descriptorfile = scores_descriptorfile %||% "scores.desc"
+        )
+        bm[,] <- Tmat; fit$scores <- bm
+      } else {
+        fit$scores <- Tmat
+      }
+    }
+  }
     
     fit <- .finalize_pls_fit(.post_scores(fit), "nipals")
     if (isTRUE(return_scores_descriptor) && inherits(fit$scores, "big.matrix")) {
@@ -387,11 +519,13 @@ pls_fit <- function(
         bm[,] <- Tmat
         fit$scores <- bm
       } else if (!is.null(scores_backingfile)) {
+        # CRAN: never write outside tempdir() by default
+        default_path <- getOption("bigPLSR.backingpath_default", tempdir())
         bm <- bigmemory::filebacked.big.matrix(
           nrow = nrow(Tmat), ncol = ncol(Tmat), type = "double",
           backingfile = scores_backingfile,
-          backingpath = if (is.null(scores_backingpath)) getwd() else scores_backingpath,
-          descriptorfile = if (is.null(scores_descriptorfile)) "scores.desc" else scores_descriptorfile
+          backingpath = scores_backingpath %||% default_path,
+          descriptorfile = scores_descriptorfile %||% "scores.desc"
         )
         bm[,] <- Tmat
         fit$scores <- bm
@@ -407,11 +541,11 @@ pls_fit <- function(
     Xr <- if (is_big) as.matrix(X[]) else as.matrix(X)
     Yr <- if (inherits(y, "big.matrix")) as.matrix(y[, , drop = FALSE]) else as.matrix(y)
     # kernel + approx handled inside C++
-    fit <- .Call(`_bigPLSR_cpp_kpls_rkhs_dense`,
-                 Xr, Yr, as.integer(ncomp), as.numeric(tol),
+    fit <- .Call(`_bigPLSR_cpp_kpls_rkhs_dense`, Xr, Yr, 
+                 as.integer(ncomp), as.numeric(tol),
                  kernel, as.numeric(gamma), as.integer(degree), as.numeric(coef0),
-                 approx, if (is.null(approx_rank)) -1L else as.integer(approx_rank),
-                 scores != "none")
+                 approx,
+                 if (is.null(approx_rank)) -1L else as.integer(approx_rank))
     fit$mode <- if (ncol(Yr) == 1L) "pls1" else "pls2"
     # big scores sink if requested
     if (identical(scores, "big") && !is.null(fit$scores)) {
@@ -585,14 +719,10 @@ pls_fit <- function(
     cw <- normalize_class_weights(if (is.factor(y)) y else factor(ybin, levels = c(0,1), labels = classes), class_weights)
 
     # hyper-params (allow ... overrides if present, else options, else defaults)
-    k   <- if (exists("dots", inherits = FALSE)) dots$kernel else NULL
-    ga  <- if (exists("dots", inherits = FALSE)) dots$gamma  else NULL
-    de  <- if (exists("dots", inherits = FALSE)) dots$degree else NULL
-    c0  <- if (exists("dots", inherits = FALSE)) dots$coef0  else NULL
-    kernel <- k  %||% getOption("bigPLSR.klogitpls.kernel", "rbf")
-    gamma  <- ga %||% getOption("bigPLSR.klogitpls.gamma",  1 / ncol(Xr))
-    degree <- de %||% getOption("bigPLSR.klogitpls.degree", 3L)
-    coef0  <- c0 %||% getOption("bigPLSR.klogitpls.coef0",  1.0)
+    kernel <- kernel %||% getOption("bigPLSR.klogitpls.kernel", "rbf")
+    gamma  <- gamma %||% getOption("bigPLSR.klogitpls.gamma",  1 / ncol(Xr))
+    degree <- degree %||% getOption("bigPLSR.klogitpls.degree", 3L)
+    coef0  <- coef0 %||% getOption("bigPLSR.klogitpls.coef0",  1.0)
     # IRLS controls / class weights
 #    cw     <- if (exists("class_weights", inherits = FALSE) && !is.null(class_weights)) as.numeric(class_weights) else numeric()
     itmax  <- if (exists("klogit_maxit", inherits = FALSE)) klogit_maxit else getOption("bigPLSR.klogitpls.maxit", 50L)
@@ -692,8 +822,16 @@ pls_fit <- function(
     if (!inherits(X, "big.matrix")) stop("For backend='bigmem', X must be a big.matrix")
     if (!inherits(y, "big.matrix")) stop("For backend='bigmem', y must be a big.matrix")
     
-    ## Unified: always cross-products + SIMPLS (PLS1 or PLS2)
-    cross <- .Call(`_bigPLSR_cpp_bigmem_cross`, X@address, y@address, as.integer(chunk_size))
+    ## Align chunk size to cache-friendly boundaries (fewer partial blocks)
+    block_align <- as.integer(getOption("bigPLSR.stream.block_align", 8192L))
+    if (is.na(block_align) || block_align <= 0L) block_align <- 8192L
+    cs <- as.integer(chunk_size)
+    if (is.na(cs) || cs <= 0L) cs <- 10000L
+    chunk_aligned <- as.integer( ( (cs + block_align - 1L) %/% block_align ) * block_align )
+
+    ## Unified: cross-products + SIMPLS (PLS1 or PLS2) with aligned blocks
+    cross <- .Call(`_bigPLSR_cpp_bigmem_cross`, X@address, y@address, chunk_aligned)
+    
     fit <- .Call(`_bigPLSR_cpp_simpls_from_cross`,
                  cross$XtX, cross$XtY, cross$x_means, cross$y_means,
                  as.integer(ncomp), tol)
@@ -703,30 +841,44 @@ pls_fit <- function(
       if (!is.null(fit$x_weights)) fit$ncomp <- ncol(fit$x_weights)
     }
     
-    # Prepare PLS-style weights for streaming: W_eff = W %*% solve(P'W)
-    style <- getOption("bigPLSR.scores_style", "pls")  # hidden
-    if (!is.null(fit$x_weights) && !is.null(fit$x_loadings)) {
-      Rmat <- crossprod(fit$x_loadings, fit$x_weights)   # ncomp x ncomp
-      Rinv <- tryCatch(solve(Rmat), error = function(e) NULL)
-    } else {
-      Rinv <- NULL
-    }
-    if (identical(style, "pls") && !is.null(Rinv)) {
-      W_eff <- fit$x_weights %*% Rinv
-    } else {
-      W_eff <- fit$x_weights
-    }
+    # Stream scores only if requested: T = (X - mu) %*% W_eff
     
-    # Stream scores if requested: T = (X - mu) %*% W_eff
+    # Before streaming T, build W_eff with a selectable solver:
     if (identical(scores, "big") || identical(scores, "r")) {
+      # Prepare PLS-style weights for streaming: W_eff = W %*% solve(P'W)
+      style  <- getOption("bigPLSR.scores_style", "pls")       # hidden
+      solver <- match.arg(getOption("bigPLSR.simpls.solve", "chol"),
+                          c("chol","tri","qr","solve"))
+      W_eff  <- fit$x_weights
+      if (!is.null(fit$x_weights) && !is.null(fit$x_loadings) && identical(style, "pls")) {
+        Rmat <- crossprod(fit$x_loadings, fit$x_weights)       # A×A, typically SPD
+        Rinv <- NULL
+        if (solver %in% c("chol","tri")) {
+          Rinv <- tryCatch({
+            U <- chol(Rmat, pivot = FALSE)
+            if (solver == "chol") chol2inv(U) else backsolve(U, diag(nrow(Rmat)))
+          }, error = function(e) NULL)
+        }
+        if (is.null(Rinv) && solver == "qr") {
+          Rinv <- tryCatch(solve(qr(Rmat), diag(nrow(Rmat))), error = function(e) NULL)
+        }
+        if (is.null(Rinv)) {
+          Rinv <- tryCatch(solve(Rmat), error = function(e) NULL)
+        }
+        if (!is.null(Rinv)) {
+          W_eff <- fit$x_weights %*% Rinv 
+        }
+      }
       local_sink <- NULL
       if (identical(scores, "big")) {
         if (is.null(scores_bm)) {
+          # CRAN: never write outside tempdir() by default
+          default_path <- getOption("bigPLSR.backingpath_default", tempdir())
           local_sink <- bigmemory::filebacked.big.matrix(
             nrow = nrow(X), ncol = as.integer(fit$ncomp), type = "double",
-            backingfile = if (is.null(scores_backingfile)) "scores.bin" else scores_backingfile,
-            backingpath = if (is.null(scores_backingpath)) getwd() else scores_backingpath,
-            descriptorfile = if (is.null(scores_descriptorfile)) "scores.desc" else scores_descriptorfile
+            backingfile = scores_backingfile %||% "scores.bin",
+            backingpath = scores_backingpath %||% default_path,
+            descriptorfile = scores_descriptorfile %||% "scores.desc"
           )
         } else if (inherits(scores_bm, "big.matrix")) {
           local_sink <- scores_bm
@@ -736,14 +888,14 @@ pls_fit <- function(
       }
       fit$scores <- .Call(`_bigPLSR_cpp_stream_scores_given_W`,
                           X@address, W_eff, fit$x_means,
-                          as.integer(chunk_size),
+                          chunk_aligned,
                           if (is.null(local_sink)) NULL else local_sink,
                           identical(scores, "big"))
     } else {
       fit$scores <- NULL
     }
     fit <- .finalize_pls_fit(.post_scores(fit), "simpls")
-        if (.bigPLSR_should_store_X(X)) fit$X <- X
+    if (.bigPLSR_should_store_X(X)) fit$X <- X
     .maybe_threshold(fit)
   }
   
@@ -761,7 +913,16 @@ pls_fit <- function(
       }
     }
     
+    # Align chunk_size to cache-friendly block size
+    blk <- .bigPLSR_stream_block_size(nrow(X), chunk_size)
+    
     if (mode == "pls1" && ncol(y) != 1L) stop("mode='pls1' requires y to have one column")
+    
+    # Align streaming chunk size to cache boundaries for better throughput
+    block_align <- as.integer(getOption("bigPLSR.stream.block_align", 8192L))
+    if (is.na(block_align) || block_align <= 0L) block_align <- 8192L
+    cs <- as.integer(chunk_size); if (is.na(cs) || cs <= 0L) cs <- 10000L
+    chunk_aligned <- as.integer(((cs + block_align - 1L) %/% block_align) * block_align)
     
     sink_bm <- NULL
     if (identical(scores, "big") && scores_target == "existing") {
@@ -770,11 +931,13 @@ pls_fit <- function(
       } else if (!is.null(scores_bm) && inherits(scores_bm, "big.matrix.descriptor")) {
         sink_bm <- bigmemory::attach.big.matrix(scores_bm)
       } else if (!is.null(scores_backingfile)) {
+        # CRAN: never write outside tempdir() by default
+        default_path <- getOption("bigPLSR.backingpath_default", tempdir())
         sink_bm <- bigmemory::filebacked.big.matrix(
           nrow = nrow(X), ncol = as.integer(ncomp), type = "double",
           backingfile = scores_backingfile,
-          backingpath = if (is.null(scores_backingpath)) getwd() else scores_backingpath,
-          descriptorfile = if (is.null(scores_descriptorfile)) "scores.desc" else scores_descriptorfile
+          backingpath = scores_backingpath %||% default_path,
+          descriptorfile = scores_descriptorfile %||% "scores.desc"
         )
       } else {
         stop("scores_target='existing' requires scores_bm or backingfile/path/descriptorfile")
@@ -784,7 +947,7 @@ pls_fit <- function(
     if (mode == "pls1") {
       fit <- pls_streaming_bigmemory(
         X@address, y@address,
-        as.integer(ncomp), as.integer(chunk_size),
+        as.integer(ncomp), chunk_aligned,
         center = TRUE, scale = FALSE,
         tol = tol,
         return_big = identical(scores, "big")
@@ -794,7 +957,7 @@ pls_fit <- function(
       fit <- big_plsr_stream_fit_nipals(
         X@address, y@address, as.integer(ncomp),
         center = TRUE, scale = FALSE,
-        chunk_size = as.integer(chunk_size),
+        chunk_size = chunk_aligned,
         return_big = identical(scores, "big")
       )
       fit$mode <- "pls2"
@@ -814,11 +977,13 @@ pls_fit <- function(
         }
         fit$scores <- sink_bm
       } else if (!inherits(fit$scores, "big.matrix") && !is.null(fit$scores)) {
+        # CRAN: never write outside tempdir() by default
+        default_path <- getOption("bigPLSR.backingpath_default", tempdir())
         bm <- bigmemory::filebacked.big.matrix(
           nrow = nrow(fit$scores), ncol = ncol(fit$scores), type = "double",
-          backingfile = if (is.null(scores_backingfile)) "scores.bin" else scores_backingfile,
-          backingpath = if (is.null(scores_backingpath)) getwd() else scores_backingpath,
-          descriptorfile = if (is.null(scores_descriptorfile)) "scores.desc" else scores_descriptorfile
+          backingfile = scores_backingfile %||% "scores.bin",
+          backingpath = scores_backingpath %||% default_path,
+          descriptorfile = scores_descriptorfile %||% "scores.desc"
         )
         bm[,] <- fit$scores
         fit$scores <- bm
@@ -834,6 +999,10 @@ pls_fit <- function(
     if (!inherits(X, "big.matrix")) stop("For backend='bigmem', X must be a big.matrix")
     gram_mode <- getOption("bigPLSR.kpls_gram", "cols")
     use_rows  <- identical(gram_mode, "rows")
+    
+    # Align chunk_size to cache-friendly block size
+    blk <- .bigPLSR_stream_block_size(nrow(X), chunk_size)
+    
     if (is.null(chunk_cols)) chunk_cols_loc <- max(1024L, as.integer(0.1 * nrow(X))) else chunk_cols_loc <- as.integer(chunk_cols)
     if (identical(gram_mode, "auto")) {
       use_rows <- (nrow(X) > 4L * ncol(X))
@@ -841,13 +1010,13 @@ pls_fit <- function(
     if (use_rows) {
       fit <- .Call(`_bigPLSR_cpp_kpls_stream_xxt`,
                    X@address, y@address,
-                   as.integer(ncomp), as.integer(chunk_size), as.integer(chunk_cols_loc),
+                   as.integer(ncomp), as.integer(blk), as.integer(chunk_cols_loc),
                    TRUE,
                    identical(scores, "big"))
     } else {
       fit <- .Call(`_bigPLSR_cpp_kpls_stream_cols`,
                    X@address, y@address,
-                   as.integer(ncomp), as.integer(chunk_size),
+                   as.integer(ncomp), as.integer(blk),
                    TRUE,
                    identical(scores, "big"))
     }
@@ -952,14 +1121,10 @@ pls_fit <- function(
       cw <- normalize_class_weights(factor(ybin, levels = c(0,1), labels = classes), class_weights)
     }
     # hyper-params (allow ... overrides if present, else options, else defaults)
-    k   <- if (exists("dots", inherits = FALSE)) dots$kernel else NULL
-    ga  <- if (exists("dots", inherits = FALSE)) dots$gamma  else NULL
-    de  <- if (exists("dots", inherits = FALSE)) dots$degree else NULL
-    c0  <- if (exists("dots", inherits = FALSE)) dots$coef0  else NULL
-    kernel <- k  %||% getOption("bigPLSR.klogitpls.kernel", "rbf")
-    gamma  <- ga %||% getOption("bigPLSR.klogitpls.gamma",  1 / ncol(X))
-    degree <- de %||% getOption("bigPLSR.klogitpls.degree", 3L)
-    coef0  <- c0 %||% getOption("bigPLSR.klogitpls.coef0",  1.0)
+    kernel <- kernel %||% getOption("bigPLSR.klogitpls.kernel", "rbf")
+    gamma  <- gamma  %||% getOption("bigPLSR.klogitpls.gamma",  1 / ncol(Xr))
+    degree <- degree %||% getOption("bigPLSR.klogitpls.degree", 3L)
+    coef0  <- coef0  %||% getOption("bigPLSR.klogitpls.coef0",  1.0)
     # IRLS controls / class weights
 #    cw     <- if (exists("class_weights", inherits = FALSE) && !is.null(class_weights)) as.numeric(class_weights) else numeric()
     itmax  <- if (exists("klogit_maxit", inherits = FALSE)) klogit_maxit else getOption("bigPLSR.klogitpls.maxit", 50L)
@@ -1060,11 +1225,13 @@ pls_fit <- function(
       local_sink <- NULL
       if (identical(scores, "big")) {
         if (is.null(scores_bm)) {
+          # CRAN: never write outside tempdir() by default
+          default_path <- getOption("bigPLSR.backingpath_default", tempdir())
           local_sink <- bigmemory::filebacked.big.matrix(
             nrow = nrow(X), ncol = as.integer(fit$ncomp), type = "double",
-            backingfile = if (is.null(scores_backingfile)) "scores.bin" else scores_backingfile,
-            backingpath = if (is.null(scores_backingpath)) getwd() else scores_backingpath,
-            descriptorfile = if (is.null(scores_descriptorfile)) "scores.desc" else scores_descriptorfile
+            backingfile = scores_backingfile %||% "scores.bin",
+            backingpath = scores_backingpath %||% default_path,
+            descriptorfile = scores_descriptorfile %||% "scores.desc"
           )
         } else if (inherits(scores_bm, "big.matrix")) {
           local_sink <- scores_bm
@@ -1341,4 +1508,59 @@ bigPLSR_stream_kstats <- function(Xbm,
     }
   }
   list(r = col_sum / n, g = total_sum / (n * n))
+}
+
+.bigPLSR_stream_block_size <- function(n, want = NULL) {
+  # Target cache-friendly alignment; user-overridable
+  align <- as.integer(getOption("bigPLSR.stream.block_align", 8192L))
+  if (!is.finite(align) || align <= 0L) align <- 8192L
+  
+  # If caller didn't pass a block size (or gave nonpositive), start from min(n, align)
+  size <- if (is.null(want) || !is.finite(want) || want <= 0L) {
+    min(as.integer(n), align)
+  } else {
+    as.integer(want)
+  }
+  if (!is.finite(size) || size < 1L) size = 1L
+  
+  # Round UP to next multiple of 'align', then clamp to n
+  size <- as.integer(((size + align - 1L) %/% align) * align)
+  if (size > n) size <- as.integer(n)
+  
+  size
+}
+
+## --- KF-PLS: attach state snapshot to a proper big_plsr object --------------
+.bigPLSR_kf_state_as_fit <- function(snap, mode = c("pls1","pls2")) {
+  mode <- match.arg(mode)
+  # snap is a list returned from C++ with fields:
+  #   x_mu (p), y_mu (m), W (p×k), P (p×k or NULL), Q (m×k or NULL),
+  #   B (p×m), b0 (m), ncomp (k)
+  k <- if (!is.null(snap$ncomp)) as.integer(snap$ncomp) else {
+    if (!is.null(snap$W)) ncol(snap$W) else 0L
+  }
+  fit <- list(
+    algorithm     = "kf_pls",
+    mode          = mode,
+    ncomp         = k,
+    x_means       = as.numeric(snap$x_mu %||% numeric()),
+    y_means       = as.numeric(snap$y_mu %||% numeric()),
+    x_weights     = if (!is.null(snap$W))  as.matrix(snap$W)  else NULL,
+    x_loadings    = if (!is.null(snap$P))  as.matrix(snap$P)  else NULL,
+    y_loadings    = if (!is.null(snap$Q))  as.matrix(snap$Q)  else NULL,
+    coefficients  = if (!is.null(snap$B))  as.matrix(snap$B)  else NULL,
+    intercept     = as.numeric(snap$b0 %||% snap$y_mu %||% numeric())
+  )
+  class(fit) <- unique(c("big_plsr", class(fit)))
+  .finalize_pls_fit(fit, "kf_pls")
+}
+
+# Internal: choose dense cross-products implementation for SIMPLS
+# Options:
+#   bigPLSR.simpls.cross = "dense_cxx" | "R" | "auto"
+.bigPLSR_simpls_cross_mode <- function() {
+  mode <- tolower(as.character(getOption("bigPLSR.simpls.cross", "auto")))
+  if (mode %in% c("dense_cxx", "r")) return(mode)
+  # auto: prefer C++ helper if available, otherwise R fallback
+  if (exists("cpp_dense_cross", mode = "function")) "dense_cxx" else "r"
 }

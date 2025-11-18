@@ -16,10 +16,22 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+```{r setup_ops, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.path = "figures/bootstrap-",
+  fig.width = 7,
+  fig.height = 5,
+  dpi = 150,
+  message = FALSE,
+  warning = FALSE
+)
+
+LOCAL <- identical(Sys.getenv("LOCAL"), "TRUE")
 set.seed(2025)
 ```
+
 
 ## Introduction
 
@@ -46,13 +58,13 @@ Y <- cbind(eta1, eta2) + matrix(rnorm(n * m, sd = 0.5), n, m)
 
 ## Baseline fit
 
-```{r fit}
+```{r fit, eval=LOCAL, cache=TRUE}
 fit <- pls_fit(X, Y, ncomp = 3, scores = "r")
 ```
 
 ## (X, Y) bootstrap
 
-```{r boot-xy}
+```{r boot-xy, eval=LOCAL, cache=TRUE}
 boot_xy <- pls_bootstrap(X, Y, ncomp = 3, R = 50, type = "xy",
                          parallel = "none", return_scores = TRUE)
 head(summarise_pls_bootstrap(boot_xy))
@@ -60,7 +72,7 @@ head(summarise_pls_bootstrap(boot_xy))
 
 A quick visual inspection of the coefficient distributions:
 
-```{r boot-xy-plot, fig.height=4.5}
+```{r boot-xy-plot, fig.height=4.5, eval=LOCAL, cache=TRUE}
 plot_pls_bootstrap_coefficients(boot_xy, variables = colnames(X))
 ```
 
@@ -69,13 +81,13 @@ plot_pls_bootstrap_coefficients(boot_xy, variables = colnames(X))
 The conditional bootstrap operates on the latent score representation extracted
 from the baseline fit.
 
-```{r boot-xt}
+```{r boot-xt, eval=LOCAL, cache=TRUE}
 boot_xt <- pls_bootstrap(X, Y, ncomp = 3, R = 50, type = "xt",
                          parallel = "none", return_scores = TRUE)
 head(summarise_pls_bootstrap(boot_xt))
 ```
 
-```{r boot-xt-plot, fig.height=4.5}
+```{r boot-xt-plot, fig.height=4.5, eval=LOCAL, cache=TRUE}
 plot_pls_bootstrap_coefficients(boot_xt, responses = colnames(Y))
 ```
 
@@ -85,7 +97,7 @@ When `return_scores = TRUE`, the bootstrap result stores the score matrices for
 each replicate. This allows for custom diagnostics such as the dispersion of the
 first two latent variables:
 
-```{r boot-score-summary}
+```{r boot-score-summary, eval=LOCAL, cache=TRUE}
 score_mats <- boot_xt$score_samples
 score_means <- sapply(score_mats, function(M) colMeans(M)[1:2])
 apply(score_means, 1, summary)

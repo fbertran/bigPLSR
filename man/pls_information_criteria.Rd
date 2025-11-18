@@ -14,8 +14,6 @@ pls_information_criteria(object, X, Y, max_comp = NULL)
 \item{Y}{Training response matrix or vector.}
 
 \item{max_comp}{Maximum number of components to consider.}
-
-\item{criteria}{Character vector specifying which criteria to compute.}
 }
 \value{
 A data frame with RSS, RMSE, AIC and BIC per component.

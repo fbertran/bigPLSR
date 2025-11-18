@@ -1,0 +1,48 @@
+#!/usr/bin/env sh
+
+# Minimal configure: detect a CBLAS header and enable BIGPLSR_USE_CBLAS_SYRK
+
+echo "==> bigPLSR: running configure"
+
+# Resolve C++ compiler from R (falls back to c++)
+CXX="${CXX:-$(R CMD config CXX17 2>/dev/null || R CMD config CXX 2>/dev/null || command -v c++)}"
+CPPFLAGS_DEFAULT="$(R CMD config CPPFLAGS 2>/dev/null)"
+CXXFLAGS_DEFAULT="$(R CMD config CXXFLAGS 2>/dev/null)"
+
+# Try to compile a trivial TU that includes a CBLAS header
+cat > conftest.cpp <<'EOF'
+#if __has_include(<cblas.h>)
+# include <cblas.h>
+#elif __has_include(<vecLib/cblas.h>)
+# include <vecLib/cblas.h>
+#else
+# error "No cblas.h / vecLib/cblas.h"
+#endif
+int main(){ return 0; }
+EOF
+
+CBLAS_DEFINE=""
+if "$CXX" $CPPFLAGS_DEFAULT $CXXFLAGS_DEFAULT -c conftest.cpp -o conftest.o >/dev/null 2>&1; then
+  echo "==> bigPLSR: CBLAS header detected — enabling BIGPLSR_USE_CBLAS_SYRK"
+  CBLAS_DEFINE="-DBIGPLSR_USE_CBLAS_SYRK"
+else
+  echo "==> bigPLSR: CBLAS header NOT found — building without BIGPLSR_USE_CBLAS_SYRK"
+fi
+rm -f conftest.cpp conftest.o
+
+# Generate src/Makevars from template (or create a basic one)
+mkdir -p src
+
+if [ -f src/Makevars.in ]; then
+  sed "s|@BIGPLSR_CBLAS_DEFINE@|$CBLAS_DEFINE|g" src/Makevars.in > src/Makevars
+else
+  # Fallback: write a Makevars that includes the optional define if available
+  cat > src/Makevars <<EOF
+PKG_CPPFLAGS = -DARMA_USE_CURRENT $CBLAS_DEFINE
+PKG_LIBS = \$(LAPACK_LIBS) \$(BLAS_LIBS) \$(FLIBS)
+CXX_STD = CXX17
+EOF
+fi
+
+echo "==> bigPLSR: wrote src/Makevars"
+exit 0

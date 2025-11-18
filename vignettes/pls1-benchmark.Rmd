@@ -20,7 +20,7 @@ vignette: >
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
-  fig.path = "figures/benchmarking-",
+  fig.path = "figures/benchmarking-pls1-",
   fig.width = 7,
   fig.height = 5,
   dpi = 150,
@@ -29,6 +29,7 @@ knitr::opts_chunk$set(
 )
 
 LOCAL <- identical(Sys.getenv("LOCAL"), "TRUE")
+set.seed(2025)
 ```
 
 ```{r setup, message=FALSE}
@@ -97,12 +98,28 @@ internal_bench <- bench::mark(
                          backend = "arma", algorithm = "nipals"),
   streaming_nipals = pls_fit(X, y, ncomp = ncomp, backend = "bigmem",
                              algorithm = "nipals", chunk_size = 512L),
+  dense_kernelpls = pls_fit(as.matrix(X[]), y_vec, ncomp = ncomp,
+                         backend = "arma", algorithm = "kernelpls"),
+  streaming_kernelpls = pls_fit(X, y, ncomp = ncomp, backend = "bigmem",
+                             algorithm = "kernelpls", chunk_size = 512L),
+  dense_widekernelpls = pls_fit(as.matrix(X[]), y_vec, ncomp = ncomp,
+                         backend = "arma", algorithm = "widekernelpls"),
+  streaming_widekernelpls = pls_fit(X, y, ncomp = ncomp, backend = "bigmem",
+                             algorithm = "widekernelpls", chunk_size = 512L),
   iterations = 20,
   check = FALSE
 )
-internal_bench
+internal_bench_res <-internal_bench[,2:5]
+internal_bench_res <- as.matrix(internal_bench_res)
+rownames(internal_bench_res) <- names(internal_bench$expression)
 ```
+
+```{r internal-benchmark-plot, eval=LOCAL, cache=TRUE}
+dotchart(internal_bench_res[,2], labels=rownames(internal_bench_res),xlab="median_time_s")
+dotchart(internal_bench_res[,3], labels=rownames(internal_bench_res),xlab="itr_per_sec")
+dotchart(internal_bench_res[,4], labels=rownames(internal_bench_res),xlab="mem_alloc_bytes")
 ```
+
 The results highlight the trade-off between throughput and memory usage:
 SIMPLS shines on dense matrices, whereas the streaming backend scales to
 larger-than-memory inputs thanks to block processing.
@@ -116,21 +133,46 @@ script stored in `inst/scripts/external_pls_benchmarks.R`.
 
 ```{r external-benchmark}
 data("external_pls_benchmarks", package = "bigPLSR")
-subset(external_pls_benchmarks, task == "pls1")
+sub_pls1 <- subset(external_pls_benchmarks,task=="pls1" & !algorithm=="widekernelpls")
+sub_pls1$n <- factor(sub_pls1$n)
+sub_pls1$p <- factor(sub_pls1$p)
+sub_pls1$q <- factor(sub_pls1$q)
+sub_pls1$ncomp <- factor(sub_pls1$ncomp)
+replications(~package+algorithm+task+n+p+ncomp,data=sub_pls1)
+
+sub_pls1_wide <- subset(external_pls_benchmarks,external_pls_benchmarks$task=="pls1" & algorithm=="widekernelpls")
+sub_pls1_wide$n <- factor(sub_pls1_wide$n)
+sub_pls1_wide$p <- factor(sub_pls1_wide$p)
+sub_pls1_wide$q <- factor(sub_pls1_wide$q)
+sub_pls1_wide$ncomp <- factor(sub_pls1_wide$ncomp)
+replications(~package+algorithm+task+n+p+ncomp,data=sub_pls1_wide)
+
+sub_pls2 <- subset(external_pls_benchmarks,external_pls_benchmarks$task=="pls2" & !algorithm=="widekernelpls")
+sub_pls2$n <- factor(sub_pls2$n)
+sub_pls2$p <- factor(sub_pls2$p)
+sub_pls2$q <- factor(sub_pls2$q)
+sub_pls2$ncomp <- factor(sub_pls2$ncomp)
+replications(~package+algorithm+task+n+p+ncomp,data=sub_pls2)
+
+sub_pls2_wide <- subset(external_pls_benchmarks,external_pls_benchmarks$task=="pls2" & algorithm=="widekernelpls")
+sub_pls2_wide$n <- factor(sub_pls2_wide$n)
+sub_pls2_wide$p <- factor(sub_pls2_wide$p)
+sub_pls2_wide$q <- factor(sub_pls2_wide$q)
+sub_pls2_wide$ncomp <- factor(sub_pls2_wide$ncomp)
+replications(~package+algorithm+task+n+p+ncomp,data=sub_pls2_wide)
 ```
 
-The table reports median execution times (in milliseconds) and the number
-of iterations per second for a representative single-response scenario.
+```{r external-sample-result}
+sub_pls1
+```
+
+
+The table reports median execution times (in seconds), the number
+of iterations and memory use per second for a representative single-response scenario.
 The notes column indicates the additional packages required to reproduce
 those measurements.
 
 ## Takeaways
 
-* Use the dense backend when the full predictor matrix fits comfortably
-  in RAM—the SIMPLS path delivers the best raw performance.
-* Switch to the streaming backend for file-backed or
-  larger-than-memory workloads; the cost in throughput is compensated by
-  the ability to scale.
-* Refer to the external benchmark table when choosing between bigPLSR
-  and third-party implementations.
-  
+Dense vs streaming backends. On small/medium data that fits in RAM, in-memory implementations (e.g., pls) are typically fastest (median ≈0.36 s for SIMPLS in our runs). However, they materialize large cross-products/Gram matrices and memory grows as O(p^2) (or O(n^2) in kernel views). In contrast, bigPLSR’s streaming big-memory backend keeps memory bounded via chunked BLAS and never forms those intermediates. In our PLS2 benchmark, streaming used ~7–8× less RAM than pls (≈89 MB vs ≈732 MB median) while remaining competitive in runtime (≈3.5 s vs 0.36 s). PLS1 shows the same pattern: streaming is often fast enough while dramatically reducing memory. As n or p grow, the streaming backend scales where dense approaches become memory-limited.
+

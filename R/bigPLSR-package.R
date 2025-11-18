@@ -15,16 +15,17 @@
 # #' @seealso [big_plsR()] and [big_plsR_gd()]
 #' 
 #' @examples
-#' set.seed(314)
-#' library(bigPLSR)
-#' data(sim_data)
-#' head(sim_data)
+#' set.seed(123)
+#' X <- matrix(rnorm(60), nrow = 20)
+#' y <- X[, 1] - 0.5 * X[, 2] + rnorm(20, sd = 0.1)
+#' fit <- pls_fit(X, y, ncomp = 2, scores = "r", algorithm = "simpls")
+#' head(pls_predict_response(fit, X, ncomp = 2))
 #' 
 "_PACKAGE"
 
 #' @importFrom graphics abline arrows axis layout lines legend par plot segments text 
 #' @importFrom grDevices dev.new hcl.colors
-#' @importFrom stats as.formula cov is.empty.model model.matrix model.response model.weights qchisq quantile rexp runif var
+#' @importFrom stats as.formula cov is.empty.model model.matrix model.response model.weights predict qchisq quantile rexp runif setNames var
 #' @importFrom utils modifyList read.csv
 #' @import bigmemory
 #' @useDynLib bigPLSR, .registration = TRUE

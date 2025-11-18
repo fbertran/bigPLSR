@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">bigPLSR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.6.8</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.7.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -18,17 +18,20 @@
       <ul class="navbar-nav me-auto"><li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/auto-backend.html">Auto backend usage</a></li>
-    <li><a class="dropdown-item" href="../articles/bigPLSR-auto-selection.html">Automatic Algorithm Selection in bigPLSR</a></li>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/bigPLSR-auto-selection.html">Automatic Algorithm Selection in bigPLSR</a></li>
     <li><a class="dropdown-item" href="../articles/bigPLSR-kpls-streaming.html">Streaming Kernel PLS in bigPLSR: XX^T and Column-Chunked Variants</a></li>
     <li><a class="dropdown-item" href="../articles/bootstrap-strategies.html">Bootstrap strategies for bigPLSR</a></li>
     <li><a class="dropdown-item" href="../articles/cross-validation-ic.html">Cross-validation and Information Criteria in bigPLSR</a></li>
-    <li><a class="dropdown-item" href="../articles/double-rkhs-pls.html">double-rkhs-pls</a></li>
+    <li><a class="dropdown-item" href="../articles/double-rkhs-pls.html">Double RKHS PLS (rkhs_xy): Theory and Usage</a></li>
+    <li><a class="dropdown-item" href="../articles/external-pls-benchmarks-long.html">External PLS benchmarks for bigPLSR: detailed analysis</a></li>
+    <li><a class="dropdown-item" href="../articles/external-pls-benchmarks-short.html">Benchmarking bigPLSR against external PLS implementations</a></li>
     <li><a class="dropdown-item" href="../articles/kf-pls.html">KF-PLS: Streaming PLS with Kalman-style updates</a></li>
-    <li><a class="dropdown-item" href="../articles/klogitpls.html">klogitpls</a></li>
+    <li><a class="dropdown-item" href="../articles/klogitpls.html">Kernel Logistic PLS</a></li>
     <li><a class="dropdown-item" href="../articles/kpls_review.html">Kernel and Streaming PLS Methods in bigPLSR</a></li>
+    <li><a class="dropdown-item" href="../articles/plotting-guide.html">Visualising PLS Fits with bigPLSR</a></li>
     <li><a class="dropdown-item" href="../articles/pls1-benchmark.html">Benchmarking PLS1 Implementations</a></li>
     <li><a class="dropdown-item" href="../articles/pls2-benchmark.html">Benchmarking PLS2 Implementations</a></li>
+    <li><a class="dropdown-item" href="../articles/rkhs-overview.html">RKHS-based Algorithms in bigPLSR</a></li>
   </ul></li>
 <li class="active nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
@@ -46,6 +49,23 @@
       <small>Source: <a href="https://github.com/fbertran/bigPLSR/blob/HEAD/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.7.1" id="bigplsr-071">bigPLSR 0.7.1<a class="anchor" aria-label="anchor" href="#bigplsr-071"></a></h2>
+<ul><li>New tuning option: <code>options(bigPLSR.stream.block_align = 8192L)</code>. All streamed backends (bigmem SIMPLS, streamed scores, RKHS/klogitpls Gram passes, and bigmem predict) round their <code>chunk_size</code> <em>up</em> to a multiple of this alignment, then clamp to the available number of rows. Typical sweet spots are 4096–16384 on modern CPUs.</li>
+<li>If you always need scores on disk, prefer <code>scores = "big"</code> to avoid large R dense allocations; it streams directly into a <code>big.matrix</code>.</li>
+<li>Added benchmarks results and analysis as two vignettes.</li>
+</ul></div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.7.0" id="bigplsr-070">bigPLSR 0.7.0<a class="anchor" aria-label="anchor" href="#bigplsr-070"></a></h2>
+<ul><li>Added <code><a href="../reference/plot_pls_bootstrap_scores.html">plot_pls_bootstrap_scores()</a></code> and group-aware ellipses for <code><a href="../reference/plot_pls_biplot.html">plot_pls_biplot()</a></code> to visualise latent structures.</li>
+<li>Exposed <code><a href="../reference/bigPLSR_stream_kstats.html">bigPLSR_stream_kstats()</a></code> for streamed RKHS centering statistics and corrected the bigmemory RKHS interface to accept dense response blocks.</li>
+</ul></div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.6.9" id="bigplsr-069">bigPLSR 0.6.9<a class="anchor" aria-label="anchor" href="#bigplsr-069"></a></h2>
+<ul><li>Stabilised kernel logistic PLS class weighting, reinstated IRLS fallbacks and improved dense/big-memory parity.</li>
+<li>Reworked the Kalman-filter state helper to reuse the SIMPLS backend, ensuring identical coefficients/intercepts to batch fits.</li>
+<li>Added dedicated RKHS/RKHS-XY and plotting vignettes, and refreshed the PLS1/PLS2 benchmarking guides with notes on the new algorithms and parallel helpers.</li>
+</ul></div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.6.8" id="bigplsr-068">bigPLSR 0.6.8<a class="anchor" aria-label="anchor" href="#bigplsr-068"></a></h2>
 <ul><li>Added optional <code>future</code>-powered parallel execution to <code><a href="../reference/pls_cross_validate.html">pls_cross_validate()</a></code> and <code><a href="../reference/pls_bootstrap.html">pls_bootstrap()</a></code>.</li>

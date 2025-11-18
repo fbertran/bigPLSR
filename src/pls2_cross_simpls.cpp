@@ -7,28 +7,7 @@
 #include <algorithm>    // std::min
 using namespace Rcpp;
 
-// Optional CBLAS fast path: include only if the header is available.
-// This avoids including the Accelerate umbrella (which pulls vDSP and conflicts with R's COMPLEX).
-#if defined(BIGPLSR_USE_CBLAS)
-#if defined(__APPLE__)
-#if __has_include(<vecLib/cblas.h>)
-extern "C" { 
-#include <vecLib/cblas.h> 
-}
-#else
-// Header not present in SDK; fall back to the portable Armadillo path.
-#undef BIGPLSR_USE_CBLAS
-#endif
-#else
-#if __has_include(<cblas.h>)
-extern "C" { 
-#include <cblas.h> 
-}
-#else
-#undef BIGPLSR_USE_CBLAS
-#endif
-#endif
-#endif
+#include "cblas_compat.h"
 
 // choose a cache-friendly default chunk size when chunk_size == 0
 static inline std::size_t default_chunk_size(std::size_t n) {

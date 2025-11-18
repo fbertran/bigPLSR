@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">bigPLSR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.7.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.7.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -38,6 +38,8 @@
     <li><a class="dropdown-item" href="../articles/bootstrap-strategies.html">Bootstrap strategies for bigPLSR</a></li>
     <li><a class="dropdown-item" href="../articles/cross-validation-ic.html">Cross-validation and Information Criteria in bigPLSR</a></li>
     <li><a class="dropdown-item" href="../articles/double-rkhs-pls.html">Double RKHS PLS (rkhs_xy): Theory and Usage</a></li>
+    <li><a class="dropdown-item" href="../articles/external-pls-benchmarks-long.html">External PLS benchmarks for bigPLSR: detailed analysis</a></li>
+    <li><a class="dropdown-item" href="../articles/external-pls-benchmarks-short.html">Benchmarking bigPLSR against external PLS implementations</a></li>
     <li><a class="dropdown-item" href="../articles/kf-pls.html">KF-PLS: Streaming PLS with Kalman-style updates</a></li>
     <li><a class="dropdown-item" href="../articles/klogitpls.html">Kernel Logistic PLS</a></li>
     <li><a class="dropdown-item" href="../articles/kpls_review.html">Kernel and Streaming PLS Methods in bigPLSR</a></li>
@@ -75,7 +77,7 @@ Bertrand</h4>
 Paris<br><a class="author_email" href="mailto:#"></a><a href="mailto:frederic.bertrand@lecnam.net" class="email">frederic.bertrand@lecnam.net</a>
       </address>
                   
-            <h4 data-toc-skip class="date">2025-11-11</h4>
+            <h4 data-toc-skip class="date">2025-11-18</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/fbertran/bigPLSR/blob/HEAD/vignettes/double-rkhs-pls.Rmd" class="external-link"><code>vignettes/double-rkhs-pls.Rmd</code></a></small>
       <div class="d-none name"><code>double-rkhs-pls.Rmd</code></div>
@@ -191,7 +193,7 @@ stabilize inversions and dampen numerical noise.</li>
 <h3 id="minimal-example">Minimal Example<a class="anchor" aria-label="anchor" href="#minimal-example"></a>
 </h3>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://fbertran.github.io/bigPLSR/">bigPLSR</a></span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://fbertran.github.io/bigPLSR">bigPLSR</a></span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">42</span><span class="op">)</span></span>
 <span><span class="va">n</span> <span class="op">&lt;-</span> <span class="fl">60</span>; <span class="va">p</span> <span class="op">&lt;-</span> <span class="fl">6</span>; <span class="va">m</span> <span class="op">&lt;-</span> <span class="fl">2</span></span>
 <span><span class="va">X</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="va">n</span> <span class="op">*</span> <span class="va">p</span><span class="op">)</span>, <span class="va">n</span>, <span class="va">p</span><span class="op">)</span></span>
@@ -209,8 +211,8 @@ stabilize inversions and dampen numerical noise.</li>
 <span></span>
 <span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pls_fit.html">pls_fit</a></span><span class="op">(</span><span class="va">X</span>, <span class="va">Y</span>, ncomp <span class="op">=</span> <span class="fl">3</span>, algorithm <span class="op">=</span> <span class="st">"rkhs_xy"</span>, backend <span class="op">=</span> <span class="st">"arma"</span><span class="op">)</span></span>
 <span><span class="va">Yhat</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">fit</span>, <span class="va">X</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="op">(</span><span class="va">Y</span> <span class="op">-</span> <span class="va">Yhat</span><span class="op">)</span><span class="op">^</span><span class="fl">2</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## [1] 2.619847e-12</span></span></code></pre>
+<span><span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="op">(</span><span class="va">Y</span> <span class="op">-</span> <span class="va">Yhat</span><span class="op">)</span><span class="op">^</span><span class="fl">2</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] 2.619847e-12</span></span></code></pre></div>
 <p>References • Rosipal &amp; Trejo (2001) Kernel Partial Least Squares
 Regression in Reproducing Kernel Hilbert Space. JMLR 2:97–123. <a href="doi:10.5555/944733.944741" class="uri">doi:10.5555/944733.944741</a>. • Kernel PLS Regression II:
 Kernel Partial Least Squares Regression by Projecting Both Independent

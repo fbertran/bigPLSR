@@ -9,10 +9,11 @@
 Provides Partial least squares Regression for big data. It allows for missing data in the explanatory variables. Repeated k-fold cross-validation of such models using various criteria. Bootstrap confidence intervals constructions are also available.
 }
 \examples{
-set.seed(314)
-library(bigPLSR)
-data(sim_data)
-head(sim_data)
+set.seed(123)
+X <- matrix(rnorm(60), nrow = 20)
+y <- X[, 1] - 0.5 * X[, 2] + rnorm(20, sd = 0.1)
+fit <- pls_fit(X, y, ncomp = 2, scores = "r", algorithm = "simpls")
+head(pls_predict_response(fit, X, ncomp = 2))
 
 }
 \references{
@@ -28,8 +29,8 @@ Poster. https://doi.org/10.7490/f1000research.1119546.1
 Useful links:
 \itemize{
   \item \url{https://fbertran.github.io/bigPLSR/}
-  \item \url{https://github.com/fbertran/bigPLSR/}
-  \item Report bugs at \url{https://github.com/fbertran/bigPLSR/issues/}
+  \item \url{https://github.com/fbertran/bigPLSR}
+  \item Report bugs at \url{https://github.com/fbertran/bigPLSR/issues}
 }
 
 }

@@ -1,12 +1,11 @@
 Package: bigPLSR
-Version: 0.7.0
+Version: 0.7.1
 Date: 2025-11-10
 Depends: R (>= 4.0.0)
 biocViews:
 Imports: 
   Rcpp,
-  bigmemory,
-  bigalgebra
+  bigmemory
 LinkingTo:
   Rcpp,
   RcppArmadillo,
@@ -14,14 +13,20 @@ LinkingTo:
   bigmemory
 Suggests:
   bench,
+  dplyr,
+  forcats,
   future,
   future.apply,
+  ggplot2,
   knitr,
   pls,
   plsRglm,
   rmarkdown,
   RhpcBLASctl,
-  testthat (>= 3.0.0)
+  svglite,
+  testthat (>= 3.0.0),
+  tidyr,
+  withr
 VignetteBuilder: knitr
 Title: Partial Least Squares Regression Models with Big Matrices 
 Authors@R: c(
@@ -43,7 +48,7 @@ Description:
   and  <https://hal.science/hal-05352061> highlighted fitting and cross-validating 
   PLS regression models to big data. For more details about some of the techniques 
   featured in the package, Dayal and MacGregor (1997) 
-  <doi:10.1002/(SICI)1099-128X(199701)11:1<73::AID-CEM435>3.0.CO;2>,
+  <doi:10.1002/(SICI)1099-128X(199701)11:1%3C73::AID-CEM435%3E3.0.CO;2-%23>,
   Rosipal & Trejo (2001) <https://www.jmlr.org/papers/v2/rosipal01a.html>,
   Tenenhaus, Viennet, and Saporta (2007) <doi:10.1016/j.csda.2007.01.004>,
   Rosipal (2004) <doi:10.1007/978-3-540-45167-9_17>,
@@ -54,14 +59,21 @@ Description:
   diagnostics with graphical summaries for coefficients, scores, and
   cross-validation workflows, alongside dedicated plotting utilities for
   individuals, variables, ellipses, and biplots.
+  The streaming backend uses far less memory and keeps memory bounded across data sizes.
+	For PLS1, streaming is often fast enough while preserving a small memory footprint; 
+	for PLS2 it remains competitive with a bounded footprint.
+	On small problems that fit comfortably in RAM, dense in-memory solvers are slightly faster; 
+	the crossover occurs as n or p grow and the Gram/cross-product cost dominates.
 License: GPL-3
 Encoding: UTF-8
-URL: https://fbertran.github.io/bigPLSR/, https://github.com/fbertran/bigPLSR/
-BugReports: https://github.com/fbertran/bigPLSR/issues/
+URL: https://fbertran.github.io/bigPLSR/, https://github.com/fbertran/bigPLSR
+BugReports: https://github.com/fbertran/bigPLSR/issues
 Classification/MSC: 62N01, 62N02, 62N03, 62N99
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
 LazyData: true
 Config/testthat/edition: 3
-SystemRequirements: C++17
+SystemRequirements: 
+  C++17,
+  Optional CBLAS (detected at compile time)
 NeedsCompilation: yes

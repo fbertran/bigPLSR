@@ -128,7 +128,7 @@ benchmarks_pls2 <- rbind(
   run_benchmark("pls2", algorithm = "simpls", n = 1000, p = 100, q = 10, ncomp = 10),
   run_benchmark("pls2", algorithm = "kernelpls", n = 1000, p = 100, q = 10, ncomp = 10),
   run_benchmark("pls2", algorithm = "widekernelpls", n = 100, p = 5000, q = 10, ncomp = 10),
-  run_benchmark("pls2", algorithm = "nipals", n = 1000, p = 100, q = 10, ncomp = 100)
+  run_benchmark("pls2", algorithm = "nipals", n = 1000, p = 100, q = 10, ncomp = 10)
 )
 
 benchmarks_pls2_bigq <- rbind(
@@ -143,7 +143,7 @@ benchmarks_pls2_bigq <- rbind(
   run_benchmark("pls2", algorithm = "simpls", n = 1000, p = 100, q = 100, ncomp = 10),
   run_benchmark("pls2", algorithm = "kernelpls", n = 1000, p = 100, q = 100, ncomp = 10),
   run_benchmark("pls2", algorithm = "widekernelpls", n = 100, p = 5000, q = 100, ncomp = 10),
-  run_benchmark("pls2", algorithm = "nipals", n = 1000, p = 100, q = 100, ncomp = 100)
+  run_benchmark("pls2", algorithm = "nipals", n = 1000, p = 100, q = 100, ncomp = 10)
 )
 
 benchmarks_pls1_bign_bigp <- rbind(
@@ -191,16 +191,60 @@ run_benchmark("pls2", algorithm = "widekernelpls", n = 1000, p = 50000, q = 100,
 run_benchmark("pls2", algorithm = "nipals", n = 10000, p = 1000, q = 100, ncomp = 10)
 )
 
-benchmarks_all <- rbind(benchmarks_pls1,
-                        benchmarks_pls2,
-                        benchmarks_pls2_bigq)
+benchmarks_pl2_bign_bigp_bigq_big_comp1 <- rbind(
+run_benchmark("pls1", algorithm = "simpls", n = 1000, p = 100, q = 1, ncomp = 100),
+run_benchmark("pls1", algorithm = "kernelpls", n = 1000, p = 100, q = 1, ncomp = 100),
+run_benchmark("pls1", algorithm = "widekernelpls", n = 100, p = 5000, q = 1, ncomp = 100),
+run_benchmark("pls1", algorithm = "nipals", n = 1000, p = 100, q = 1, ncomp = 100)
+)
+
+benchmarks_pl2_bign_bigp_bigq_big_comp2 <- rbind(
+run_benchmark("pls2", algorithm = "simpls", n = 1000, p = 100, q = 10, ncomp = 100),
+run_benchmark("pls2", algorithm = "kernelpls", n = 1000, p = 100, q = 10, ncomp = 100),
+run_benchmark("pls2", algorithm = "widekernelpls", n = 100, p = 5000, q = 10, ncomp = 100),
+run_benchmark("pls2", algorithm = "nipals", n = 1000, p = 100, q = 10, ncomp = 100)
+)
+
+benchmarks_pl2_bign_bigp_bigq_big_comp3 <- rbind(
+run_benchmark("pls2", algorithm = "simpls", n = 1000, p = 100, q = 100, ncomp = 100),
+run_benchmark("pls2", algorithm = "kernelpls", n = 1000, p = 100, q = 100, ncomp = 100),
+run_benchmark("pls2", algorithm = "widekernelpls", n = 100, p = 5000, q = 100, ncomp = 100),
+run_benchmark("pls2", algorithm = "nipals", n = 1000, p = 100, q = 100, ncomp = 100)
+)
+
+benchmarks_pl2_bign_bigp_bigq_big_comp4 <- rbind(
+run_benchmark("pls1", algorithm = "simpls", n = 10000, p = 1000, q = 1, ncomp = 100),
+run_benchmark("pls1", algorithm = "kernelpls", n = 10000, p = 1000, q = 1, ncomp = 100),
+run_benchmark("pls1", algorithm = "widekernelpls", n = 1000, p = 50000, q = 1, ncomp = 100),
+run_benchmark("pls1", algorithm = "nipals", n = 10000, p = 1000, q = 1, ncomp = 100)
+)
+
+benchmarks_pl2_bign_bigp_bigq_big_comp4 <- rbind(
+run_benchmark("pls2", algorithm = "simpls", n = 10000, p = 1000, q = 10, ncomp = 100),
+run_benchmark("pls2", algorithm = "kernelpls", n = 10000, p = 1000, q = 10, ncomp = 100),
+run_benchmark("pls2", algorithm = "widekernelpls", n = 1000, p = 50000, q = 10, ncomp = 100),
+run_benchmark("pls2", algorithm = "nipals", n = 10000, p = 1000, q = 10, ncomp = 100)
+)
+
+benchmarks_pl2_bign_bigp_bigq_big_comp6 <- rbind(
+run_benchmark("pls2", algorithm = "simpls", n = 10000, p = 1000, q = 100, ncomp = 100),
+run_benchmark("pls2", algorithm = "kernelpls", n = 10000, p = 1000, q = 100, ncomp = 100),
+run_benchmark("pls2", algorithm = "widekernelpls", n = 1000, p = 50000, q = 100, ncomp = 100),
+run_benchmark("pls2", algorithm = "nipals", n = 10000, p = 1000, q = 100, ncomp = 100)
+)
 
 benchmarks_all <- rbind(benchmarks_pls1,
                         benchmarks_pls2,
                         benchmarks_pls2_bigq,
                         benchmarks_pls1_bign_bigp,
                         benchmarks_pls2_bign_bigp,
-                        benchmarks_pl2_bign_bigp_bigq)
+                        benchmarks_pl2_bign_bigp_bigq,
+                        benchmarks_pl2_bign_bigp_bigq_big_comp1,
+                        benchmarks_pl2_bign_bigp_bigq_big_comp2,
+                        benchmarks_pl2_bign_bigp_bigq_big_comp3,
+                        benchmarks_pl2_bign_bigp_bigq_big_comp4,
+                        benchmarks_pl2_bign_bigp_bigq_big_comp5,
+                        benchmarks_pl2_bign_bigp_bigq_big_comp6)
 
 external_pls_benchmarks <- within(benchmarks_all, {
   notes <- ifelse(package == "bigPLSR_dense",

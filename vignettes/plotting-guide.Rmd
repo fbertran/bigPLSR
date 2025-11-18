@@ -16,15 +16,25 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-```{r, include=FALSE}
-knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.path = "figures/plots-", dpi = 150,
-                      fig.width = 6, fig.height = 4,
-                      message = FALSE, warning = FALSE)
+```{r setup_ops, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.path = "figures/plots-",
+  fig.width = 7,
+  fig.height = 5,
+  dpi = 150,
+  message = FALSE,
+  warning = FALSE
+)
+
+LOCAL <- identical(Sys.getenv("LOCAL"), "TRUE")
+set.seed(2025)
 ```
+
 
 ```{r setup}
 library(bigPLSR)
-library(ggplot2)
 set.seed(101)
 ```
 
@@ -41,42 +51,39 @@ fit <- pls_fit(X, Y, ncomp = 3, scores = "r")
 
 ## Score plots with ellipses
 
-```{r scores-ellipse}
+```{r scores-ellipse, eval=LOCAL, cache=TRUE}
 plot_pls_individuals(fit, comps = c(1, 2), groups = groups,
-                     ellipse = TRUE, ellipse_level = 0.90) +
-  ggtitle("Component scores with 90% ellipses")
+                     ellipse = TRUE, ellipse_level = 0.90, 
+                     main="Component scores with 90% ellipses")
 ```
 
 ## Variable correlations and biplots
 
-```{r variables}
-plot_pls_variables(fit, comps = c(1, 2)) +
-  ggtitle("Correlation circle")
+```{r variables, eval=LOCAL, cache=TRUE}
+plot_pls_variables(fit, comps = c(1, 2), main="Correlation circle")
 ```
 
-```{r biplot}
+```{r biplot, eval=LOCAL, cache=TRUE}
 plot_pls_biplot(fit, comps = c(1, 2), groups = groups,
-                ellipse = TRUE, ellipse_level = 0.90) +
-  ggtitle("Biplot with grouped individuals")
+                ellipse = TRUE, ellipse_level = 0.90, 
+                main="Biplot with grouped individuals")
 ```
 
 ## Bootstrap summaries
 
-```{r bootstrap}
+```{r bootstrap, eval=LOCAL, cache=TRUE}
 boot <- pls_bootstrap(X, Y, ncomp = 2, R = 30, type = "xy",
                       parallel = "none", seed = 99)
 summary_boot <- summarise_pls_bootstrap(boot)
 summary_boot
 ```
 
-```{r bootstrap-coef}
-plot_pls_bootstrap_coefficients(boot) +
-  ggtitle("Bootstrap coefficient intervals")
+```{r bootstrap-coef, eval=LOCAL, cache=TRUE}
+plot_pls_bootstrap_coefficients(boot, main="Bootstrap coefficient intervals")
 ```
 
-```{r bootstrap-scores}
+```{r bootstrap-scores, eval=LOCAL, cache=TRUE}
 boot <- pls_bootstrap(X, Y, ncomp = 2, R = 30, type = "xy", 
                       parallel = "none", seed = 99, return_scores = TRUE)
-plot_pls_bootstrap_scores(boot) +
-  ggtitle("Bootstrap score dispersion")
+plot_pls_bootstrap_scores(boot,main="Bootstrap score dispersion")
 ```

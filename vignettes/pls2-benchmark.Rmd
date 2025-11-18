@@ -20,7 +20,7 @@ vignette: >
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
-  fig.path = "figures/benchmarking-",
+  fig.path = "figures/benchmarking-pls2-",
   fig.width = 7,
   fig.height = 5,
   dpi = 150,
@@ -29,6 +29,7 @@ knitr::opts_chunk$set(
 )
 
 LOCAL <- identical(Sys.getenv("LOCAL"), "TRUE")
+set.seed(2025)
 ```
 
 ```{r setup, message=FALSE}
@@ -81,7 +82,7 @@ packages.
 
 ## Simulated data
 
-```{r data-generation}
+```{r data-generation, eval=LOCAL, cache=TRUE}
 n <- 1200
 p <- 60
 q <- 3

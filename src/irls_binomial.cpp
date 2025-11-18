@@ -12,7 +12,7 @@ static inline arma::vec sigmoid(const arma::vec& x) {
 //' Fast IRLS for binomial logit with class weights
 //'
 //' @param T n x A numeric matrix of latent scores (no intercept column)
-//' @param ybin integer vector of {0,1} labels (length n)
+//' @param ybin integer vector of \{0,1\} labels (length n)
 //' @param w_class optional length-2 numeric vector: weights for classes c( w0, w1 )
 //' @param maxit max IRLS iterations
 //' @param tol relative tolerance on parameter change

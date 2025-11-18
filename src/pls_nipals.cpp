@@ -11,7 +11,7 @@ using namespace Rcpp;
 
 // [[Rcpp::plugins(cpp17)]]
 
-#include "bigmatrix_utils.hpp"
+#include "bigmatrix_utils.h"
 
 namespace {
 

@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">bigPLSR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.6.3</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.7.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -33,9 +33,18 @@
 <li class="active nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
-<li><a class="dropdown-item" href="../articles/auto-backend.html">Auto backend usage</a></li>
+<li><a class="dropdown-item" href="../articles/bigPLSR-auto-selection.html">Automatic Algorithm Selection in bigPLSR</a></li>
+    <li><a class="dropdown-item" href="../articles/bigPLSR-kpls-streaming.html">Streaming Kernel PLS in bigPLSR: XX^T and Column-Chunked Variants</a></li>
+    <li><a class="dropdown-item" href="../articles/bootstrap-strategies.html">Bootstrap strategies for bigPLSR</a></li>
+    <li><a class="dropdown-item" href="../articles/cross-validation-ic.html">Cross-validation and Information Criteria in bigPLSR</a></li>
+    <li><a class="dropdown-item" href="../articles/double-rkhs-pls.html">Double RKHS PLS (rkhs_xy): Theory and Usage</a></li>
+    <li><a class="dropdown-item" href="../articles/kf-pls.html">KF-PLS: Streaming PLS with Kalman-style updates</a></li>
+    <li><a class="dropdown-item" href="../articles/klogitpls.html">Kernel Logistic PLS</a></li>
+    <li><a class="dropdown-item" href="../articles/kpls_review.html">Kernel and Streaming PLS Methods in bigPLSR</a></li>
+    <li><a class="dropdown-item" href="../articles/plotting-guide.html">Visualising PLS Fits with bigPLSR</a></li>
     <li><a class="dropdown-item" href="../articles/pls1-benchmark.html">Benchmarking PLS1 Implementations</a></li>
     <li><a class="dropdown-item" href="../articles/pls2-benchmark.html">Benchmarking PLS2 Implementations</a></li>
+    <li><a class="dropdown-item" href="../articles/rkhs-overview.html">RKHS-based Algorithms in bigPLSR</a></li>
   </ul>
 </li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
@@ -66,7 +75,7 @@ Bertrand</h4>
 Paris<br><a class="author_email" href="mailto:#"></a><a href="mailto:frederic.bertrand@lecnam.net" class="email">frederic.bertrand@lecnam.net</a>
       </address>
                   
-            <h4 data-toc-skip class="date">2025-11-07</h4>
+            <h4 data-toc-skip class="date">2025-11-13</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/fbertran/bigPLSR/blob/HEAD/vignettes/pls1-benchmark.Rmd" class="external-link"><code>vignettes/pls1-benchmark.Rmd</code></a></small>
       <div class="d-none name"><code>pls1-benchmark.Rmd</code></div>
@@ -82,171 +91,386 @@ Paris<br><a class="author_email" href="mailto:#"></a><a href="mailto:frederic.be
 <div class="section level2">
 <h2 id="overview">Overview<a class="anchor" aria-label="anchor" href="#overview"></a>
 </h2>
-<p>This vignette illustrates how to benchmark the dense and streaming
-implementations provided for single-response partial least squares
-regression (PLS1). The dense implementation (<code>pls1_dense</code>)
-copies the predictor matrix in memory and should therefore be preferred
-when the whole dataset fits in RAM. The streaming implementation
-(<code>pls1_stream</code>) iterates over the data in blocks, enabling
-analyses of larger-than-memory workloads.</p>
+<p>The unified <code><a href="../reference/pls_fit.html">pls_fit()</a></code> interface now drives both the
+dense and streaming implementations of single-response partial least
+squares regression. This vignette revisits the benchmarking workflow
+with the modern API and introduces two complementary perspectives:</p>
+<ol style="list-style-type: decimal">
+<li>
+<strong>Internal comparisons</strong> that contrast the dense
+(in-memory) and streaming (big-memory) backends of
+<code><a href="../reference/pls_fit.html">pls_fit()</a></code>.</li>
+<li>
+<strong>External references</strong> recorded against popular
+packages such as <code>pls</code> and <code>mixOmics</code>. These
+results are stored in the package to keep the vignette lightweight while
+still documenting performance relative to the wider ecosystem.</li>
+</ol>
+<p>The chunks tagged with <code>eval = LOCAL</code> are only executed
+when the environment variable <code>LOCAL</code> is set to
+<code>TRUE</code>, allowing CRAN checks to skip the more time-consuming
+benchmarks.</p>
 </div>
 <div class="section level2">
 <h2 id="simulated-data">Simulated data<a class="anchor" aria-label="anchor" href="#simulated-data"></a>
 </h2>
-<p>We generate a moderately sized synthetic datasets with a low
-dimensional latent structure. The predictors are stored in a
-<code><a href="https://rdrr.io/pkg/bigmemory/man/big.matrix.html" class="external-link">bigmemory::big.matrix</a></code> so they can be reused without
-additional copies during the benchmarks.</p>
+<p>We create a synthetic regression problem with a modest latent
+structure and keep both dense and big-memory versions of the predictors
+and response so they can be reused in the benchmarking chunks.</p>
 <p>Here is an example with <code>n=4000</code> en <code>p=50</code></p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">n</span> <span class="op">&lt;-</span> <span class="fl">1000</span></span>
-<span><span class="va">p</span> <span class="op">&lt;-</span> <span class="fl">50</span></span>
-<span><span class="va">ncomp</span> <span class="op">&lt;-</span> <span class="fl">5</span></span>
+<code class="sourceCode R"><span><span class="va">n</span> <span class="op">&lt;-</span> <span class="fl">1500</span></span>
+<span><span class="va">p</span> <span class="op">&lt;-</span> <span class="fl">80</span></span>
+<span><span class="va">ncomp</span> <span class="op">&lt;-</span> <span class="fl">6</span></span>
 <span></span>
 <span><span class="va">X</span> <span class="op">&lt;-</span> <span class="fu">bigmemory</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/bigmemory/man/big.matrix.html" class="external-link">big.matrix</a></span><span class="op">(</span>nrow <span class="op">=</span> <span class="va">n</span>, ncol <span class="op">=</span> <span class="va">p</span>, type <span class="op">=</span> <span class="st">"double"</span><span class="op">)</span></span>
 <span><span class="va">X</span><span class="op">[</span>,<span class="op">]</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="va">n</span> <span class="op">*</span> <span class="va">p</span><span class="op">)</span>, nrow <span class="op">=</span> <span class="va">n</span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">true_beta</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="va">p</span><span class="op">)</span>, ncol <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
-<span><span class="va">y_vec</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/vector.html" class="external-link">as.vector</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/scale.html" class="external-link">scale</a></span><span class="op">(</span><span class="va">X</span><span class="op">[</span>,<span class="op">]</span> <span class="op"><a href="https://rdrr.io/r/base/matmult.html" class="external-link">%*%</a></span> <span class="va">true_beta</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="va">n</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">y_vec</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/scale.html" class="external-link">scale</a></span><span class="op">(</span><span class="va">X</span><span class="op">[</span>,<span class="op">]</span> <span class="op"><a href="https://rdrr.io/r/base/matmult.html" class="external-link">%*%</a></span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="va">p</span><span class="op">)</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="va">n</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">y</span> <span class="op">&lt;-</span> <span class="fu">bigmemory</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/bigmemory/man/big.matrix.html" class="external-link">big.matrix</a></span><span class="op">(</span>nrow <span class="op">=</span> <span class="va">n</span>, ncol <span class="op">=</span> <span class="fl">1</span>, type <span class="op">=</span> <span class="st">"double"</span><span class="op">)</span></span>
 <span><span class="va">y</span><span class="op">[</span>,<span class="op">]</span> <span class="op">&lt;-</span> <span class="va">y_vec</span></span>
 <span></span>
 <span><span class="va">X</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">6</span>, <span class="fl">1</span><span class="op">:</span><span class="fl">6</span><span class="op">]</span></span>
-<span><span class="co">#&gt;             [,1]        [,2]       [,3]        [,4]       [,5]       [,6]</span></span>
-<span><span class="co">#&gt; [1,] -0.56047565 -0.99579872 -0.5116037 -0.15030748  0.1965498 -0.4941739</span></span>
-<span><span class="co">#&gt; [2,] -0.23017749 -1.03995504  0.2369379 -0.32775713  0.6501132  1.1275935</span></span>
-<span><span class="co">#&gt; [3,]  1.55870831 -0.01798024 -0.5415892 -1.44816529  0.6710042 -1.1469495</span></span>
-<span><span class="co">#&gt; [4,]  0.07050839 -0.13217513  1.2192276 -0.69728458 -1.2841578  1.4810186</span></span>
-<span><span class="co">#&gt; [5,]  0.12928774 -2.54934277  0.1741359  2.59849023 -2.0261096  0.9161912</span></span>
-<span><span class="co">#&gt; [6,]  1.71506499  1.04057346 -0.6152683 -0.03741501  2.2053261  0.3351310</span></span>
+<span><span class="co">#&gt;             [,1]       [,2]        [,3]       [,4]       [,5]       [,6]</span></span>
+<span><span class="co">#&gt; [1,] -0.56047565 -0.8209867 -0.15030748  0.8343715 -0.6992281  0.3500025</span></span>
+<span><span class="co">#&gt; [2,] -0.23017749 -0.3072572 -0.32775713 -0.6984039  0.9964515  0.8144417</span></span>
+<span><span class="co">#&gt; [3,]  1.55870831 -0.9020980 -1.44816529  1.3092405 -0.6927454 -0.5166661</span></span>
+<span><span class="co">#&gt; [4,]  0.07050839  0.6270687 -0.69728458 -0.9801776 -0.1034830 -2.6922644</span></span>
+<span><span class="co">#&gt; [5,]  0.12928774  1.1203550  2.59849023  0.7479851  0.6038661 -1.0969546</span></span>
+<span><span class="co">#&gt; [6,]  1.71506499  2.1272136 -0.03741501  1.2577966 -0.6080450 -1.2554751</span></span>
 <span><span class="va">y</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">6</span>,<span class="op">]</span></span>
-<span><span class="co">#&gt; [1] -1.30750385 -0.31942974  0.78534055  0.95482632 -0.64407070 -0.04507161</span></span></code></pre></div>
+<span><span class="co">#&gt; [1]  0.66723250  0.66189719 -0.77458416  0.07452428  0.28174414  0.15756565</span></span></code></pre></div>
 </div>
 <div class="section level2">
-<h2 id="benchmark-results">Benchmark results<a class="anchor" aria-label="anchor" href="#benchmark-results"></a>
+<h2 id="internal-benchmarks">Internal benchmarks<a class="anchor" aria-label="anchor" href="#internal-benchmarks"></a>
 </h2>
-<p>The <code>bench</code> package provides a convenient framework to
-compare the runtime characteristics of both solvers. The following
-benchmark uses a chunk size of 1024 rows for the streaming variant,
-which offers a good trade-off between speed and memory usage for this
-dataset size.</p>
+<p>The following chunk compares dense vs. streaming fits for both SIMPLS
+and NIPALS. The dense backend receives base R matrices, while the
+streaming backend consumes the <code>big.matrix</code> objects
+directly.</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">bench_res_simpls</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bench.r-lib.org/reference/press.html" class="external-link">press</a></span><span class="op">(</span></span>
-<span>  n <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">500</span>, <span class="fl">1000</span>, <span class="fl">5000</span><span class="op">)</span>,</span>
-<span>  p <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">100</span>, <span class="fl">500</span>, <span class="fl">1000</span><span class="op">)</span>,</span>
-<span>  <span class="op">{</span></span>
-<span>    <span class="va">ncomp</span> <span class="op">=</span> <span class="fl">5</span></span>
-<span>    <span class="va">rep</span> <span class="op">=</span> <span class="fl">1</span></span>
-<span>    <span class="va">algorithm</span> <span class="op">=</span> <span class="st">"simpls"</span></span>
-<span>    <span class="va">X</span> <span class="op">&lt;-</span> <span class="fu">bigmemory</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/bigmemory/man/big.matrix.html" class="external-link">big.matrix</a></span><span class="op">(</span>nrow <span class="op">=</span> <span class="va">n</span>, ncol <span class="op">=</span> <span class="va">p</span>, type <span class="op">=</span> <span class="st">"double"</span><span class="op">)</span></span>
-<span>    <span class="va">X</span><span class="op">[</span>,<span class="op">]</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="va">n</span> <span class="op">*</span> <span class="va">p</span><span class="op">)</span>, nrow <span class="op">=</span> <span class="va">n</span><span class="op">)</span></span>
-<span></span>
-<span>    <span class="va">true_beta</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="va">p</span><span class="op">)</span>, ncol <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
-<span>    <span class="va">y_vec</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/vector.html" class="external-link">as.vector</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/scale.html" class="external-link">scale</a></span><span class="op">(</span><span class="va">X</span><span class="op">[</span>,<span class="op">]</span> <span class="op"><a href="https://rdrr.io/r/base/matmult.html" class="external-link">%*%</a></span> <span class="va">true_beta</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="va">n</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
-<span></span>
-<span>    <span class="va">y</span> <span class="op">&lt;-</span> <span class="fu">bigmemory</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/bigmemory/man/big.matrix.html" class="external-link">big.matrix</a></span><span class="op">(</span>nrow <span class="op">=</span> <span class="va">n</span>, ncol <span class="op">=</span> <span class="fl">1</span>, type <span class="op">=</span> <span class="st">"double"</span><span class="op">)</span></span>
-<span>    <span class="va">y</span><span class="op">[</span>,<span class="op">]</span> <span class="op">&lt;-</span> <span class="va">y_vec</span></span>
-<span>    <span class="fu">bench</span><span class="fu">::</span><span class="fu"><a href="https://bench.r-lib.org/reference/mark.html" class="external-link">mark</a></span><span class="op">(</span></span>
-<span>      dense <span class="op">=</span> <span class="fu"><a href="../reference/pls1_dense.html">pls1_dense</a></span><span class="op">(</span><span class="va">X</span>, <span class="va">y_vec</span>, ncomp <span class="op">=</span> <span class="va">ncomp</span>, algorithm <span class="op">=</span> <span class="va">algorithm</span><span class="op">)</span>,</span>
-<span>      streaming <span class="op">=</span> <span class="fu"><a href="../reference/pls1_dense.html">pls1_stream</a></span><span class="op">(</span><span class="va">X</span>, <span class="va">y_vec</span>, ncomp <span class="op">=</span> <span class="va">ncomp</span>, chunk_size <span class="op">=</span> <span class="fl">1024L</span>, </span>
-<span>                              algorithm <span class="op">=</span> <span class="va">algorithm</span><span class="op">)</span>,</span>
-<span>      dense_a <span class="op">=</span> <span class="fu"><a href="../reference/pls1_dense_a.html">pls1_dense_a</a></span><span class="op">(</span><span class="va">X</span>, <span class="va">y</span>, ncomp <span class="op">=</span> <span class="va">ncomp</span>, algorithm <span class="op">=</span> <span class="va">algorithm</span><span class="op">)</span>,</span>
-<span>      streaming_a <span class="op">=</span> <span class="fu"><a href="../reference/pls1_dense_a.html">pls1_stream_a</a></span><span class="op">(</span><span class="va">X</span>, <span class="va">y</span>, ncomp <span class="op">=</span> <span class="va">ncomp</span>, chunk_size <span class="op">=</span> <span class="fl">1024L</span>, </span>
-<span>                                  algorithm <span class="op">=</span> <span class="va">algorithm</span><span class="op">)</span>,</span>
-<span>      dense_ya <span class="op">=</span> <span class="fu"><a href="../reference/pls1_dense_ya.html">pls1_dense_ya</a></span><span class="op">(</span><span class="va">X</span>, <span class="va">y</span>, ncomp <span class="op">=</span> <span class="va">ncomp</span>, algorithm <span class="op">=</span> <span class="va">algorithm</span><span class="op">)</span>,</span>
-<span>      streaming_ya <span class="op">=</span> <span class="fu"><a href="../reference/pls1_dense_ya.html">pls1_stream_ya</a></span><span class="op">(</span><span class="va">X</span>, <span class="va">y</span>, ncomp <span class="op">=</span> <span class="va">ncomp</span>, chunk_size <span class="op">=</span> <span class="fl">1024L</span>, </span>
-<span>                                    algorithm <span class="op">=</span> <span class="va">algorithm</span><span class="op">)</span>,</span>
-<span>      iterations <span class="op">=</span> <span class="fl">10</span>,</span>
-<span>      check <span class="op">=</span> <span class="cn">FALSE</span></span>
-<span>    <span class="op">)</span>  </span>
-<span>  <span class="op">}</span></span>
-<span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="va">internal_bench</span> <span class="op">&lt;-</span> <span class="fu">bench</span><span class="fu">::</span><span class="fu"><a href="https://bench.r-lib.org/reference/mark.html" class="external-link">mark</a></span><span class="op">(</span></span>
+<span>  dense_simpls <span class="op">=</span> <span class="fu"><a href="../reference/pls_fit.html">pls_fit</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="va">X</span><span class="op">[</span><span class="op">]</span><span class="op">)</span>, <span class="va">y_vec</span>, ncomp <span class="op">=</span> <span class="va">ncomp</span>,</span>
+<span>                         backend <span class="op">=</span> <span class="st">"arma"</span>, algorithm <span class="op">=</span> <span class="st">"simpls"</span><span class="op">)</span>,</span>
+<span>  streaming_simpls <span class="op">=</span> <span class="fu"><a href="../reference/pls_fit.html">pls_fit</a></span><span class="op">(</span><span class="va">X</span>, <span class="va">y</span>, ncomp <span class="op">=</span> <span class="va">ncomp</span>, backend <span class="op">=</span> <span class="st">"bigmem"</span>,</span>
+<span>                             algorithm <span class="op">=</span> <span class="st">"simpls"</span>, chunk_size <span class="op">=</span> <span class="fl">512L</span><span class="op">)</span>,</span>
+<span>  dense_nipals <span class="op">=</span> <span class="fu"><a href="../reference/pls_fit.html">pls_fit</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="va">X</span><span class="op">[</span><span class="op">]</span><span class="op">)</span>, <span class="va">y_vec</span>, ncomp <span class="op">=</span> <span class="va">ncomp</span>,</span>
+<span>                         backend <span class="op">=</span> <span class="st">"arma"</span>, algorithm <span class="op">=</span> <span class="st">"nipals"</span><span class="op">)</span>,</span>
+<span>  streaming_nipals <span class="op">=</span> <span class="fu"><a href="../reference/pls_fit.html">pls_fit</a></span><span class="op">(</span><span class="va">X</span>, <span class="va">y</span>, ncomp <span class="op">=</span> <span class="va">ncomp</span>, backend <span class="op">=</span> <span class="st">"bigmem"</span>,</span>
+<span>                             algorithm <span class="op">=</span> <span class="st">"nipals"</span>, chunk_size <span class="op">=</span> <span class="fl">512L</span><span class="op">)</span>,</span>
+<span>  dense_kernelpls <span class="op">=</span> <span class="fu"><a href="../reference/pls_fit.html">pls_fit</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="va">X</span><span class="op">[</span><span class="op">]</span><span class="op">)</span>, <span class="va">y_vec</span>, ncomp <span class="op">=</span> <span class="va">ncomp</span>,</span>
+<span>                         backend <span class="op">=</span> <span class="st">"arma"</span>, algorithm <span class="op">=</span> <span class="st">"kernelpls"</span><span class="op">)</span>,</span>
+<span>  streaming_kernelpls <span class="op">=</span> <span class="fu"><a href="../reference/pls_fit.html">pls_fit</a></span><span class="op">(</span><span class="va">X</span>, <span class="va">y</span>, ncomp <span class="op">=</span> <span class="va">ncomp</span>, backend <span class="op">=</span> <span class="st">"bigmem"</span>,</span>
+<span>                             algorithm <span class="op">=</span> <span class="st">"kernelpls"</span>, chunk_size <span class="op">=</span> <span class="fl">512L</span><span class="op">)</span>,</span>
+<span>  dense_widekernelpls <span class="op">=</span> <span class="fu"><a href="../reference/pls_fit.html">pls_fit</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="va">X</span><span class="op">[</span><span class="op">]</span><span class="op">)</span>, <span class="va">y_vec</span>, ncomp <span class="op">=</span> <span class="va">ncomp</span>,</span>
+<span>                         backend <span class="op">=</span> <span class="st">"arma"</span>, algorithm <span class="op">=</span> <span class="st">"widekernelpls"</span><span class="op">)</span>,</span>
+<span>  streaming_widekernelpls <span class="op">=</span> <span class="fu"><a href="../reference/pls_fit.html">pls_fit</a></span><span class="op">(</span><span class="va">X</span>, <span class="va">y</span>, ncomp <span class="op">=</span> <span class="va">ncomp</span>, backend <span class="op">=</span> <span class="st">"bigmem"</span>,</span>
+<span>                             algorithm <span class="op">=</span> <span class="st">"widekernelpls"</span>, chunk_size <span class="op">=</span> <span class="fl">512L</span><span class="op">)</span>,</span>
+<span>  iterations <span class="op">=</span> <span class="fl">20</span>,</span>
+<span>  check <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">internal_bench_res</span> <span class="op">&lt;-</span><span class="va">internal_bench</span><span class="op">[</span>,<span class="fl">2</span><span class="op">:</span><span class="fl">5</span><span class="op">]</span></span>
+<span><span class="va">internal_bench_res</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="va">internal_bench_res</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">rownames</a></span><span class="op">(</span><span class="va">internal_bench_res</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">internal_bench</span><span class="op">$</span><span class="va">expression</span><span class="op">)</span></span></code></pre></div>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">bench_res_nipals</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bench.r-lib.org/reference/press.html" class="external-link">press</a></span><span class="op">(</span></span>
-<span>  n <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">500</span>, <span class="fl">1000</span>, <span class="fl">5000</span><span class="op">)</span>,</span>
-<span>  p <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">100</span>, <span class="fl">500</span>, <span class="fl">1000</span><span class="op">)</span>,</span>
-<span>  <span class="op">{</span></span>
-<span>    <span class="va">ncomp</span> <span class="op">=</span> <span class="fl">5</span></span>
-<span>    <span class="va">rep</span> <span class="op">=</span> <span class="fl">1</span></span>
-<span>    <span class="va">algorithm</span> <span class="op">=</span> <span class="st">"nipals"</span></span>
-<span>    <span class="va">X</span> <span class="op">&lt;-</span> <span class="fu">bigmemory</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/bigmemory/man/big.matrix.html" class="external-link">big.matrix</a></span><span class="op">(</span>nrow <span class="op">=</span> <span class="va">n</span>, ncol <span class="op">=</span> <span class="va">p</span>, type <span class="op">=</span> <span class="st">"double"</span><span class="op">)</span></span>
-<span>    <span class="va">X</span><span class="op">[</span>,<span class="op">]</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="va">n</span> <span class="op">*</span> <span class="va">p</span><span class="op">)</span>, nrow <span class="op">=</span> <span class="va">n</span><span class="op">)</span></span>
-<span></span>
-<span>    <span class="va">true_beta</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="va">p</span><span class="op">)</span>, ncol <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
-<span>    <span class="va">y_vec</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/vector.html" class="external-link">as.vector</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/scale.html" class="external-link">scale</a></span><span class="op">(</span><span class="va">X</span><span class="op">[</span>,<span class="op">]</span> <span class="op"><a href="https://rdrr.io/r/base/matmult.html" class="external-link">%*%</a></span> <span class="va">true_beta</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="va">n</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
-<span></span>
-<span>    <span class="va">y</span> <span class="op">&lt;-</span> <span class="fu">bigmemory</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/bigmemory/man/big.matrix.html" class="external-link">big.matrix</a></span><span class="op">(</span>nrow <span class="op">=</span> <span class="va">n</span>, ncol <span class="op">=</span> <span class="fl">1</span>, type <span class="op">=</span> <span class="st">"double"</span><span class="op">)</span></span>
-<span>    <span class="va">y</span><span class="op">[</span>,<span class="op">]</span> <span class="op">&lt;-</span> <span class="va">y_vec</span></span>
-<span>    <span class="fu">bench</span><span class="fu">::</span><span class="fu"><a href="https://bench.r-lib.org/reference/mark.html" class="external-link">mark</a></span><span class="op">(</span></span>
-<span>      dense <span class="op">=</span> <span class="fu"><a href="../reference/pls1_dense.html">pls1_dense</a></span><span class="op">(</span><span class="va">X</span>, <span class="va">y_vec</span>, ncomp <span class="op">=</span> <span class="va">ncomp</span>, algorithm <span class="op">=</span> <span class="va">algorithm</span><span class="op">)</span>,</span>
-<span>      streaming <span class="op">=</span> <span class="fu"><a href="../reference/pls1_dense.html">pls1_stream</a></span><span class="op">(</span><span class="va">X</span>, <span class="va">y_vec</span>, ncomp <span class="op">=</span> <span class="va">ncomp</span>, chunk_size <span class="op">=</span> <span class="fl">1024L</span>, </span>
-<span>                              algorithm <span class="op">=</span> <span class="va">algorithm</span><span class="op">)</span>,</span>
-<span>      dense_a <span class="op">=</span> <span class="fu"><a href="../reference/pls1_dense_a.html">pls1_dense_a</a></span><span class="op">(</span><span class="va">X</span>, <span class="va">y</span>, ncomp <span class="op">=</span> <span class="va">ncomp</span>, algorithm <span class="op">=</span> <span class="va">algorithm</span><span class="op">)</span>,</span>
-<span>      streaming_a <span class="op">=</span> <span class="fu"><a href="../reference/pls1_dense_a.html">pls1_stream_a</a></span><span class="op">(</span><span class="va">X</span>, <span class="va">y</span>, ncomp <span class="op">=</span> <span class="va">ncomp</span>, chunk_size <span class="op">=</span> <span class="fl">1024L</span>, </span>
-<span>                                  algorithm <span class="op">=</span> <span class="va">algorithm</span><span class="op">)</span>,</span>
-<span>      dense_ya <span class="op">=</span> <span class="fu"><a href="../reference/pls1_dense_ya.html">pls1_dense_ya</a></span><span class="op">(</span><span class="va">X</span>, <span class="va">y</span>, ncomp <span class="op">=</span> <span class="va">ncomp</span>, algorithm <span class="op">=</span> <span class="va">algorithm</span><span class="op">)</span>,</span>
-<span>      streaming_ya <span class="op">=</span> <span class="fu"><a href="../reference/pls1_dense_ya.html">pls1_stream_ya</a></span><span class="op">(</span><span class="va">X</span>, <span class="va">y</span>, ncomp <span class="op">=</span> <span class="va">ncomp</span>, chunk_size <span class="op">=</span> <span class="fl">1024L</span>, </span>
-<span>                                    algorithm <span class="op">=</span> <span class="va">algorithm</span><span class="op">)</span>,</span>
-<span>      iterations <span class="op">=</span> <span class="fl">10</span>,</span>
-<span>      check <span class="op">=</span> <span class="cn">FALSE</span></span>
-<span>    <span class="op">)</span>  </span>
-<span>  <span class="op">}</span></span>
-<span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/dotchart.html" class="external-link">dotchart</a></span><span class="op">(</span><span class="va">internal_bench_res</span><span class="op">[</span>,<span class="fl">2</span><span class="op">]</span>, labels<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">rownames</a></span><span class="op">(</span><span class="va">internal_bench_res</span><span class="op">)</span>,xlab<span class="op">=</span><span class="st">"median_time_s"</span><span class="op">)</span></span></code></pre></div>
+<p><img src="figures/benchmarking-pls1-internal-benchmark-plot-1.png" width="1050"></p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/dotchart.html" class="external-link">dotchart</a></span><span class="op">(</span><span class="va">internal_bench_res</span><span class="op">[</span>,<span class="fl">3</span><span class="op">]</span>, labels<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">rownames</a></span><span class="op">(</span><span class="va">internal_bench_res</span><span class="op">)</span>,xlab<span class="op">=</span><span class="st">"itr_per_sec"</span><span class="op">)</span></span></code></pre></div>
+<p><img src="figures/benchmarking-pls1-internal-benchmark-plot-2.png" width="1050"></p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/dotchart.html" class="external-link">dotchart</a></span><span class="op">(</span><span class="va">internal_bench_res</span><span class="op">[</span>,<span class="fl">4</span><span class="op">]</span>, labels<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">rownames</a></span><span class="op">(</span><span class="va">internal_bench_res</span><span class="op">)</span>,xlab<span class="op">=</span><span class="st">"mem_alloc_bytes"</span><span class="op">)</span></span></code></pre></div>
+<p><img src="figures/benchmarking-pls1-internal-benchmark-plot-3.png" width="1050"></p>
+<p>The results highlight the trade-off between throughput and memory
+usage: SIMPLS shines on dense matrices, whereas the streaming backend
+scales to larger-than-memory inputs thanks to block processing.</p>
 </div>
 <div class="section level2">
-<h2 id="interpreting-the-output">Interpreting the output<a class="anchor" aria-label="anchor" href="#interpreting-the-output"></a>
+<h2 id="external-references">External references<a class="anchor" aria-label="anchor" href="#external-references"></a>
 </h2>
-<p>The table summarises the timing and memory footprint of each solver.
-In practice you can adjust the number of components, the chunk size or
-the data generation process to mimic your own workload. When working
-with file-backed matrices the streaming solver is often the only viable
-option, whereas the dense solver remains the fastest choice for datasets
-that comfortably fit in memory.</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">bench_res_simpls</span></span>
-<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 54 × 8</span></span></span>
-<span><span class="co">#&gt;    expression       n     p      min   median `itr/sec` mem_alloc `gc/sec`</span></span>
-<span><span class="co">#&gt;    <span style="color: #949494; font-style: italic;">&lt;bch:expr&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;bch:tm&gt;</span> <span style="color: #949494; font-style: italic;">&lt;bch:tm&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;bch:byt&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 1</span> dense          500   100   5.11ms   5.28ms     189.    199.4KB     0   </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 2</span> streaming      500   100  26.68ms  26.74ms      37.3      49KB     0   </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 3</span> dense_a        500   100   4.67ms   4.71ms     212.     42.1KB     0   </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 4</span> streaming_a    500   100  26.25ms  26.38ms      37.7    47.7KB     0   </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 5</span> dense_ya       500   100   4.67ms   4.71ms     212.     43.5KB     0   </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 6</span> streaming_ya   500   100  26.22ms  26.32ms      37.9    43.8KB     0   </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 7</span> dense         <span style="text-decoration: underline;">1</span>000   100   8.57ms   8.73ms     114.     18.4KB     0   </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 8</span> streaming     <span style="text-decoration: underline;">1</span>000   100  51.21ms  51.31ms      19.2    18.4KB     2.13</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 9</span> dense_a       <span style="text-decoration: underline;">1</span>000   100   8.23ms   8.29ms     120.     11.2KB     0   </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">10</span> streaming_a   <span style="text-decoration: underline;">1</span>000   100  50.79ms  50.89ms      19.6    11.6KB     0   </span></span>
-<span><span class="co">#&gt; <span style="color: #949494;"># ℹ 44 more rows</span></span></span></code></pre></div>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">bench_res_nipals</span></span>
-<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 54 × 8</span></span></span>
-<span><span class="co">#&gt;    expression       n     p      min   median `itr/sec` mem_alloc `gc/sec`</span></span>
-<span><span class="co">#&gt;    <span style="color: #949494; font-style: italic;">&lt;bch:expr&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;bch:tm&gt;</span> <span style="color: #949494; font-style: italic;">&lt;bch:tm&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;bch:byt&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 1</span> dense          500   100   8.53ms   8.54ms     117.     34.7KB     0   </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 2</span> streaming      500   100   8.53ms   8.53ms     117.     34.9KB     0   </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 3</span> dense_a        500   100   6.56ms   6.58ms     152.     33.5KB     0   </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 4</span> streaming_a    500   100   3.54ms   3.54ms     281.     53.4KB     0   </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 5</span> dense_ya       500   100   8.55ms   8.56ms     117.     62.7KB     0   </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 6</span> streaming_ya   500   100   8.55ms   8.56ms     117.     35.2KB     0   </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 7</span> dense         <span style="text-decoration: underline;">1</span>000   100  16.99ms     17ms      58.8    50.8KB     0   </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 8</span> streaming     <span style="text-decoration: underline;">1</span>000   100  16.98ms     17ms      58.8    50.8KB     6.53</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 9</span> dense_a       <span style="text-decoration: underline;">1</span>000   100  13.04ms  13.07ms      72.9    49.5KB     0   </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">10</span> streaming_a   <span style="text-decoration: underline;">1</span>000   100   7.08ms   7.13ms     138.       89KB     0   </span></span>
-<span><span class="co">#&gt; <span style="color: #949494;"># ℹ 44 more rows</span></span></span></code></pre></div>
+<p>To avoid heavy dependencies at build time we ship a pre-computed
+benchmark dataset that contrasts <code>bigPLSR</code> with
+implementations from the <code>pls</code> and <code>mixOmics</code>
+packages. The dataset was generated with the helper script stored in
+<code>inst/scripts/external_pls_benchmarks.R</code>.</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">bench_res_simpls</span>, type<span class="op">=</span><span class="st">"jitter"</span><span class="op">)</span></span></code></pre></div>
-<p><img src="figures/benchmarking-unnamed-chunk-5-1.png" width="1050"></p>
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="st">"external_pls_benchmarks"</span>, package <span class="op">=</span> <span class="st">"bigPLSR"</span><span class="op">)</span></span>
+<span><span class="va">sub_pls1</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/subset.html" class="external-link">subset</a></span><span class="op">(</span><span class="va">external_pls_benchmarks</span>,<span class="va">task</span><span class="op">==</span><span class="st">"pls1"</span> <span class="op">&amp;</span> <span class="op">!</span><span class="va">algorithm</span><span class="op">==</span><span class="st">"widekernelpls"</span><span class="op">)</span></span>
+<span><span class="va">sub_pls1</span><span class="op">$</span><span class="va">n</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="va">sub_pls1</span><span class="op">$</span><span class="va">n</span><span class="op">)</span></span>
+<span><span class="va">sub_pls1</span><span class="op">$</span><span class="va">p</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="va">sub_pls1</span><span class="op">$</span><span class="va">p</span><span class="op">)</span></span>
+<span><span class="va">sub_pls1</span><span class="op">$</span><span class="va">q</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="va">sub_pls1</span><span class="op">$</span><span class="va">q</span><span class="op">)</span></span>
+<span><span class="va">sub_pls1</span><span class="op">$</span><span class="va">ncomp</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="va">sub_pls1</span><span class="op">$</span><span class="va">ncomp</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/stats/replications.html" class="external-link">replications</a></span><span class="op">(</span><span class="op">~</span><span class="va">package</span><span class="op">+</span><span class="va">algorithm</span><span class="op">+</span><span class="va">task</span><span class="op">+</span><span class="va">n</span><span class="op">+</span><span class="va">p</span><span class="op">+</span><span class="va">ncomp</span>,data<span class="op">=</span><span class="va">sub_pls1</span><span class="op">)</span></span>
+<span><span class="co">#&gt;   package algorithm      task         n         p     ncomp </span></span>
+<span><span class="co">#&gt;        18        24        72        36        36        24</span></span>
+<span></span>
+<span><span class="va">sub_pls1_wide</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/subset.html" class="external-link">subset</a></span><span class="op">(</span><span class="va">external_pls_benchmarks</span>,<span class="va">external_pls_benchmarks</span><span class="op">$</span><span class="va">task</span><span class="op">==</span><span class="st">"pls1"</span> <span class="op">&amp;</span> <span class="va">algorithm</span><span class="op">==</span><span class="st">"widekernelpls"</span><span class="op">)</span></span>
+<span><span class="va">sub_pls1_wide</span><span class="op">$</span><span class="va">n</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="va">sub_pls1_wide</span><span class="op">$</span><span class="va">n</span><span class="op">)</span></span>
+<span><span class="va">sub_pls1_wide</span><span class="op">$</span><span class="va">p</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="va">sub_pls1_wide</span><span class="op">$</span><span class="va">p</span><span class="op">)</span></span>
+<span><span class="va">sub_pls1_wide</span><span class="op">$</span><span class="va">q</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="va">sub_pls1_wide</span><span class="op">$</span><span class="va">q</span><span class="op">)</span></span>
+<span><span class="va">sub_pls1_wide</span><span class="op">$</span><span class="va">ncomp</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="va">sub_pls1_wide</span><span class="op">$</span><span class="va">ncomp</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/stats/replications.html" class="external-link">replications</a></span><span class="op">(</span><span class="op">~</span><span class="va">package</span><span class="op">+</span><span class="va">algorithm</span><span class="op">+</span><span class="va">task</span><span class="op">+</span><span class="va">n</span><span class="op">+</span><span class="va">p</span><span class="op">+</span><span class="va">ncomp</span>,data<span class="op">=</span><span class="va">sub_pls1_wide</span><span class="op">)</span></span>
+<span><span class="co">#&gt;   package algorithm      task         n         p     ncomp </span></span>
+<span><span class="co">#&gt;         6        24        24        12        12         8</span></span>
+<span></span>
+<span><span class="va">sub_pls2</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/subset.html" class="external-link">subset</a></span><span class="op">(</span><span class="va">external_pls_benchmarks</span>,<span class="va">external_pls_benchmarks</span><span class="op">$</span><span class="va">task</span><span class="op">==</span><span class="st">"pls2"</span> <span class="op">&amp;</span> <span class="op">!</span><span class="va">algorithm</span><span class="op">==</span><span class="st">"widekernelpls"</span><span class="op">)</span></span>
+<span><span class="va">sub_pls2</span><span class="op">$</span><span class="va">n</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="va">sub_pls2</span><span class="op">$</span><span class="va">n</span><span class="op">)</span></span>
+<span><span class="va">sub_pls2</span><span class="op">$</span><span class="va">p</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="va">sub_pls2</span><span class="op">$</span><span class="va">p</span><span class="op">)</span></span>
+<span><span class="va">sub_pls2</span><span class="op">$</span><span class="va">q</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="va">sub_pls2</span><span class="op">$</span><span class="va">q</span><span class="op">)</span></span>
+<span><span class="va">sub_pls2</span><span class="op">$</span><span class="va">ncomp</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="va">sub_pls2</span><span class="op">$</span><span class="va">ncomp</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/stats/replications.html" class="external-link">replications</a></span><span class="op">(</span><span class="op">~</span><span class="va">package</span><span class="op">+</span><span class="va">algorithm</span><span class="op">+</span><span class="va">task</span><span class="op">+</span><span class="va">n</span><span class="op">+</span><span class="va">p</span><span class="op">+</span><span class="va">ncomp</span>,data<span class="op">=</span><span class="va">sub_pls2</span><span class="op">)</span></span>
+<span><span class="co">#&gt;   package algorithm      task         n         p     ncomp </span></span>
+<span><span class="co">#&gt;        36        48       144        72        72        48</span></span>
+<span></span>
+<span><span class="va">sub_pls2_wide</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/subset.html" class="external-link">subset</a></span><span class="op">(</span><span class="va">external_pls_benchmarks</span>,<span class="va">external_pls_benchmarks</span><span class="op">$</span><span class="va">task</span><span class="op">==</span><span class="st">"pls2"</span> <span class="op">&amp;</span> <span class="va">algorithm</span><span class="op">==</span><span class="st">"widekernelpls"</span><span class="op">)</span></span>
+<span><span class="va">sub_pls2_wide</span><span class="op">$</span><span class="va">n</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="va">sub_pls2_wide</span><span class="op">$</span><span class="va">n</span><span class="op">)</span></span>
+<span><span class="va">sub_pls2_wide</span><span class="op">$</span><span class="va">p</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="va">sub_pls2_wide</span><span class="op">$</span><span class="va">p</span><span class="op">)</span></span>
+<span><span class="va">sub_pls2_wide</span><span class="op">$</span><span class="va">q</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="va">sub_pls2_wide</span><span class="op">$</span><span class="va">q</span><span class="op">)</span></span>
+<span><span class="va">sub_pls2_wide</span><span class="op">$</span><span class="va">ncomp</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="va">sub_pls2_wide</span><span class="op">$</span><span class="va">ncomp</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/stats/replications.html" class="external-link">replications</a></span><span class="op">(</span><span class="op">~</span><span class="va">package</span><span class="op">+</span><span class="va">algorithm</span><span class="op">+</span><span class="va">task</span><span class="op">+</span><span class="va">n</span><span class="op">+</span><span class="va">p</span><span class="op">+</span><span class="va">ncomp</span>,data<span class="op">=</span><span class="va">sub_pls2_wide</span><span class="op">)</span></span>
+<span><span class="co">#&gt;   package algorithm      task         n         p     ncomp </span></span>
+<span><span class="co">#&gt;        12        48        48        24        24        16</span></span></code></pre></div>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">bench_res_nipals</span>, type<span class="op">=</span><span class="st">"jitter"</span><span class="op">)</span></span></code></pre></div>
-<p><img src="figures/benchmarking-unnamed-chunk-6-1.png" width="1050"></p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">bench_res_simpls</span>, type<span class="op">=</span><span class="st">"boxplot"</span><span class="op">)</span></span></code></pre></div>
-<p><img src="figures/benchmarking-unnamed-chunk-7-1.png" width="1050"></p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">bench_res_nipals</span>, type<span class="op">=</span><span class="st">"boxplot"</span><span class="op">)</span></span></code></pre></div>
-<p><img src="figures/benchmarking-unnamed-chunk-8-1.png" width="1050"></p>
+<code class="sourceCode R"><span><span class="va">sub_pls1</span></span>
+<span><span class="co">#&gt;     task algorithm            package median_time_s  itr_per_sec</span></span>
+<span><span class="co">#&gt; 1   pls1    simpls      bigPLSR_dense  0.0067246150  148.0232093</span></span>
+<span><span class="co">#&gt; 2   pls1    simpls bigPLSR_big.memory  0.0036029980  277.7090750</span></span>
+<span><span class="co">#&gt; 3   pls1    simpls                pls  0.0022770375  437.1897736</span></span>
+<span><span class="co">#&gt; 4   pls1    simpls           mixOmics  0.0044901560  222.5633281</span></span>
+<span><span class="co">#&gt; 5   pls1 kernelpls      bigPLSR_dense  0.0489712611   18.4018038</span></span>
+<span><span class="co">#&gt; 6   pls1 kernelpls bigPLSR_big.memory  0.0005245131 1908.9476574</span></span>
+<span><span class="co">#&gt; 7   pls1 kernelpls                pls  0.0021272850  358.4499622</span></span>
+<span><span class="co">#&gt; 8   pls1 kernelpls           mixOmics  0.0047856634  168.7496829</span></span>
+<span><span class="co">#&gt; 13  pls1    nipals      bigPLSR_dense  0.0007314811 1205.3254563</span></span>
+<span><span class="co">#&gt; 14  pls1    nipals bigPLSR_big.memory  0.0063339670  155.1675479</span></span>
+<span><span class="co">#&gt; 15  pls1    nipals                pls  0.0022903420  434.8982218</span></span>
+<span><span class="co">#&gt; 16  pls1    nipals           mixOmics  0.0043836380  227.8532589</span></span>
+<span><span class="co">#&gt; 17  pls1    simpls      bigPLSR_dense  0.0065849486  151.6776964</span></span>
+<span><span class="co">#&gt; 18  pls1    simpls bigPLSR_big.memory  0.0035743800  278.8872263</span></span>
+<span><span class="co">#&gt; 19  pls1    simpls                pls  0.0026474111  377.1385860</span></span>
+<span><span class="co">#&gt; 20  pls1    simpls           mixOmics  0.0079937701  125.1715709</span></span>
+<span><span class="co">#&gt; 21  pls1 kernelpls      bigPLSR_dense  0.0453674431   22.0422385</span></span>
+<span><span class="co">#&gt; 22  pls1 kernelpls bigPLSR_big.memory  0.0011308210  865.1415443</span></span>
+<span><span class="co">#&gt; 23  pls1 kernelpls                pls  0.0026473495  374.7793386</span></span>
+<span><span class="co">#&gt; 24  pls1 kernelpls           mixOmics  0.0082481339  120.5571369</span></span>
+<span><span class="co">#&gt; 29  pls1    nipals      bigPLSR_dense  0.0016668550  592.5614418</span></span>
+<span><span class="co">#&gt; 30  pls1    nipals bigPLSR_big.memory  0.0066213361  147.4796798</span></span>
+<span><span class="co">#&gt; 31  pls1    nipals                pls  0.0033974855  289.7519881</span></span>
+<span><span class="co">#&gt; 32  pls1    nipals           mixOmics  0.0083244351  120.0403884</span></span>
+<span><span class="co">#&gt; 33  pls1    simpls      bigPLSR_dense  0.0067931670  146.1966203</span></span>
+<span><span class="co">#&gt; 34  pls1    simpls bigPLSR_big.memory  0.0036683520  266.7412212</span></span>
+<span><span class="co">#&gt; 35  pls1    simpls                pls  0.0047441100  209.7457999</span></span>
+<span><span class="co">#&gt; 36  pls1    simpls           mixOmics  0.0212875688   47.2762356</span></span>
+<span><span class="co">#&gt; 37  pls1 kernelpls      bigPLSR_dense  0.0502987590   19.7701241</span></span>
+<span><span class="co">#&gt; 38  pls1 kernelpls bigPLSR_big.memory  0.0032584749  304.0034685</span></span>
+<span><span class="co">#&gt; 39  pls1 kernelpls                pls  0.0047713750  210.3620345</span></span>
+<span><span class="co">#&gt; 40  pls1 kernelpls           mixOmics  0.0212102840   47.2352685</span></span>
+<span><span class="co">#&gt; 45  pls1    nipals      bigPLSR_dense  0.0049670886  195.0587514</span></span>
+<span><span class="co">#&gt; 46  pls1    nipals bigPLSR_big.memory  0.0066567600  147.2806571</span></span>
+<span><span class="co">#&gt; 47  pls1    nipals                pls  0.0075556440  132.2163658</span></span>
+<span><span class="co">#&gt; 48  pls1    nipals           mixOmics  0.0209695730   48.0368106</span></span>
+<span><span class="co">#&gt; 145 pls1    simpls      bigPLSR_dense  6.3196013995    0.1560965</span></span>
+<span><span class="co">#&gt; 146 pls1    simpls bigPLSR_big.memory  3.4780965225    0.2882154</span></span>
+<span><span class="co">#&gt; 147 pls1    simpls                pls  0.3617566530    2.8113887</span></span>
+<span><span class="co">#&gt; 148 pls1    simpls           mixOmics  0.3419937920    2.6744942</span></span>
+<span><span class="co">#&gt; 149 pls1 kernelpls      bigPLSR_dense  0.0875219005   11.4002975</span></span>
+<span><span class="co">#&gt; 150 pls1 kernelpls bigPLSR_big.memory  0.0572001660   15.2469776</span></span>
+<span><span class="co">#&gt; 151 pls1 kernelpls                pls  0.3495531260    3.1086178</span></span>
+<span><span class="co">#&gt; 152 pls1 kernelpls           mixOmics  0.4555282245    2.2243872</span></span>
+<span><span class="co">#&gt; 157 pls1    nipals      bigPLSR_dense  0.0793887920   12.4715205</span></span>
+<span><span class="co">#&gt; 158 pls1    nipals bigPLSR_big.memory  6.2405680775    0.1575006</span></span>
+<span><span class="co">#&gt; 159 pls1    nipals                pls  0.2215801335    4.4212757</span></span>
+<span><span class="co">#&gt; 160 pls1    nipals           mixOmics  0.3240520485    3.0859240</span></span>
+<span><span class="co">#&gt; 161 pls1    simpls      bigPLSR_dense  6.6035757635    0.1511993</span></span>
+<span><span class="co">#&gt; 162 pls1    simpls bigPLSR_big.memory  3.6277102170    0.2762871</span></span>
+<span><span class="co">#&gt; 163 pls1    simpls                pls  0.2944476500    2.9759450</span></span>
+<span><span class="co">#&gt; 164 pls1    simpls           mixOmics  0.7795254970    1.3364046</span></span>
+<span><span class="co">#&gt; 165 pls1 kernelpls      bigPLSR_dense  0.2228726995    4.4778063</span></span>
+<span><span class="co">#&gt; 166 pls1 kernelpls bigPLSR_big.memory  0.1308061540    7.5146125</span></span>
+<span><span class="co">#&gt; 167 pls1 kernelpls                pls  0.2958856020    3.0274729</span></span>
+<span><span class="co">#&gt; 168 pls1 kernelpls           mixOmics  0.7937342930    1.2842244</span></span>
+<span><span class="co">#&gt; 173 pls1    nipals      bigPLSR_dense  0.1926474585    5.1410083</span></span>
+<span><span class="co">#&gt; 174 pls1    nipals bigPLSR_big.memory  6.2397971545    0.1605795</span></span>
+<span><span class="co">#&gt; 175 pls1    nipals                pls  0.3588060470    2.7022458</span></span>
+<span><span class="co">#&gt; 176 pls1    nipals           mixOmics  0.6335405281    1.4952876</span></span>
+<span><span class="co">#&gt; 177 pls1    simpls      bigPLSR_dense  6.2928044145    0.1585666</span></span>
+<span><span class="co">#&gt; 178 pls1    simpls bigPLSR_big.memory  3.4739361500    0.2879672</span></span>
+<span><span class="co">#&gt; 179 pls1    simpls                pls  0.5703391100    1.8750414</span></span>
+<span><span class="co">#&gt; 180 pls1    simpls           mixOmics  1.8980518270    0.5262915</span></span>
+<span><span class="co">#&gt; 181 pls1 kernelpls      bigPLSR_dense  0.6460428016    1.5505732</span></span>
+<span><span class="co">#&gt; 182 pls1 kernelpls bigPLSR_big.memory  0.3653160885    2.6907637</span></span>
+<span><span class="co">#&gt; 183 pls1 kernelpls                pls  0.5757799330    1.7536473</span></span>
+<span><span class="co">#&gt; 184 pls1 kernelpls           mixOmics  1.7895776350    0.5399431</span></span>
+<span><span class="co">#&gt; 189 pls1    nipals      bigPLSR_dense  0.5255408905    1.8317478</span></span>
+<span><span class="co">#&gt; 190 pls1    nipals bigPLSR_big.memory  6.2838405435    0.1591461</span></span>
+<span><span class="co">#&gt; 191 pls1    nipals                pls  0.7320582391    1.3418031</span></span>
+<span><span class="co">#&gt; 192 pls1    nipals           mixOmics  1.6411711855    0.6002285</span></span>
+<span><span class="co">#&gt;     mem_alloc_bytes     n    p q ncomp</span></span>
+<span><span class="co">#&gt; 1           1850464  1000  100 1     1</span></span>
+<span><span class="co">#&gt; 2            944384  1000  100 1     1</span></span>
+<span><span class="co">#&gt; 3           8056600  1000  100 1     1</span></span>
+<span><span class="co">#&gt; 4           8768696  1000  100 1     1</span></span>
+<span><span class="co">#&gt; 5          42579912  1000  100 1     1</span></span>
+<span><span class="co">#&gt; 6            821328  1000  100 1     1</span></span>
+<span><span class="co">#&gt; 7           7570072  1000  100 1     1</span></span>
+<span><span class="co">#&gt; 8           7550384  1000  100 1     1</span></span>
+<span><span class="co">#&gt; 13            22752  1000  100 1     1</span></span>
+<span><span class="co">#&gt; 14           835624  1000  100 1     1</span></span>
+<span><span class="co">#&gt; 15          8377136  1000  100 1     1</span></span>
+<span><span class="co">#&gt; 16          7550384  1000  100 1     1</span></span>
+<span><span class="co">#&gt; 17          1723264  1000  100 1     3</span></span>
+<span><span class="co">#&gt; 18           901520  1000  100 1     3</span></span>
+<span><span class="co">#&gt; 19          7764576  1000  100 1     3</span></span>
+<span><span class="co">#&gt; 20         12407296  1000  100 1     3</span></span>
+<span><span class="co">#&gt; 21         42480456  1000  100 1     3</span></span>
+<span><span class="co">#&gt; 22           840528  1000  100 1     3</span></span>
+<span><span class="co">#&gt; 23          7720248  1000  100 1     3</span></span>
+<span><span class="co">#&gt; 24         12304368  1000  100 1     3</span></span>
+<span><span class="co">#&gt; 29            18128  1000  100 1     3</span></span>
+<span><span class="co">#&gt; 30           865424  1000  100 1     3</span></span>
+<span><span class="co">#&gt; 31         10122568  1000  100 1     3</span></span>
+<span><span class="co">#&gt; 32         12304368  1000  100 1     3</span></span>
+<span><span class="co">#&gt; 33          1734464  1000  100 1    10</span></span>
+<span><span class="co">#&gt; 34           922096  1000  100 1    10</span></span>
+<span><span class="co">#&gt; 35          9013040  1000  100 1    10</span></span>
+<span><span class="co">#&gt; 36         28992768  1000  100 1    10</span></span>
+<span><span class="co">#&gt; 37         42547656  1000  100 1    10</span></span>
+<span><span class="co">#&gt; 38           907728  1000  100 1    10</span></span>
+<span><span class="co">#&gt; 39          8959992  1000  100 1    10</span></span>
+<span><span class="co">#&gt; 40         28992768  1000  100 1    10</span></span>
+<span><span class="co">#&gt; 45            29328  1000  100 1    10</span></span>
+<span><span class="co">#&gt; 46           988624  1000  100 1    10</span></span>
+<span><span class="co">#&gt; 47         16876368  1000  100 1    10</span></span>
+<span><span class="co">#&gt; 48         28992768  1000  100 1    10</span></span>
+<span><span class="co">#&gt; 145       168378464 10000 1000 1     1</span></span>
+<span><span class="co">#&gt; 146        88146320 10000 1000 1     1</span></span>
+<span><span class="co">#&gt; 147       722792304 10000 1000 1     1</span></span>
+<span><span class="co">#&gt; 148       651508960 10000 1000 1     1</span></span>
+<span><span class="co">#&gt; 149          282544 10000 1000 1     1</span></span>
+<span><span class="co">#&gt; 150        80194128 10000 1000 1     1</span></span>
+<span><span class="co">#&gt; 151       722624584 10000 1000 1     1</span></span>
+<span><span class="co">#&gt; 152       651508960 10000 1000 1     1</span></span>
+<span><span class="co">#&gt; 157          130128 10000 1000 1     1</span></span>
+<span><span class="co">#&gt; 158        80282224 10000 1000 1     1</span></span>
+<span><span class="co">#&gt; 159       802652584 10000 1000 1     1</span></span>
+<span><span class="co">#&gt; 160       651508960 10000 1000 1     1</span></span>
+<span><span class="co">#&gt; 161       168410464 10000 1000 1     3</span></span>
+<span><span class="co">#&gt; 162        88194320 10000 1000 1     3</span></span>
+<span><span class="co">#&gt; 163       725626656 10000 1000 1     3</span></span>
+<span><span class="co">#&gt; 164       986912144 10000 1000 1     3</span></span>
+<span><span class="co">#&gt; 165          474544 10000 1000 1     3</span></span>
+<span><span class="co">#&gt; 166        80386128 10000 1000 1     3</span></span>
+<span><span class="co">#&gt; 167       725179128 10000 1000 1     3</span></span>
+<span><span class="co">#&gt; 168       986912144 10000 1000 1     3</span></span>
+<span><span class="co">#&gt; 173          162128 10000 1000 1     3</span></span>
+<span><span class="co">#&gt; 174        80634224 10000 1000 1     3</span></span>
+<span><span class="co">#&gt; 175       965206648 10000 1000 1     3</span></span>
+<span><span class="co">#&gt; 176       986912144 10000 1000 1     3</span></span>
+<span><span class="co">#&gt; 177       168522464 10000 1000 1    10</span></span>
+<span><span class="co">#&gt; 178        88366096 10000 1000 1    10</span></span>
+<span><span class="co">#&gt; 179       738038720 10000 1000 1    10</span></span>
+<span><span class="co">#&gt; 180      2161313744 10000 1000 1    10</span></span>
+<span><span class="co">#&gt; 181         1146544 10000 1000 1    10</span></span>
+<span><span class="co">#&gt; 182        81058128 10000 1000 1    10</span></span>
+<span><span class="co">#&gt; 183       737488872 10000 1000 1    10</span></span>
+<span><span class="co">#&gt; 184      2161313744 10000 1000 1    10</span></span>
+<span><span class="co">#&gt; 189          274128 10000 1000 1    10</span></span>
+<span><span class="co">#&gt; 190        81866224 10000 1000 1    10</span></span>
+<span><span class="co">#&gt; 191      1536642048 10000 1000 1    10</span></span>
+<span><span class="co">#&gt; 192      2161313744 10000 1000 1    10</span></span>
+<span><span class="co">#&gt;                                         notes</span></span>
+<span><span class="co">#&gt; 1        Run via pls_fit() with dense backend</span></span>
+<span><span class="co">#&gt; 2   Run via pls_fit() with big.memory backend</span></span>
+<span><span class="co">#&gt; 3                    Requires the pls package</span></span>
+<span><span class="co">#&gt; 4               Requires the mixOmics package</span></span>
+<span><span class="co">#&gt; 5        Run via pls_fit() with dense backend</span></span>
+<span><span class="co">#&gt; 6   Run via pls_fit() with big.memory backend</span></span>
+<span><span class="co">#&gt; 7                    Requires the pls package</span></span>
+<span><span class="co">#&gt; 8               Requires the mixOmics package</span></span>
+<span><span class="co">#&gt; 13       Run via pls_fit() with dense backend</span></span>
+<span><span class="co">#&gt; 14  Run via pls_fit() with big.memory backend</span></span>
+<span><span class="co">#&gt; 15                   Requires the pls package</span></span>
+<span><span class="co">#&gt; 16              Requires the mixOmics package</span></span>
+<span><span class="co">#&gt; 17       Run via pls_fit() with dense backend</span></span>
+<span><span class="co">#&gt; 18  Run via pls_fit() with big.memory backend</span></span>
+<span><span class="co">#&gt; 19                   Requires the pls package</span></span>
+<span><span class="co">#&gt; 20              Requires the mixOmics package</span></span>
+<span><span class="co">#&gt; 21       Run via pls_fit() with dense backend</span></span>
+<span><span class="co">#&gt; 22  Run via pls_fit() with big.memory backend</span></span>
+<span><span class="co">#&gt; 23                   Requires the pls package</span></span>
+<span><span class="co">#&gt; 24              Requires the mixOmics package</span></span>
+<span><span class="co">#&gt; 29       Run via pls_fit() with dense backend</span></span>
+<span><span class="co">#&gt; 30  Run via pls_fit() with big.memory backend</span></span>
+<span><span class="co">#&gt; 31                   Requires the pls package</span></span>
+<span><span class="co">#&gt; 32              Requires the mixOmics package</span></span>
+<span><span class="co">#&gt; 33       Run via pls_fit() with dense backend</span></span>
+<span><span class="co">#&gt; 34  Run via pls_fit() with big.memory backend</span></span>
+<span><span class="co">#&gt; 35                   Requires the pls package</span></span>
+<span><span class="co">#&gt; 36              Requires the mixOmics package</span></span>
+<span><span class="co">#&gt; 37       Run via pls_fit() with dense backend</span></span>
+<span><span class="co">#&gt; 38  Run via pls_fit() with big.memory backend</span></span>
+<span><span class="co">#&gt; 39                   Requires the pls package</span></span>
+<span><span class="co">#&gt; 40              Requires the mixOmics package</span></span>
+<span><span class="co">#&gt; 45       Run via pls_fit() with dense backend</span></span>
+<span><span class="co">#&gt; 46  Run via pls_fit() with big.memory backend</span></span>
+<span><span class="co">#&gt; 47                   Requires the pls package</span></span>
+<span><span class="co">#&gt; 48              Requires the mixOmics package</span></span>
+<span><span class="co">#&gt; 145      Run via pls_fit() with dense backend</span></span>
+<span><span class="co">#&gt; 146 Run via pls_fit() with big.memory backend</span></span>
+<span><span class="co">#&gt; 147                  Requires the pls package</span></span>
+<span><span class="co">#&gt; 148             Requires the mixOmics package</span></span>
+<span><span class="co">#&gt; 149      Run via pls_fit() with dense backend</span></span>
+<span><span class="co">#&gt; 150 Run via pls_fit() with big.memory backend</span></span>
+<span><span class="co">#&gt; 151                  Requires the pls package</span></span>
+<span><span class="co">#&gt; 152             Requires the mixOmics package</span></span>
+<span><span class="co">#&gt; 157      Run via pls_fit() with dense backend</span></span>
+<span><span class="co">#&gt; 158 Run via pls_fit() with big.memory backend</span></span>
+<span><span class="co">#&gt; 159                  Requires the pls package</span></span>
+<span><span class="co">#&gt; 160             Requires the mixOmics package</span></span>
+<span><span class="co">#&gt; 161      Run via pls_fit() with dense backend</span></span>
+<span><span class="co">#&gt; 162 Run via pls_fit() with big.memory backend</span></span>
+<span><span class="co">#&gt; 163                  Requires the pls package</span></span>
+<span><span class="co">#&gt; 164             Requires the mixOmics package</span></span>
+<span><span class="co">#&gt; 165      Run via pls_fit() with dense backend</span></span>
+<span><span class="co">#&gt; 166 Run via pls_fit() with big.memory backend</span></span>
+<span><span class="co">#&gt; 167                  Requires the pls package</span></span>
+<span><span class="co">#&gt; 168             Requires the mixOmics package</span></span>
+<span><span class="co">#&gt; 173      Run via pls_fit() with dense backend</span></span>
+<span><span class="co">#&gt; 174 Run via pls_fit() with big.memory backend</span></span>
+<span><span class="co">#&gt; 175                  Requires the pls package</span></span>
+<span><span class="co">#&gt; 176             Requires the mixOmics package</span></span>
+<span><span class="co">#&gt; 177      Run via pls_fit() with dense backend</span></span>
+<span><span class="co">#&gt; 178 Run via pls_fit() with big.memory backend</span></span>
+<span><span class="co">#&gt; 179                  Requires the pls package</span></span>
+<span><span class="co">#&gt; 180             Requires the mixOmics package</span></span>
+<span><span class="co">#&gt; 181      Run via pls_fit() with dense backend</span></span>
+<span><span class="co">#&gt; 182 Run via pls_fit() with big.memory backend</span></span>
+<span><span class="co">#&gt; 183                  Requires the pls package</span></span>
+<span><span class="co">#&gt; 184             Requires the mixOmics package</span></span>
+<span><span class="co">#&gt; 189      Run via pls_fit() with dense backend</span></span>
+<span><span class="co">#&gt; 190 Run via pls_fit() with big.memory backend</span></span>
+<span><span class="co">#&gt; 191                  Requires the pls package</span></span>
+<span><span class="co">#&gt; 192             Requires the mixOmics package</span></span></code></pre></div>
+<p>The table reports median execution times (in seconds), the number of
+iterations and memory use per second for a representative
+single-response scenario. The notes column indicates the additional
+packages required to reproduce those measurements.</p>
+</div>
+<div class="section level2">
+<h2 id="takeaways">Takeaways<a class="anchor" aria-label="anchor" href="#takeaways"></a>
+</h2>
+<p>Dense vs streaming backends. On small/medium data that fits in RAM,
+in-memory implementations (e.g., pls) are typically fastest (median
+≈0.36 s for SIMPLS in our runs). However, they materialize large
+cross-products/Gram matrices and memory grows as O(p^2) (or O(n^2) in
+kernel views). In contrast, bigPLSR’s streaming big-memory backend keeps
+memory bounded via chunked BLAS and never forms those intermediates. In
+our PLS2 benchmark, streaming used ~7–8× less RAM than pls (≈89 MB vs
+≈732 MB median) while remaining competitive in runtime (≈3.5 s vs 0.36
+s). PLS1 shows the same pattern: streaming is often fast enough while
+dramatically reducing memory. As n or p grow, the streaming backend
+scales where dense approaches become memory-limited.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

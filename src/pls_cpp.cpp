@@ -19,7 +19,7 @@ using Rcpp::NumericVector;
 using Rcpp::Named;
 using Rcpp::XPtr;
 
-#include "bigmatrix_utils.hpp"
+#include "bigmatrix_utils.h"
 
 namespace {
 

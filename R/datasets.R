@@ -1,37 +1,78 @@
-#' Simulated dataset
-#' 
-#' This dataset provides explantory variables simulations and censoring status.
-#' 
-#' 
-#' @name sim_data
+#' Benchmark results against external PLS implementations
+#'
+#' Pre-computed runtime comparisons between \pkg{bigPLSR} (dense and big.memory
+#' backends) and reference implementations from the \pkg{pls} and \pkg{mixOmics}
+#' packages.
+#'
+#' Fix \code{task = "pls1"} and select algorithms in \code{"kernelpls"},
+#' \code{"nipals"} or \code{"simpls"} to get a full factorial design.
+#' Fix \code{task = "pls1"} and fix \code{algorithm = "widekernelpls"} to get a
+#' full factorial design.
+#' Fix \code{task = "pls2"} and select algorithms in \code{"kernelpls"},
+#' \code{"nipals"} or \code{"simpls"} to get a full factorial design.
+#' Fix \code{task = "pls2"} and fix \code{algorithm = "widekernelpls"} to get a
+#' full factorial design.
+#'
+#' @name external_pls_benchmarks
+#' @aliases external_pls_benchmarks
 #' @docType data
-#' @format A data frame with 1000 observations on the following 11 variables.
-#' \describe{ 
-#' \item{status}{a binary vector} 
-#' \item{X1}{a numeric vector} 
-#' \item{X2}{a numeric vector} 
-#' \item{X3}{a numeric vector} 
-#' \item{X4}{a numeric vector} 
-#' \item{X5}{a numeric vector} 
-#' \item{X6}{a numeric vector} 
-#' \item{X7}{a numeric vector} 
-#' \item{X8}{a numeric vector} 
-#' \item{X9}{a numeric vector} 
-#' \item{X10}{a numeric vector} 
+#' @usage data(external_pls_benchmarks)
+#' @format A data frame with 384 rows and 11 columns:
+#' \describe{
+#'   \item{task}{Character vector identifying the task (\code{"pls1"} or \code{"pls2"}).}
+#'   \item{algorithm}{PLS algorithm used for the benchmark (e.g., \code{"simpls"}).}
+#'   \item{package}{Package providing the implementation.}
+#'   \item{median_time_s}{Median execution time in seconds.}
+#'   \item{itr_per_sec}{Iterations per second recorded by \code{bench::mark()}.}
+#'   \item{mem_alloc_bytes}{Memory usage in bytes recorded by \code{bench::mark()}.}
+#'   \item{n}{Number of observations in the simulated dataset.}
+#'   \item{p}{Number of predictors (X) in the simulated dataset.}
+#'   \item{q}{Number of responses (Y) in the simulated dataset.}
+#'   \item{ncomp}{Number of extracted components.}
+#'   \item{notes}{Helpful context on dependencies or configuration.}
 #' }
-#' @references TODO.\cr
-#' 
+#' @source Generated via \code{inst/scripts/external_pls_benchmarks.R}.
 #' @keywords datasets
+#'
 #' @examples
-#' 
 #' \donttest{
-#' data(sim_data)
-#' X_sim_data_train <- sim_data[1:800,2:11]
-#' C_sim_data_train <- sim_data$status[1:800]
-#' X_sim_data_test <- sim_data[801:1000,2:11]
-#' C_sim_data_test <- sim_data$status[801:1000]
-#' rm(X_sim_data_train,C_sim_data_train,X_sim_data_test,C_sim_data_test)
+#' data("external_pls_benchmarks", package = "bigPLSR")
+#'
+#' sub_pls1 <- subset(external_pls_benchmarks, task == "pls1" & 
+#'                                             algorithm != "widekernelpls")
+#' sub_pls1$n     <- factor(sub_pls1$n)
+#' sub_pls1$p     <- factor(sub_pls1$p)
+#' sub_pls1$q     <- factor(sub_pls1$q)
+#' sub_pls1$ncomp <- factor(sub_pls1$ncomp)
+#' if (exists("replications")) replications(~ package + algorithm + task + n +
+#'                                            p + ncomp, data = sub_pls1)
+#'
+#' sub_pls1_wide <- subset(external_pls_benchmarks, task == "pls1" & 
+#'                                                  algorithm == "widekernelpls")
+#' sub_pls1_wide$n     <- factor(sub_pls1_wide$n)
+#' sub_pls1_wide$p     <- factor(sub_pls1_wide$p)
+#' sub_pls1_wide$q     <- factor(sub_pls1_wide$q)
+#' sub_pls1_wide$ncomp <- factor(sub_pls1_wide$ncomp)
+#' if (exists("replications")) replications(~ package + algorithm + task + n + 
+#'                                            p + ncomp, data = sub_pls1_wide)
+#'
+#' sub_pls2 <- subset(external_pls_benchmarks, task == "pls2" & 
+#'                                             algorithm != "widekernelpls")
+#' sub_pls2$n     <- factor(sub_pls2$n)
+#' sub_pls2$p     <- factor(sub_pls2$p)
+#' sub_pls2$q     <- factor(sub_pls2$q)
+#' sub_pls2$ncomp <- factor(sub_pls2$ncomp)
+#' if (exists("replications")) replications(~ package + algorithm + task + n + 
+#'                                            p + ncomp, data = sub_pls2)
+#'
+#' sub_pls2_wide <- subset(external_pls_benchmarks, task == "pls2" & 
+#'                                                  algorithm == "widekernelpls")
+#' sub_pls2_wide$n     <- factor(sub_pls2_wide$n)
+#' sub_pls2_wide$p     <- factor(sub_pls2_wide$p)
+#' sub_pls2_wide$q     <- factor(sub_pls2_wide$q)
+#' sub_pls2_wide$ncomp <- factor(sub_pls2_wide$ncomp)
+#' if (exists("replications")) replications(~ package + algorithm + task + n + 
+#'                                            p + ncomp, data = sub_pls2_wide)
 #' }
-#' 
 NULL
 

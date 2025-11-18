@@ -2,7 +2,7 @@
 % Please edit documentation in R/pls_analysis.R
 \name{pls_bootstrap}
 \alias{pls_bootstrap}
-\title{Bootstrap confidence intervals for coefficients}
+\title{Bootstrap a PLS model}
 \usage{
 pls_bootstrap(
   X,
@@ -16,7 +16,8 @@ pls_bootstrap(
   type = c("xy", "xt"),
   parallel = c("none", "future"),
   future_seed = TRUE,
-  return_scores = FALSE
+  return_scores = FALSE,
+  ...
 )
 }
 \arguments{
@@ -36,12 +37,25 @@ pls_bootstrap(
 \item{conf}{Confidence level.}
 
 \item{seed}{Optional seed.}
+
+\item{type}{Character; bootstrap scheme, e.g. \code{"pairs"}, \code{"residual"}, or \code{"parametric"}.}
+
+\item{parallel}{Logical or character; if \code{TRUE} or one of
+\code{c("sequential", "multisession", "multicore")}, uses the future framework.}
+
+\item{future_seed}{Logical or integer; forwarded to \code{future.seed} for
+reproducible parallel streams.}
+
+\item{return_scores}{Logical; if \code{TRUE}, return component scores for each replicate
+(may be large).}
+
+\item{...}{Additional arguments forwarded to \code{\link[=pls_fit]{pls_fit()}}.}
 }
 \value{
-A list with bootstrap samples and confidence intervals.
+A list with bootstrap estimates and summaries.
 }
 \description{
-Bootstrap confidence intervals for coefficients
+Draw bootstrap replicates of a fitted PLS model, refitting on each resample.
 }
 \examples{
 set.seed(123)

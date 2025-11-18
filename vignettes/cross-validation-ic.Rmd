@@ -16,8 +16,19 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+```{r setup_ops, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.path = "figures/cv-ic-",
+  fig.width = 7,
+  fig.height = 5,
+  dpi = 150,
+  message = FALSE,
+  warning = FALSE
+)
+
+LOCAL <- identical(Sys.getenv("LOCAL"), "TRUE")
 set.seed(2025)
 ```
 
@@ -47,7 +58,7 @@ any execution plan you like before calling the helper. Below we keep the
 sequential default to avoid introducing run-time dependencies during the build
 process.
 
-```{r cv}
+```{r cv, eval=LOCAL, cache=TRUE}
 cv_res <- pls_cross_validate(X, y, ncomp = 4, folds = 6,
                              metrics = c("rmse", "r2"),
                              parallel = "none")
@@ -57,14 +68,14 @@ head(cv_res$details)
 Aggregating the metrics provides a quick overview of the predictive performance
 per number of components:
 
-```{r cv-summary}
+```{r cv-summary, eval=LOCAL, cache=TRUE}
 cv_res$summary
 ```
 
 The cross-validation table is convenient for downstream selection. For example,
 we can pick the component count that minimises the RMSE:
 
-```{r cv-select}
+```{r cv-select, eval=LOCAL, cache=TRUE}
 pls_cv_select(cv_res, metric = "rmse")
 ```
 
@@ -74,7 +85,7 @@ Information criteria complement cross-validation by trading off goodness of fit
 with model complexity. The helper `pls_information_criteria()` computes the RSS,
 RMSE, AIC and BIC across components:
 
-```{r ic}
+```{r ic, eval=LOCAL, cache=TRUE}
 fit <- pls_fit(X, y, ncomp = 4, scores = "r")
 ic_tbl <- pls_information_criteria(fit, X, y)
 ic_tbl
@@ -83,7 +94,7 @@ ic_tbl
 For convenience the wrapper `pls_select_components()` selects the best
 components according to the requested criteria:
 
-```{r ic-select}
+```{r ic-select, eval=LOCAL, cache=TRUE}
 pls_select_components(fit, X, y, criteria = c("aic", "bic"))
 ```
 

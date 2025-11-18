@@ -1,0 +1,49 @@
+#!/usr/bin/env sh
+
+# Minimal Windows configure: generate src/Makevars.win
+# - If OPENBLAS_DIR is defined and contains include/cblas.h, enable CBLAS fast path.
+# - Otherwise, use R's BLAS/LAPACK and portable Armadillo code paths.
+
+set -e
+
+PKGDIR="$(pwd)"
+OUT="${PKGDIR}/src/Makevars.win"
+
+CPPFLAGS_BASE='-DARMA_USE_CURRENT'
+CXXSTD='CXX17'
+
+CBLAS_CPPFLAGS=''
+CBLAS_LIBS=''
+USE_CBLAS=0
+
+# Detect OpenBLAS via environment variable OPENBLAS_DIR (e.g. C:/openblas)
+if [ -n "${OPENBLAS_DIR}" ] && [ -f "${OPENBLAS_DIR}/include/cblas.h" ]; then
+  USE_CBLAS=1
+  # Quote paths for spaces; Rtools' make handles quoted include/lib paths.
+  CBLAS_CPPFLAGS="-I\"${OPENBLAS_DIR}/include\" -DBIGPLSR_USE_CBLAS_SYRK"
+  CBLAS_LIBS="-L\"${OPENBLAS_DIR}/lib\" -lopenblas"
+  echo "configure.win: detected OpenBLAS at ${OPENBLAS_DIR} (enabling CBLAS SYRK path)."
+else
+  echo "configure.win: no OpenBLAS detected; building without external CBLAS."
+fi
+
+# Compose flags
+PKG_CPPFLAGS="${CPPFLAGS_BASE}"
+[ ${USE_CBLAS} -eq 1 ] && PKG_CPPFLAGS="${PKG_CPPFLAGS} ${CBLAS_CPPFLAGS}"
+
+# Always link against R's BLAS/LAPACK; add OpenBLAS if present (placed first).
+if [ ${USE_CBLAS} -eq 1 ]; then
+  PKG_LIBS="${CBLAS_LIBS} \$(LAPACK_LIBS) \$(BLAS_LIBS) \$(FLIBS)"
+else
+  PKG_LIBS="\$(LAPACK_LIBS) \$(BLAS_LIBS) \$(FLIBS)"
+fi
+
+# Write Makevars.win
+mkdir -p "${PKGDIR}/src"
+cat > "${OUT}" <<EOF
+PKG_CPPFLAGS = ${PKG_CPPFLAGS}
+PKG_LIBS = ${PKG_LIBS}
+CXX_STD = ${CXXSTD}
+EOF
+
+echo "configure.win: wrote ${OUT}"

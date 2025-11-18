@@ -12,7 +12,7 @@ using namespace Rcpp;
 #include <limits>
 #include <numeric>
 
-#include "bigmatrix_utils.hpp"   // <- use package helpers (make_matrix_output, etc.)
+#include "bigmatrix_utils.h"   // <- use package helpers (make_matrix_output, etc.)
 
 // [[Rcpp::plugins(cpp17)]]
 

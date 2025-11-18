@@ -72,7 +72,8 @@ plot_pls_vip <- function(object, comps = NULL, threshold = 1, palette = c("#4575
   invisible(vip)
 }
 
-#' Summaries for big_plsr objects
+
+#' Summarize a `big_plsr` model
 #'
 #' @param object A fitted PLS model.
 #' @param X Optional design matrix to recompute reconstruction metrics.
@@ -87,7 +88,7 @@ plot_pls_vip <- function(object, comps = NULL, threshold = 1, palette = c("#4575
 #' y <- X[, 1] - 0.5 * X[, 2] + rnorm(10, sd = 0.1)
 #' fit <- pls_fit(X, y, ncomp = 2, scores = "r")
 #' summary(fit)
-summary.big_plsr <- function(object, X = NULL, Y = NULL, ...) {
+summary.big_plsr <- function(object, ..., X = NULL, Y = NULL) {
   if (!inherits(object, "big_plsr")) {
     stop("summary.big_plsr() expects an object of class 'big_plsr'", call. = FALSE)
   }
@@ -124,9 +125,13 @@ summary.big_plsr <- function(object, X = NULL, Y = NULL, ...) {
   res
 }
 
-#' @rdname summary.big_plsr
-#' 
+#' Print a `summary.big_plsr` object
+#'
+#' @param x A `summary.big_plsr` object.
+#' @param ... Passed to lower-level print methods.
+#' @return `x`, invisibly.
 #' @export
+#' @method print summary.big_plsr
 #' @examples
 #' set.seed(123)
 #' X <- matrix(rnorm(40), nrow = 10)
@@ -223,7 +228,7 @@ plot_pls_individuals <- function(object, comps = c(1L, 2L), labels = NULL,
         if (length(x) < 3L) return()
         Sigma <- stats::cov(cbind(x, y))
         if (any(!is.finite(Sigma))) return()
-        eig <- tryCatch(stats::eigen(Sigma, symmetric = TRUE), error = function(e) NULL)
+        eig <- tryCatch(base::eigen(Sigma, symmetric = TRUE), error = function(e) NULL)
         if (is.null(eig)) return()
         vals <- pmax(eig$values, 0)
         if (all(vals == 0)) return()
@@ -392,7 +397,7 @@ plot_pls_biplot <- function(object, comps = c(1L, 2L), scale_variables = 1,
       if (length(x) < 3L) return()
       Sigma <- stats::cov(cbind(x, y))
       if (any(!is.finite(Sigma))) return()
-      eig <- tryCatch(stats::eigen(Sigma, symmetric = TRUE), error = function(e) NULL)
+      eig <- tryCatch(base::eigen(Sigma, symmetric = TRUE), error = function(e) NULL)
       if (is.null(eig)) return()
       vals <- pmax(eig$values, 0)
       if (all(vals == 0)) return()
@@ -425,7 +430,6 @@ plot_pls_biplot <- function(object, comps = c(1L, 2L), scale_variables = 1,
 #' @param object A fitted PLS model.
 #' @param X Training design matrix.
 #' @param Y Training response matrix or vector.
-#' @param criteria Character vector specifying which criteria to compute.
 #' @param max_comp Maximum number of components to consider.
 #'
 #' @return A data frame with RSS, RMSE, AIC and BIC per component.
@@ -526,12 +530,13 @@ pls_select_components <- function(object, X, Y, criteria = c("aic", "bic"), max_
   sv$v[, positive, drop = FALSE] %*%
     (t(sv$u[, positive, drop = FALSE]) / sv$d[positive])
 }
+ 
 
-#' K-fold or leave-one-out cross validation for PLS models
+#' Cross-validate PLS models
 #'
-#' @param X Predictor matrix.
-#' @param Y Response matrix or vector.
-#' @param ncomp Number of components to evaluate.
+#' @param X Predictor matrix as accepted by [pls_fit()]
+#' @param Y Response matrix or vector as accepted by [pls_fit()]
+#' @param ncomp Integer; components grid to evaluate.
 #' @param folds Number of folds (ignored when `type = "loo"`).
 #' @param type Either "kfold" (default) or "loo".
 #' @param algorithm Backend algorithm: "simpls", "nipals", "kernelpls" or
@@ -539,6 +544,9 @@ pls_select_components <- function(object, X, Y, criteria = c("aic", "bic"), max_
 #' @param backend Backend passed to [pls_fit()].
 #' @param metrics Metrics to compute (subset of "rmse", "mae", "r2").
 #' @param seed Optional seed for reproducibility.
+#' @param parallel Logical or character; same semantics as in [pls_bootstrap()].
+#' @param future_seed Logical or integer; reproducible seeds for parallel evaluation.
+#' @param ... Passed to [pls_fit()].
 #' @return A list containing per-fold metrics and their summary across folds.
 #' @export
 #' @examples
@@ -550,7 +558,8 @@ pls_cross_validate <- function(X, Y, ncomp, folds = 5L, type = c("kfold", "loo")
                                algorithm = c("simpls", "nipals", "kernelpls", 
                                              "widekernelpls"), backend = "arma",
                                metrics = c("rmse", "mae", "r2"), seed = NULL,
-                               parallel = c("none", "future"), future_seed = TRUE) {
+                               parallel = c("none", "future"), future_seed = TRUE,
+                               ...) {
   type <- match.arg(type)
   algorithm <- match.arg(algorithm)
   metrics <- unique(match.arg(metrics, choices = names(.metric_functions), several.ok = TRUE))
@@ -600,7 +609,9 @@ pls_cross_validate <- function(X, Y, ncomp, folds = 5L, type = c("kfold", "loo")
   list(details = fold_df, summary = summary_df)
 }
 
-#' Bootstrap confidence intervals for coefficients
+#' Bootstrap a PLS model
+#'
+#' Draw bootstrap replicates of a fitted PLS model, refitting on each resample.
 #'
 #' @param X Predictor matrix.
 #' @param Y Response matrix or vector.
@@ -611,7 +622,15 @@ pls_cross_validate <- function(X, Y, ncomp, folds = 5L, type = c("kfold", "loo")
 #' @param backend Backend argument passed to the fitting routine.
 #' @param conf Confidence level.
 #' @param seed Optional seed.
-#' @return A list with bootstrap samples and confidence intervals.
+#' @param type Character; bootstrap scheme, e.g. `"pairs"`, `"residual"`, or `"parametric"`.
+#' @param parallel Logical or character; if `TRUE` or one of
+#'   `c("sequential", "multisession", "multicore")`, uses the future framework.
+#' @param future_seed Logical or integer; forwarded to `future.seed` for
+#'   reproducible parallel streams.
+#' @param return_scores Logical; if `TRUE`, return component scores for each replicate
+#'   (may be large).
+#' @param ... Additional arguments forwarded to [pls_fit()].
+#' @return A list with bootstrap estimates and summaries.
 #' @export
 #' @examples
 #' set.seed(123)
@@ -622,7 +641,8 @@ pls_bootstrap <- function(X, Y, ncomp, R = 100L, algorithm = c("simpls", "nipals
                           backend = "arma", conf = 0.95, seed = NULL,
                           type = c("xy", "xt"), parallel = c("none", "future"),
                           future_seed = TRUE,
-                          return_scores = FALSE) {
+                          return_scores = FALSE,
+                          ...) {
   algorithm <- match.arg(algorithm)
   type <- match.arg(type)
   parallel <- match.arg(parallel)
@@ -643,7 +663,7 @@ pls_bootstrap <- function(X, Y, ncomp, R = 100L, algorithm = c("simpls", "nipals
     boot_chunks <- .parallel_map(resample_indices, function(idx) {
       fit <- pls_fit(Xmat[idx, , drop = FALSE], Ymat[idx, , drop = FALSE],
                      ncomp = ncomp, algorithm = algorithm, backend = backend,
-                     scores = if (isTRUE(return_scores)) "r" else "none", mode = mode)
+                     scores = if (isTRUE(return_scores)) "r" else "none", mode = mode, ...)
       coef_mat <- if (inherits(fit$coefficients, "big.matrix")) fit$coefficients[,] else as.matrix(fit$coefficients)
       scores_mat <- if (isTRUE(return_scores) && !is.null(fit$scores)) as.matrix(fit$scores) else NULL
       list(coef = coef_mat, scores = scores_mat)

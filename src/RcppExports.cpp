@@ -11,6 +11,33 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
+// cpp_dense_cross
+Rcpp::List cpp_dense_cross(Rcpp::NumericMatrix X_, Rcpp::NumericMatrix Y_, Rcpp::Nullable<Rcpp::LogicalVector> use_syrk_opt, Rcpp::Nullable<Rcpp::LogicalVector> use_dgemm_opt);
+RcppExport SEXP _bigPLSR_cpp_dense_cross(SEXP X_SEXP, SEXP Y_SEXP, SEXP use_syrk_optSEXP, SEXP use_dgemm_optSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type X_(X_SEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type Y_(Y_SEXP);
+    Rcpp::traits::input_parameter< Rcpp::Nullable<Rcpp::LogicalVector> >::type use_syrk_opt(use_syrk_optSEXP);
+    Rcpp::traits::input_parameter< Rcpp::Nullable<Rcpp::LogicalVector> >::type use_dgemm_opt(use_dgemm_optSEXP);
+    rcpp_result_gen = Rcpp::wrap(cpp_dense_cross(X_, Y_, use_syrk_opt, use_dgemm_opt));
+    return rcpp_result_gen;
+END_RCPP
+}
+// cpp_dense_scores
+Rcpp::NumericMatrix cpp_dense_scores(Rcpp::NumericMatrix X_, Rcpp::NumericVector mu_x_, Rcpp::NumericMatrix W_);
+RcppExport SEXP _bigPLSR_cpp_dense_scores(SEXP X_SEXP, SEXP mu_x_SEXP, SEXP W_SEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type X_(X_SEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type mu_x_(mu_x_SEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type W_(W_SEXP);
+    rcpp_result_gen = Rcpp::wrap(cpp_dense_scores(X_, mu_x_, W_));
+    return rcpp_result_gen;
+END_RCPP
+}
 // cpp_irls_binomial
 Rcpp::List cpp_irls_binomial(const arma::mat& T, const Rcpp::IntegerVector& ybin, Rcpp::Nullable<Rcpp::NumericVector> w_class, int maxit, double tol);
 RcppExport SEXP _bigPLSR_cpp_irls_binomial(SEXP TSEXP, SEXP ybinSEXP, SEXP w_classSEXP, SEXP maxitSEXP, SEXP tolSEXP) {
@@ -464,6 +491,8 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
+    {"_bigPLSR_cpp_dense_cross", (DL_FUNC) &_bigPLSR_cpp_dense_cross, 4},
+    {"_bigPLSR_cpp_dense_scores", (DL_FUNC) &_bigPLSR_cpp_dense_scores, 3},
     {"_bigPLSR_cpp_irls_binomial", (DL_FUNC) &_bigPLSR_cpp_irls_binomial, 5},
     {"_bigPLSR_cpp_kernel_pls", (DL_FUNC) &_bigPLSR_cpp_kernel_pls, 5},
     {"_bigPLSR_cpp_kf_pls_dense", (DL_FUNC) &_bigPLSR_cpp_kf_pls_dense, 6},

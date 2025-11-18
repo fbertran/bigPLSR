@@ -2,7 +2,7 @@
 % Please edit documentation in R/pls_analysis.R
 \name{pls_cross_validate}
 \alias{pls_cross_validate}
-\title{K-fold or leave-one-out cross validation for PLS models}
+\title{Cross-validate PLS models}
 \usage{
 pls_cross_validate(
   X,
@@ -15,15 +15,16 @@ pls_cross_validate(
   metrics = c("rmse", "mae", "r2"),
   seed = NULL,
   parallel = c("none", "future"),
-  future_seed = TRUE
+  future_seed = TRUE,
+  ...
 )
 }
 \arguments{
-\item{X}{Predictor matrix.}
+\item{X}{Predictor matrix as accepted by \code{\link[=pls_fit]{pls_fit()}}}
 
-\item{Y}{Response matrix or vector.}
+\item{Y}{Response matrix or vector as accepted by \code{\link[=pls_fit]{pls_fit()}}}
 
-\item{ncomp}{Number of components to evaluate.}
+\item{ncomp}{Integer; components grid to evaluate.}
 
 \item{folds}{Number of folds (ignored when \code{type = "loo"}).}
 
@@ -37,12 +38,18 @@ pls_cross_validate(
 \item{metrics}{Metrics to compute (subset of "rmse", "mae", "r2").}
 
 \item{seed}{Optional seed for reproducibility.}
+
+\item{parallel}{Logical or character; same semantics as in \code{\link[=pls_bootstrap]{pls_bootstrap()}}.}
+
+\item{future_seed}{Logical or integer; reproducible seeds for parallel evaluation.}
+
+\item{...}{Passed to \code{\link[=pls_fit]{pls_fit()}}.}
 }
 \value{
 A list containing per-fold metrics and their summary across folds.
 }
 \description{
-K-fold or leave-one-out cross validation for PLS models
+Cross-validate PLS models
 }
 \examples{
 set.seed(123)

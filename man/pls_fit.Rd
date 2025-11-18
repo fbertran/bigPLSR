@@ -65,6 +65,13 @@ pls_fit(
 
 \item{scores_bm}{optional existing big.matrix or descriptor for scores}
 
+\item{scores_backingfile}{Character; file name for file-backed scores (when \code{scores="big"}).}
+
+\item{scores_backingpath}{Character; directory for the file-backed scores.
+Defaults to \code{getwd()} or \code{tempdir()} in streamed predict, unless overridden.}
+
+\item{scores_descriptorfile}{Character; descriptor file name for the file-backed scores.}
+
 \item{scores_colnames}{optional character vector for score column names}
 
 \item{return_scores_descriptor}{logical; if TRUE and scores is big.matrix, add \code{$scores_descriptor}}
@@ -87,8 +94,6 @@ coefficients strictly below the threshold are set to zero via
 \item{approx_rank}{rank (columns / features) for the approximation}
 
 \item{class_weights}{optional numeric weights for classes in \code{klogitpls}}
-
-\item{scores_backingfile/backingpath/descriptorfile}{file-backed sink args}
 }
 \value{
 a list with coefficients, intercept, weights, loadings, means,

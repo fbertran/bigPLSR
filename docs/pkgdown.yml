@@ -2,18 +2,21 @@ pandoc: 3.6.3
 pkgdown: 2.1.3
 pkgdown_sha: ~
 articles:
-  auto-backend: auto-backend.html
   bigPLSR-auto-selection: bigPLSR-auto-selection.html
   bigPLSR-kpls-streaming: bigPLSR-kpls-streaming.html
   bootstrap-strategies: bootstrap-strategies.html
   cross-validation-ic: cross-validation-ic.html
   double-rkhs-pls: double-rkhs-pls.html
+  external-pls-benchmarks-long: external-pls-benchmarks-long.html
+  external-pls-benchmarks-short: external-pls-benchmarks-short.html
   kf-pls: kf-pls.html
   klogitpls: klogitpls.html
   kpls_review: kpls_review.html
+  plotting-guide: plotting-guide.html
   pls1-benchmark: pls1-benchmark.html
   pls2-benchmark: pls2-benchmark.html
-last_built: 2025-11-10T14:07Z
+  rkhs-overview: rkhs-overview.html
+last_built: 2025-11-18T01:54Z
 urls:
   reference: https://fbertran.github.io/bigPLSR/reference
   article: https://fbertran.github.io/bigPLSR/articles

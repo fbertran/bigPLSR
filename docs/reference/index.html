@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">bigPLSR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.7.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.7.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -23,6 +23,8 @@
     <li><a class="dropdown-item" href="../articles/bootstrap-strategies.html">Bootstrap strategies for bigPLSR</a></li>
     <li><a class="dropdown-item" href="../articles/cross-validation-ic.html">Cross-validation and Information Criteria in bigPLSR</a></li>
     <li><a class="dropdown-item" href="../articles/double-rkhs-pls.html">Double RKHS PLS (rkhs_xy): Theory and Usage</a></li>
+    <li><a class="dropdown-item" href="../articles/external-pls-benchmarks-long.html">External PLS benchmarks for bigPLSR: detailed analysis</a></li>
+    <li><a class="dropdown-item" href="../articles/external-pls-benchmarks-short.html">Benchmarking bigPLSR against external PLS implementations</a></li>
     <li><a class="dropdown-item" href="../articles/kf-pls.html">KF-PLS: Streaming PLS with Kalman-style updates</a></li>
     <li><a class="dropdown-item" href="../articles/klogitpls.html">Kernel Logistic PLS</a></li>
     <li><a class="dropdown-item" href="../articles/kpls_review.html">Kernel and Streaming PLS Methods in bigPLSR</a></li>
@@ -71,12 +73,6 @@
         <dd>Streamed centering statistics for RKHS kernels</dd>
       </dl><dl><dt>
 
-          <code><a href="bigmatrix-operations.html">`%*%`(<i>&lt;big.matrix&gt;</i>,<i>&lt;big.matrix&gt;</i>)</a></code> <code><a href="bigmatrix-operations.html">`%*%`(<i>&lt;matrix&gt;</i>,<i>&lt;big.matrix&gt;</i>)</a></code> <code><a href="bigmatrix-operations.html">`%*%`(<i>&lt;big.matrix&gt;</i>,<i>&lt;matrix&gt;</i>)</a></code> <code><a href="bigmatrix-operations.html">Arith(<i>&lt;big.matrix&gt;</i>,<i>&lt;big.matrix&gt;</i>)</a></code> <code><a href="bigmatrix-operations.html">Arith(<i>&lt;big.matrix&gt;</i>,<i>&lt;matrix&gt;</i>)</a></code> <code><a href="bigmatrix-operations.html">Arith(<i>&lt;matrix&gt;</i>,<i>&lt;big.matrix&gt;</i>)</a></code> <code><a href="bigmatrix-operations.html">Arith(<i>&lt;numeric&gt;</i>,<i>&lt;big.matrix&gt;</i>)</a></code> <code><a href="bigmatrix-operations.html">Arith(<i>&lt;big.matrix&gt;</i>,<i>&lt;numeric&gt;</i>)</a></code>
-
-        </dt>
-        <dd>Matrix and arithmetic operations for big.matrix objects</dd>
-      </dl><dl><dt>
-
           <code><a href="cpp_irls_binomial.html">cpp_irls_binomial()</a></code>
 
         </dt>
@@ -98,7 +94,19 @@
           <code><a href="kf_pls_state_fit.html">kf_pls_state_fit()</a></code>
 
         </dt>
-        <dd>Stateful PLS Kalman Filter</dd>
+        <dd>Finalize a KF-PLS state into a fitted model</dd>
+      </dl><dl><dt>
+
+          <code><a href="kf_pls_state_new.html">kf_pls_state_new()</a></code>
+
+        </dt>
+        <dd>KF-PLS streaming state (constructor)</dd>
+      </dl><dl><dt>
+
+          <code><a href="kf_pls_state_update.html">kf_pls_state_update()</a></code>
+
+        </dt>
+        <dd>Update a KF-PLS streaming state with a mini-batch</dd>
       </dl><dl><dt>
 
           <code><a href="plot_pls_biplot.html">plot_pls_biplot()</a></code>
@@ -140,13 +148,13 @@
           <code><a href="pls_bootstrap.html">pls_bootstrap()</a></code>
 
         </dt>
-        <dd>Bootstrap confidence intervals for coefficients</dd>
+        <dd>Bootstrap a PLS model</dd>
       </dl><dl><dt>
 
           <code><a href="pls_cross_validate.html">pls_cross_validate()</a></code>
 
         </dt>
-        <dd>K-fold or leave-one-out cross validation for PLS models</dd>
+        <dd>Cross-validate PLS models</dd>
       </dl><dl><dt>
 
           <code><a href="pls_cv_select.html">pls_cv_select()</a></code>
@@ -203,10 +211,10 @@
         <dd>Predict method for big_plsr objects</dd>
       </dl><dl><dt>
 
-          <code><a href="sim_data.html">sim_data</a></code>
+          <code><a href="print.summary.big_plsr.html">print(<i>&lt;summary.big_plsr&gt;</i>)</a></code>
 
         </dt>
-        <dd>Simulated dataset</dd>
+        <dd>Print a <code>summary.big_plsr</code> object</dd>
       </dl><dl><dt>
 
           <code><a href="summarise_pls_bootstrap.html">summarise_pls_bootstrap()</a></code>
@@ -215,10 +223,10 @@
         <dd>Summarise bootstrap estimates</dd>
       </dl><dl><dt>
 
-          <code><a href="summary.big_plsr.html">summary(<i>&lt;big_plsr&gt;</i>)</a></code> <code><a href="summary.big_plsr.html">print.summary.big_plsr()</a></code>
+          <code><a href="summary.big_plsr.html">summary(<i>&lt;big_plsr&gt;</i>)</a></code>
 
         </dt>
-        <dd>Summaries for big_plsr objects</dd>
+        <dd>Summarize a <code>big_plsr</code> model</dd>
       </dl></div>
   </main></div>
 

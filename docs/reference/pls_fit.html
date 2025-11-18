@@ -23,7 +23,7 @@ controlled by chunk_cols."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">bigPLSR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.6.8</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.7.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -34,17 +34,20 @@ controlled by chunk_cols."></head><body>
       <ul class="navbar-nav me-auto"><li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/auto-backend.html">Auto backend usage</a></li>
-    <li><a class="dropdown-item" href="../articles/bigPLSR-auto-selection.html">Automatic Algorithm Selection in bigPLSR</a></li>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/bigPLSR-auto-selection.html">Automatic Algorithm Selection in bigPLSR</a></li>
     <li><a class="dropdown-item" href="../articles/bigPLSR-kpls-streaming.html">Streaming Kernel PLS in bigPLSR: XX^T and Column-Chunked Variants</a></li>
     <li><a class="dropdown-item" href="../articles/bootstrap-strategies.html">Bootstrap strategies for bigPLSR</a></li>
     <li><a class="dropdown-item" href="../articles/cross-validation-ic.html">Cross-validation and Information Criteria in bigPLSR</a></li>
-    <li><a class="dropdown-item" href="../articles/double-rkhs-pls.html">double-rkhs-pls</a></li>
+    <li><a class="dropdown-item" href="../articles/double-rkhs-pls.html">Double RKHS PLS (rkhs_xy): Theory and Usage</a></li>
+    <li><a class="dropdown-item" href="../articles/external-pls-benchmarks-long.html">External PLS benchmarks for bigPLSR: detailed analysis</a></li>
+    <li><a class="dropdown-item" href="../articles/external-pls-benchmarks-short.html">Benchmarking bigPLSR against external PLS implementations</a></li>
     <li><a class="dropdown-item" href="../articles/kf-pls.html">KF-PLS: Streaming PLS with Kalman-style updates</a></li>
-    <li><a class="dropdown-item" href="../articles/klogitpls.html">klogitpls</a></li>
+    <li><a class="dropdown-item" href="../articles/klogitpls.html">Kernel Logistic PLS</a></li>
     <li><a class="dropdown-item" href="../articles/kpls_review.html">Kernel and Streaming PLS Methods in bigPLSR</a></li>
+    <li><a class="dropdown-item" href="../articles/plotting-guide.html">Visualising PLS Fits with bigPLSR</a></li>
     <li><a class="dropdown-item" href="../articles/pls1-benchmark.html">Benchmarking PLS1 Implementations</a></li>
     <li><a class="dropdown-item" href="../articles/pls2-benchmark.html">Benchmarking PLS2 Implementations</a></li>
+    <li><a class="dropdown-item" href="../articles/rkhs-overview.html">RKHS-based Algorithms in bigPLSR</a></li>
   </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
@@ -167,6 +170,19 @@ controlled by <code>chunk_cols</code>.</p>
 <dd><p>optional existing big.matrix or descriptor for scores</p></dd>
 
 
+<dt id="arg-scores-backingfile">scores_backingfile<a class="anchor" aria-label="anchor" href="#arg-scores-backingfile"></a></dt>
+<dd><p>Character; file name for file-backed scores (when <code>scores="big"</code>).</p></dd>
+
+
+<dt id="arg-scores-backingpath">scores_backingpath<a class="anchor" aria-label="anchor" href="#arg-scores-backingpath"></a></dt>
+<dd><p>Character; directory for the file-backed scores.
+Defaults to <code><a href="https://rdrr.io/r/base/getwd.html" class="external-link">getwd()</a></code> or <code><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir()</a></code> in streamed predict, unless overridden.</p></dd>
+
+
+<dt id="arg-scores-descriptorfile">scores_descriptorfile<a class="anchor" aria-label="anchor" href="#arg-scores-descriptorfile"></a></dt>
+<dd><p>Character; descriptor file name for the file-backed scores.</p></dd>
+
+
 <dt id="arg-scores-colnames">scores_colnames<a class="anchor" aria-label="anchor" href="#arg-scores-colnames"></a></dt>
 <dd><p>optional character vector for score column names</p></dd>
 
@@ -208,10 +224,6 @@ coefficients strictly below the threshold are set to zero via
 
 <dt id="arg-class-weights">class_weights<a class="anchor" aria-label="anchor" href="#arg-class-weights"></a></dt>
 <dd><p>optional numeric weights for classes in <code>klogitpls</code></p></dd>
-
-
-<dt id="arg-scores-backingfile-backingpath-descriptorfile">scores_backingfile/backingpath/descriptorfile<a class="anchor" aria-label="anchor" href="#arg-scores-backingfile-backingpath-descriptorfile"></a></dt>
-<dd><p>file-backed sink args</p></dd>
 
 </dl></div>
     <div class="section level2">

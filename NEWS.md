@@ -1,3 +1,14 @@
+# bigPLSR 0.7.1
+
+* New tuning option: `options(bigPLSR.stream.block_align = 8192L)`. All streamed
+  backends (bigmem SIMPLS, streamed scores, RKHS/klogitpls Gram passes, and
+  bigmem predict) round their `chunk_size` *up* to a multiple of this alignment,
+  then clamp to the available number of rows. Typical sweet spots are 4096–16384
+  on modern CPUs.
+* If you always need scores on disk, prefer `scores = "big"` to avoid large R
+  dense allocations; it streams directly into a `big.matrix`.
+* Added benchmarks results and analysis as two vignettes.
+
 # bigPLSR 0.7.0
 
 * Added `plot_pls_bootstrap_scores()` and group-aware ellipses for

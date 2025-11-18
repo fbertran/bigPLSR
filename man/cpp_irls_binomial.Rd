@@ -9,7 +9,7 @@ cpp_irls_binomial(T, ybin, w_class = NULL, maxit = 50L, tol = 1e-08)
 \arguments{
 \item{T}{n x A numeric matrix of latent scores (no intercept column)}
 
-\item{ybin}{integer vector of {0,1} labels (length n)}
+\item{ybin}{integer vector of \{0,1\} labels (length n)}
 
 \item{w_class}{optional length-2 numeric vector: weights for classes c( w0, w1 )}
 

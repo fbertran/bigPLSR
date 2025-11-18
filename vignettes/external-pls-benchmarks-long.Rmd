@@ -1,0 +1,362 @@
+---
+title: "External PLS benchmarks for bigPLSR: detailed analysis"
+shorttitle: "External PLS benchmarks for bigPLSR: detailed analysis"
+author:
+- name: "Frédéric Bertrand"
+  affiliation:
+  - Cedric, Cnam, Paris
+  email: frederic.bertrand@lecnam.net
+date: "`r Sys.Date()`"
+output:
+  rmarkdown::html_vignette:
+    toc: true
+vignette: >
+  %\VignetteIndexEntry{External PLS benchmarks for bigPLSR: detailed analysis}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment  = "#>",
+  fig.path = "figures/benchmark-long-",
+  fig.width  = 6.5,
+  fig.height = 4.5,
+  dpi = 150,
+  message = FALSE,
+  warning = FALSE
+)
+
+LOCAL <- identical(Sys.getenv("LOCAL"), "TRUE")
+```
+
+## Introduction
+
+This vignette presents a more detailed analysis of the external benchmarks
+stored in `external_pls_benchmarks`. The dataset compares `bigPLSR` dense
+and streaming implementations to reference PLS implementations available
+in other R packages.
+
+The analysis is organised as follows.
+
+* Section on the benchmark design and the structure of the dataset.
+* Section on PLS1 behaviour, with emphasis on runtime and memory.
+* Section on PLS2 behaviour, including wide response settings.
+* Section comparing kernel based algorithms and wide kernel PLS.
+* Short discussion and take home messages.
+
+The code chunks are meant to be reproducible and can be adapted if you
+update or extend the benchmark dataset.
+
+## Benchmark design and data structure
+
+```{r, eval=LOCAL, cache=TRUE}
+library(bigPLSR)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(forcats)
+
+data("external_pls_benchmarks", package = "bigPLSR")
+
+head(external_pls_benchmarks)
+```
+
+The key factors are:
+
+* `task`: PLS1 versus PLS2,
+* `algorithm`: SIMPLS, NIPALS, kernel PLS or wide kernel PLS,
+* `package`: implementation provider,
+* `n`, `p`, `q`: data dimensions,
+* `ncomp`: number of extracted components.
+
+The performance measures are:
+
+* `median_time_s` and `itr_per_sec` for runtime,
+* `mem_alloc_bytes` for memory consumption as reported by `bench::mark`.
+
+For the analyses below it is convenient to add a few helper variables.
+
+```{r, eval=LOCAL, cache=TRUE}
+bench <- external_pls_benchmarks %>%
+  mutate(
+    mem_mib      = mem_alloc_bytes / 1024^2,
+    log_time     = log10(median_time_s),
+    log_mem_mib  = log10(pmax(mem_mib, 1e-6)),
+    impl         = paste(package, algorithm, sep = "::")
+  )
+```
+
+We will often work conditionally on `task`, `n`, `p`, `q` and `ncomp` in order
+to compare implementations on exactly the same configurations.
+
+## PLS1: dense versus streaming
+
+### Fixed size, varying number of components
+
+We first focus on PLS1 problems and fix a representative data size. You can
+adjust the selection below depending on the contents of your benchmark runs.
+
+```{r, eval=LOCAL, cache=TRUE}
+pls1_sizes <- bench %>%
+  filter(task == "pls1") %>%
+  count(n, p, q, sort = TRUE)
+
+pls1_sizes
+```
+
+For illustration we take the most frequent `(n, p, q)` triple and look at
+runtime as a function of `ncomp`.
+
+```{r, eval=LOCAL, cache=TRUE}
+size_pls1 <- pls1_sizes %>% slice(1L) %>% select(n, p, q)
+
+pls1_subset <- bench %>%
+  semi_join(size_pls1, by = c("n", "p", "q")) %>%
+  filter(task == "pls1")
+```
+
+```{r, eval=LOCAL, cache=TRUE}
+ggplot(pls1_subset,
+       aes(x = ncomp, y = median_time_s,
+           colour = package, linetype = algorithm)) +
+  geom_line() +
+  geom_point() +
+  scale_y_log10() +
+  labs(
+    x = "Number of components",
+    y = "Median runtime (seconds, log scale)",
+    title = "PLS1: fixed data size, varying components"
+  ) +
+  theme_minimal()
+```
+
+```{r, eval=LOCAL, cache=TRUE}
+ggplot(pls1_subset,
+       aes(x = ncomp, y = mem_mib,
+           colour = package, linetype = algorithm)) +
+  geom_line() +
+  geom_point() +
+  labs(
+    x = "Number of components",
+    y = "Memory allocated (MiB)",
+    title = "PLS1: fixed data size, memory behaviour"
+  ) +
+  theme_minimal()
+```
+
+These plots allow you to compare how dense `bigPLSR` backends and competitors
+scale as the number of latent components increases, without mixing problem
+sizes.
+
+### Relative speed and memory ratios
+
+To better understand the relative behaviour we compute ratios with respect
+to a chosen reference implementation, for example `pls::simpls` when it is
+available in the dataset.
+
+```{r, eval=LOCAL, cache=TRUE}
+reference_impl <- "pls::simpls"
+
+## 1) Reference rows for pls1
+refs_pls1 <- bench %>%
+  filter(task == "pls1", impl == reference_impl) %>%
+  select(
+    n, p, q, ncomp,
+    time_ref = median_time_s,
+    mem_ref  = mem_mib
+  )
+
+## 2) Join and compute ratios (only where a reference exists)
+ratios_pls1 <- bench %>%
+  filter(task == "pls1") %>%
+  left_join(refs_pls1, by = c("n", "p", "q", "ncomp")) %>%
+  filter(!is.na(time_ref), !is.na(mem_ref)) %>%
+  mutate(
+    rel_time = median_time_s / time_ref,
+    rel_mem  = mem_mib      / mem_ref
+  )
+
+ggplot(ratios_pls1,
+       aes(x = impl, y = rel_time)) +
+  geom_hline(yintercept = 1, linetype = "dashed", colour = "grey50") +
+  geom_boxplot() +
+  coord_flip() +
+  scale_y_log10() +
+  labs(
+    x = "Implementation",
+    y = "Runtime ratio vs reference (log scale)",
+    title = "PLS1: runtime ratios relative to pls::simpls"
+  ) +
+  theme_minimal()
+```
+
+```{r, eval=LOCAL, cache=TRUE}
+ggplot(ratios_pls1,
+       aes(x = impl, y = rel_mem)) +
+  geom_hline(yintercept = 1, linetype = "dashed", colour = "grey50") +
+  geom_boxplot() +
+  coord_flip() +
+  scale_y_log10() +
+  labs(
+    x = "Implementation",
+    y = "Memory ratio vs reference (log scale)",
+    title = "PLS1: memory ratios relative to pls::simpls"
+  ) +
+  theme_minimal()
+```
+
+These figures help to answer questions such as:
+
+* How close is dense `bigPLSR` SIMPLS to classical implementations in terms
+  of runtime for a given problem regime.
+* For which domains the big memory streaming backends give substantial memory
+  savings relative to fully dense algorithms.
+
+## PLS2: multiple responses
+
+### Fixed size, varying number of components
+
+We now repeat the same type of analysis for PLS2 configurations.
+
+```{r, eval=LOCAL, cache=TRUE}
+pls2_sizes <- bench %>%
+  filter(task == "pls2") %>%
+  count(n, p, q, sort = TRUE)
+
+pls2_sizes
+```
+
+```{r, eval=LOCAL, cache=TRUE}
+size_pls2 <- pls2_sizes %>% slice(1L) %>% select(n, p, q)
+
+pls2_subset <- bench %>%
+  semi_join(size_pls2, by = c("n", "p", "q")) %>%
+  filter(task == "pls2")
+```
+
+```{r, eval=LOCAL, cache=TRUE}
+ggplot(pls2_subset,
+       aes(x = ncomp, y = median_time_s,
+           colour = package, linetype = algorithm)) +
+  geom_line() +
+  geom_point() +
+  scale_y_log10() +
+  labs(
+    x = "Number of components",
+    y = "Median runtime (seconds, log scale)",
+    title = "PLS2: fixed data size, varying components"
+  ) +
+  theme_minimal()
+```
+
+```{r, eval=LOCAL, cache=TRUE}
+ggplot(pls2_subset,
+       aes(x = ncomp, y = mem_mib,
+           colour = package, linetype = algorithm)) +
+  geom_line() +
+  geom_point() +
+  labs(
+    x = "Number of components",
+    y = "Memory allocated (MiB)",
+    title = "PLS2: fixed data size, memory behaviour"
+  ) +
+  theme_minimal()
+```
+
+### Influence of the number of responses
+
+When `q` grows, some implementations may move from a predictor limited regime
+to a response limited regime. The dataset allows you to explore this by
+fixing `n` and `p` and varying `q`.
+
+```{r, eval=LOCAL, cache=TRUE}
+pls2_q_grid <- bench %>%
+  filter(task == "pls2") %>%
+  count(n, p, q, sort = TRUE)
+
+head(pls2_q_grid)
+```
+
+You can adapt the following code to one or several grids of interest.
+
+```{r, eval=LOCAL, cache=TRUE}
+grid_example <- pls2_q_grid %>%
+  slice(1L) %>%
+  select(n, p)
+
+pls2_q_subset <- bench %>%
+  semi_join(grid_example, by = c("n", "p")) %>%
+  filter(task == "pls2", ncomp == max(ncomp))
+
+ggplot(pls2_q_subset,
+       aes(x = q, y = median_time_s,
+           colour = package, linetype = algorithm)) +
+  geom_line() +
+  geom_point() +
+  scale_y_log10() +
+  labs(
+    x = "Number of responses q",
+    y = "Median runtime (seconds, log scale)",
+    title = "PLS2: influence of q at fixed n and p"
+  ) +
+  theme_minimal()
+```
+
+## Kernel and wide kernel PLS
+
+Kernel based algorithms are available in both dense and wide kernel flavours.
+They are often more sensitive to the number of observations than linear PLS,
+because they rely on Gram matrices of size `n x n`.
+
+Here we restrict the dataset to kernel based algorithms for visual clarity.
+
+```{r, eval=LOCAL, cache=TRUE}
+bench_kernel <- bench %>%
+  filter(algorithm %in% c("kernelpls", "widekernelpls"))
+```
+
+Example plot for PLS1:
+
+```{r, eval=LOCAL, cache=TRUE}
+kern_pls1 <- bench_kernel %>% filter(task == "pls1")
+
+ggplot(kern_pls1,
+       aes(x = n, y = median_time_s,
+           colour = package, linetype = algorithm)) +
+  geom_line() +
+  geom_point() +
+  scale_y_log10() +
+  labs(
+    x = "Number of observations n",
+    y = "Median runtime (seconds, log scale)",
+    title = "Kernel PLS1: scaling with n"
+  ) +
+  theme_minimal()
+```
+
+You can build similar plots for memory and for the PLS2 task. They make it
+easy to check whether kernel implementations scale in the expected way for
+your data regimes.
+
+## Discussion and practical guidance
+
+The figures in this vignette illustrate a few practical messages.
+
+* On moderate dense problems where `n` and `p` fit comfortably in memory,
+  `bigPLSR` dense SIMPLS can be used as a drop in alternative to classical
+  PLS implementations. Runtime is usually close in practice and the code
+  keeps the possibility of switching to streaming if required later.
+* On large sample sizes, the big memory streaming backends avoid allocating
+  dense score matrices when `scores = "none"` and keep memory bounded with
+  respect to `n`. This is particularly relevant for PLS2 and kernel based
+  methods.
+* Kernel PLS algorithms may benefit from careful choice of kernel parameters
+  and from backends that reduce the memory footprint of `n x n` Gram
+  matrices. The design of `bigPLSR` keeps these extensions in mind.
+
+The benchmark dataset is part of the package so that the evidence behind
+these statements remains transparent and reproducible. You can extend the
+benchmarks with your own tasks and regenerate the figures by simply adding
+rows to `external_pls_benchmarks`.
