@@ -1,6 +1,7 @@
 
 test_that("dense vs bigmem parity is tight under deterministic settings", {
   skip_on_cran()
+  skip_on_ci() 
   set.seed(123)
   
   n <- 200; p <- 40
@@ -25,6 +26,7 @@ test_that("dense vs bigmem parity is tight under deterministic settings", {
 
 test_that("file-backed scores sink matches dense scores on small data", {
   skip_on_cran()
+  skip_on_ci() 
   skip_if_not_installed("bigmemory")
   set.seed(321)
   

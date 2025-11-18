@@ -259,8 +259,8 @@ plot_pls_individuals <- function(object, comps = c(1L, 2L), labels = NULL,
 #'
 #' @param object A fitted PLS model.
 #' @param comps Components to display (length two).
-#' @param circle Logical; draw the correlation circle.
-#' @param circle_col Colour of the correlation circle.
+#' @param circle Logical; draw the unit circle.
+#' @param circle_col Colour of the unit circle.
 #' @param arrow_col Colour of the variable arrows.
 #' @param arrow_scale Scaling applied to variable vectors.
 #' @param ... Additional plotting parameters passed to [graphics::plot()].
@@ -310,8 +310,8 @@ plot_pls_variables <- function(object, comps = c(1L, 2L), circle = TRUE,
 #' @param object A fitted PLS model with scores and loadings.
 #' @param comps Components to display.
 #' @param scale_variables Scaling factor applied to variable loadings.
-#' @param circle Logical; draw a correlation circle behind loadings.
-#' @param circle_col Colour of the circle guide.
+#' @param circle Logical; draw a unit circle behind loadings.
+#' @param circle_col Colour of the unit circle guide.
 #' @param arrow_col Colour for loading arrows.
 #' @param groups Optional factor or character vector defining groups for
 #'   individuals. When supplied, group-specific colours are used and, if

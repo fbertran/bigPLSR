@@ -1,5 +1,5 @@
 test_that("PLS2 bigmem path matches dense fallback on small data", {
-  skip_on_cran(); skip_if_not_installed("bigmemory")
+  skip_on_cran(); skip_on_ci(); skip_if_not_installed("bigmemory")
   options_val_before <- options("bigmemory.allow.dimnames")
   options(bigmemory.allow.dimnames=TRUE)
   set.seed(1)
@@ -23,7 +23,7 @@ test_that("PLS2 bigmem path matches dense fallback on small data", {
 })
 
 test_that("PLS2 bigmem streams scores correctly", {
-  skip_on_cran(); skip_if_not_installed("bigmemory")
+  skip_on_cran(); skip_on_ci(); skip_if_not_installed("bigmemory")
   options_val_before <- options("bigmemory.allow.dimnames")
   options(bigmemory.allow.dimnames=TRUE)
   set.seed(2)

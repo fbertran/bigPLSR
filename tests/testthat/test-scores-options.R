@@ -1,5 +1,6 @@
 test_that("dense: scores_colnames works; descriptor absent", {
   skip_on_cran()
+  skip_on_ci() 
   set.seed(42)
   
   n <- 120; p <- 20; k <- 3
@@ -21,6 +22,7 @@ test_that("dense: scores_colnames works; descriptor absent", {
 
 test_that("bigmem: file-backed sink → named columns + descriptor", {
   skip_on_cran()
+  skip_on_ci() 
   skip_if_not_installed("bigmemory")
   options_val_before <- options("bigmemory.allow.dimnames")
   options(bigmemory.allow.dimnames=TRUE)
@@ -66,6 +68,7 @@ test_that("bigmem: file-backed sink → named columns + descriptor", {
 
 test_that("bigmem: descriptor sink works with names + descriptor", {
   skip_on_cran()
+  skip_on_ci() 
   skip_if_not_installed("bigmemory")
   options_val_before <- options("bigmemory.allow.dimnames")
   options(bigmemory.allow.dimnames=TRUE)

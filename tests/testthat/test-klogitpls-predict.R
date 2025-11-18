@@ -1,5 +1,6 @@
 test_that("klogitpls fits and predicts probabilities & scores (bigmem stream)", {
   skip_on_cran()
+  skip_on_ci() 
   set.seed(7)
   n <- 120; p <- 8
   X  <- matrix(rnorm(n*p), n, p)

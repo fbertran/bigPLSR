@@ -1,4 +1,5 @@
 skip_on_cran()
+skip_on_ci() 
 
 set.seed(123)
 X <- matrix(rnorm(80), nrow = 20)

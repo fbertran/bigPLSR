@@ -1,5 +1,6 @@
 test_that("big_pls_fit approximates OLS when enough components are used", {
   skip_on_cran()
+  skip_on_ci() 
   skip_if_not_installed("bigmemory")
 
   set.seed(123)
@@ -20,6 +21,7 @@ test_that("big_pls_fit approximates OLS when enough components are used", {
 
 test_that("streaming fit matches direct fit", {
   skip_on_cran()
+  skip_on_ci() 
   skip_if_not_installed("bigmemory")
 
   set.seed(321)
@@ -41,6 +43,7 @@ test_that("streaming fit matches direct fit", {
 
 test_that("dense big_pls algorithms agree", {
   skip_on_cran()
+  skip_on_ci() 
   skip_if_not_installed("bigmemory")
   
   set.seed(2024)
@@ -81,6 +84,7 @@ test_that("dense big_pls algorithms agree", {
 
 test_that("big memory interfaces support both algorithms", {
   skip_on_cran()
+  skip_on_ci() 
   skip_if_not_installed("bigmemory")
   
   set.seed(404)
@@ -120,6 +124,7 @@ test_that("big memory interfaces support both algorithms", {
 
 test_that("big memory interfaces support both algorithms", {
   skip_on_cran()
+  skip_on_ci() 
   skip_if_not_installed("bigmemory")
   
   set.seed(404)

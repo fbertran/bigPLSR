@@ -3,7 +3,7 @@
 
 
 
-# bigPLSR, PLS regression models in R <img src="man/figures/logo_bigPLSR.svg" align="right" width="200"/>
+# bigPLSR, PLS Regression Models with Big Matrices <img src="man/figures/logo_bigPLSR.svg" align="right" width="200"/>
 
 ## Frédéric Bertrand and Myriam Maumy
 
@@ -23,7 +23,7 @@ Both **PLS1** (single response) and **PLS2** (multi-response) are supported. PLS
 Recent updates bring additional solvers and tooling:
 
 - **Kernel PLS** and **wide kernel PLS** are available alongside SIMPLS/NIPALS.
-- Plot helpers now include correlation circles, loading arrows and VIP bar charts.
+- Plot helpers now include unit circles, loading arrows and VIP bar charts.
 - New wrappers simplify prediction, information-criteria based component selection,
   cross-validation and bootstrapping workflows.
 - **Kalman-filter PLS** and **double RKHS** solvers extend the modelling

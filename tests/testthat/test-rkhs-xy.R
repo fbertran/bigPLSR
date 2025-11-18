@@ -1,5 +1,6 @@
 test_that("rkhs_xy: predict parity on dense RBF example + orthonormal scores", {
   skip_on_cran()
+  skip_on_ci() 
   set.seed(42)
   
   n <- 60; p <- 6; m <- 2

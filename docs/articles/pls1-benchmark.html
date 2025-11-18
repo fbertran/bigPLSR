@@ -38,6 +38,8 @@
     <li><a class="dropdown-item" href="../articles/bootstrap-strategies.html">Bootstrap strategies for bigPLSR</a></li>
     <li><a class="dropdown-item" href="../articles/cross-validation-ic.html">Cross-validation and Information Criteria in bigPLSR</a></li>
     <li><a class="dropdown-item" href="../articles/double-rkhs-pls.html">Double RKHS PLS (rkhs_xy): Theory and Usage</a></li>
+    <li><a class="dropdown-item" href="../articles/external-pls-benchmarks-long.html">External PLS benchmarks for bigPLSR: detailed analysis</a></li>
+    <li><a class="dropdown-item" href="../articles/external-pls-benchmarks-short.html">Benchmarking bigPLSR against external PLS implementations</a></li>
     <li><a class="dropdown-item" href="../articles/kf-pls.html">KF-PLS: Streaming PLS with Kalman-style updates</a></li>
     <li><a class="dropdown-item" href="../articles/klogitpls.html">Kernel Logistic PLS</a></li>
     <li><a class="dropdown-item" href="../articles/kpls_review.html">Kernel and Streaming PLS Methods in bigPLSR</a></li>
@@ -75,7 +77,7 @@ Bertrand</h4>
 Paris<br><a class="author_email" href="mailto:#"></a><a href="mailto:frederic.bertrand@lecnam.net" class="email">frederic.bertrand@lecnam.net</a>
       </address>
                   
-            <h4 data-toc-skip class="date">2025-11-13</h4>
+            <h4 data-toc-skip class="date">2025-11-18</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/fbertran/bigPLSR/blob/HEAD/vignettes/pls1-benchmark.Rmd" class="external-link"><code>vignettes/pls1-benchmark.Rmd</code></a></small>
       <div class="d-none name"><code>pls1-benchmark.Rmd</code></div>
@@ -202,8 +204,25 @@ packages. The dataset was generated with the helper script stored in
 <span><span class="va">sub_pls1</span><span class="op">$</span><span class="va">q</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="va">sub_pls1</span><span class="op">$</span><span class="va">q</span><span class="op">)</span></span>
 <span><span class="va">sub_pls1</span><span class="op">$</span><span class="va">ncomp</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="va">sub_pls1</span><span class="op">$</span><span class="va">ncomp</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/stats/replications.html" class="external-link">replications</a></span><span class="op">(</span><span class="op">~</span><span class="va">package</span><span class="op">+</span><span class="va">algorithm</span><span class="op">+</span><span class="va">task</span><span class="op">+</span><span class="va">n</span><span class="op">+</span><span class="va">p</span><span class="op">+</span><span class="va">ncomp</span>,data<span class="op">=</span><span class="va">sub_pls1</span><span class="op">)</span></span>
-<span><span class="co">#&gt;   package algorithm      task         n         p     ncomp </span></span>
-<span><span class="co">#&gt;        18        24        72        36        36        24</span></span>
+<span><span class="co">#&gt; $package</span></span>
+<span><span class="co">#&gt; [1] 24</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; $algorithm</span></span>
+<span><span class="co">#&gt; [1] 32</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; $task</span></span>
+<span><span class="co">#&gt; [1] 96</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; $n</span></span>
+<span><span class="co">#&gt; [1] 48</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; $p</span></span>
+<span><span class="co">#&gt; [1] 48</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; $ncomp</span></span>
+<span><span class="co">#&gt; ncomp</span></span>
+<span><span class="co">#&gt;   1   3  10 100 </span></span>
+<span><span class="co">#&gt;  24  24  36  12</span></span>
 <span></span>
 <span><span class="va">sub_pls1_wide</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/subset.html" class="external-link">subset</a></span><span class="op">(</span><span class="va">external_pls_benchmarks</span>,<span class="va">external_pls_benchmarks</span><span class="op">$</span><span class="va">task</span><span class="op">==</span><span class="st">"pls1"</span> <span class="op">&amp;</span> <span class="va">algorithm</span><span class="op">==</span><span class="st">"widekernelpls"</span><span class="op">)</span></span>
 <span><span class="va">sub_pls1_wide</span><span class="op">$</span><span class="va">n</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="va">sub_pls1_wide</span><span class="op">$</span><span class="va">n</span><span class="op">)</span></span>
@@ -211,8 +230,25 @@ packages. The dataset was generated with the helper script stored in
 <span><span class="va">sub_pls1_wide</span><span class="op">$</span><span class="va">q</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="va">sub_pls1_wide</span><span class="op">$</span><span class="va">q</span><span class="op">)</span></span>
 <span><span class="va">sub_pls1_wide</span><span class="op">$</span><span class="va">ncomp</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="va">sub_pls1_wide</span><span class="op">$</span><span class="va">ncomp</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/stats/replications.html" class="external-link">replications</a></span><span class="op">(</span><span class="op">~</span><span class="va">package</span><span class="op">+</span><span class="va">algorithm</span><span class="op">+</span><span class="va">task</span><span class="op">+</span><span class="va">n</span><span class="op">+</span><span class="va">p</span><span class="op">+</span><span class="va">ncomp</span>,data<span class="op">=</span><span class="va">sub_pls1_wide</span><span class="op">)</span></span>
-<span><span class="co">#&gt;   package algorithm      task         n         p     ncomp </span></span>
-<span><span class="co">#&gt;         6        24        24        12        12         8</span></span>
+<span><span class="co">#&gt; $package</span></span>
+<span><span class="co">#&gt; [1] 8</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; $algorithm</span></span>
+<span><span class="co">#&gt; [1] 32</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; $task</span></span>
+<span><span class="co">#&gt; [1] 32</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; $n</span></span>
+<span><span class="co">#&gt; [1] 16</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; $p</span></span>
+<span><span class="co">#&gt; [1] 16</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; $ncomp</span></span>
+<span><span class="co">#&gt; ncomp</span></span>
+<span><span class="co">#&gt;   1   3  10 100 </span></span>
+<span><span class="co">#&gt;   8   8  12   4</span></span>
 <span></span>
 <span><span class="va">sub_pls2</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/subset.html" class="external-link">subset</a></span><span class="op">(</span><span class="va">external_pls_benchmarks</span>,<span class="va">external_pls_benchmarks</span><span class="op">$</span><span class="va">task</span><span class="op">==</span><span class="st">"pls2"</span> <span class="op">&amp;</span> <span class="op">!</span><span class="va">algorithm</span><span class="op">==</span><span class="st">"widekernelpls"</span><span class="op">)</span></span>
 <span><span class="va">sub_pls2</span><span class="op">$</span><span class="va">n</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="va">sub_pls2</span><span class="op">$</span><span class="va">n</span><span class="op">)</span></span>
@@ -220,8 +256,25 @@ packages. The dataset was generated with the helper script stored in
 <span><span class="va">sub_pls2</span><span class="op">$</span><span class="va">q</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="va">sub_pls2</span><span class="op">$</span><span class="va">q</span><span class="op">)</span></span>
 <span><span class="va">sub_pls2</span><span class="op">$</span><span class="va">ncomp</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="va">sub_pls2</span><span class="op">$</span><span class="va">ncomp</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/stats/replications.html" class="external-link">replications</a></span><span class="op">(</span><span class="op">~</span><span class="va">package</span><span class="op">+</span><span class="va">algorithm</span><span class="op">+</span><span class="va">task</span><span class="op">+</span><span class="va">n</span><span class="op">+</span><span class="va">p</span><span class="op">+</span><span class="va">ncomp</span>,data<span class="op">=</span><span class="va">sub_pls2</span><span class="op">)</span></span>
-<span><span class="co">#&gt;   package algorithm      task         n         p     ncomp </span></span>
-<span><span class="co">#&gt;        36        48       144        72        72        48</span></span>
+<span><span class="co">#&gt; $package</span></span>
+<span><span class="co">#&gt; [1] 48</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; $algorithm</span></span>
+<span><span class="co">#&gt; [1] 64</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; $task</span></span>
+<span><span class="co">#&gt; [1] 192</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; $n</span></span>
+<span><span class="co">#&gt; [1] 96</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; $p</span></span>
+<span><span class="co">#&gt; [1] 96</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; $ncomp</span></span>
+<span><span class="co">#&gt; ncomp</span></span>
+<span><span class="co">#&gt;  1  3 10 </span></span>
+<span><span class="co">#&gt; 48 48 96</span></span>
 <span></span>
 <span><span class="va">sub_pls2_wide</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/subset.html" class="external-link">subset</a></span><span class="op">(</span><span class="va">external_pls_benchmarks</span>,<span class="va">external_pls_benchmarks</span><span class="op">$</span><span class="va">task</span><span class="op">==</span><span class="st">"pls2"</span> <span class="op">&amp;</span> <span class="va">algorithm</span><span class="op">==</span><span class="st">"widekernelpls"</span><span class="op">)</span></span>
 <span><span class="va">sub_pls2_wide</span><span class="op">$</span><span class="va">n</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="va">sub_pls2_wide</span><span class="op">$</span><span class="va">n</span><span class="op">)</span></span>
@@ -229,98 +282,139 @@ packages. The dataset was generated with the helper script stored in
 <span><span class="va">sub_pls2_wide</span><span class="op">$</span><span class="va">q</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="va">sub_pls2_wide</span><span class="op">$</span><span class="va">q</span><span class="op">)</span></span>
 <span><span class="va">sub_pls2_wide</span><span class="op">$</span><span class="va">ncomp</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="va">sub_pls2_wide</span><span class="op">$</span><span class="va">ncomp</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/stats/replications.html" class="external-link">replications</a></span><span class="op">(</span><span class="op">~</span><span class="va">package</span><span class="op">+</span><span class="va">algorithm</span><span class="op">+</span><span class="va">task</span><span class="op">+</span><span class="va">n</span><span class="op">+</span><span class="va">p</span><span class="op">+</span><span class="va">ncomp</span>,data<span class="op">=</span><span class="va">sub_pls2_wide</span><span class="op">)</span></span>
-<span><span class="co">#&gt;   package algorithm      task         n         p     ncomp </span></span>
-<span><span class="co">#&gt;        12        48        48        24        24        16</span></span></code></pre></div>
+<span><span class="co">#&gt; $package</span></span>
+<span><span class="co">#&gt; [1] 16</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; $algorithm</span></span>
+<span><span class="co">#&gt; [1] 64</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; $task</span></span>
+<span><span class="co">#&gt; [1] 64</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; $n</span></span>
+<span><span class="co">#&gt; [1] 32</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; $p</span></span>
+<span><span class="co">#&gt; [1] 32</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; $ncomp</span></span>
+<span><span class="co">#&gt; ncomp</span></span>
+<span><span class="co">#&gt;  1  3 10 </span></span>
+<span><span class="co">#&gt; 16 16 32</span></span></code></pre></div>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">sub_pls1</span></span>
 <span><span class="co">#&gt;     task algorithm            package median_time_s  itr_per_sec</span></span>
-<span><span class="co">#&gt; 1   pls1    simpls      bigPLSR_dense  0.0067246150  148.0232093</span></span>
-<span><span class="co">#&gt; 2   pls1    simpls bigPLSR_big.memory  0.0036029980  277.7090750</span></span>
-<span><span class="co">#&gt; 3   pls1    simpls                pls  0.0022770375  437.1897736</span></span>
-<span><span class="co">#&gt; 4   pls1    simpls           mixOmics  0.0044901560  222.5633281</span></span>
-<span><span class="co">#&gt; 5   pls1 kernelpls      bigPLSR_dense  0.0489712611   18.4018038</span></span>
-<span><span class="co">#&gt; 6   pls1 kernelpls bigPLSR_big.memory  0.0005245131 1908.9476574</span></span>
-<span><span class="co">#&gt; 7   pls1 kernelpls                pls  0.0021272850  358.4499622</span></span>
-<span><span class="co">#&gt; 8   pls1 kernelpls           mixOmics  0.0047856634  168.7496829</span></span>
-<span><span class="co">#&gt; 13  pls1    nipals      bigPLSR_dense  0.0007314811 1205.3254563</span></span>
-<span><span class="co">#&gt; 14  pls1    nipals bigPLSR_big.memory  0.0063339670  155.1675479</span></span>
-<span><span class="co">#&gt; 15  pls1    nipals                pls  0.0022903420  434.8982218</span></span>
-<span><span class="co">#&gt; 16  pls1    nipals           mixOmics  0.0043836380  227.8532589</span></span>
-<span><span class="co">#&gt; 17  pls1    simpls      bigPLSR_dense  0.0065849486  151.6776964</span></span>
-<span><span class="co">#&gt; 18  pls1    simpls bigPLSR_big.memory  0.0035743800  278.8872263</span></span>
-<span><span class="co">#&gt; 19  pls1    simpls                pls  0.0026474111  377.1385860</span></span>
-<span><span class="co">#&gt; 20  pls1    simpls           mixOmics  0.0079937701  125.1715709</span></span>
-<span><span class="co">#&gt; 21  pls1 kernelpls      bigPLSR_dense  0.0453674431   22.0422385</span></span>
-<span><span class="co">#&gt; 22  pls1 kernelpls bigPLSR_big.memory  0.0011308210  865.1415443</span></span>
-<span><span class="co">#&gt; 23  pls1 kernelpls                pls  0.0026473495  374.7793386</span></span>
-<span><span class="co">#&gt; 24  pls1 kernelpls           mixOmics  0.0082481339  120.5571369</span></span>
-<span><span class="co">#&gt; 29  pls1    nipals      bigPLSR_dense  0.0016668550  592.5614418</span></span>
-<span><span class="co">#&gt; 30  pls1    nipals bigPLSR_big.memory  0.0066213361  147.4796798</span></span>
-<span><span class="co">#&gt; 31  pls1    nipals                pls  0.0033974855  289.7519881</span></span>
-<span><span class="co">#&gt; 32  pls1    nipals           mixOmics  0.0083244351  120.0403884</span></span>
-<span><span class="co">#&gt; 33  pls1    simpls      bigPLSR_dense  0.0067931670  146.1966203</span></span>
-<span><span class="co">#&gt; 34  pls1    simpls bigPLSR_big.memory  0.0036683520  266.7412212</span></span>
-<span><span class="co">#&gt; 35  pls1    simpls                pls  0.0047441100  209.7457999</span></span>
-<span><span class="co">#&gt; 36  pls1    simpls           mixOmics  0.0212875688   47.2762356</span></span>
-<span><span class="co">#&gt; 37  pls1 kernelpls      bigPLSR_dense  0.0502987590   19.7701241</span></span>
-<span><span class="co">#&gt; 38  pls1 kernelpls bigPLSR_big.memory  0.0032584749  304.0034685</span></span>
-<span><span class="co">#&gt; 39  pls1 kernelpls                pls  0.0047713750  210.3620345</span></span>
-<span><span class="co">#&gt; 40  pls1 kernelpls           mixOmics  0.0212102840   47.2352685</span></span>
-<span><span class="co">#&gt; 45  pls1    nipals      bigPLSR_dense  0.0049670886  195.0587514</span></span>
-<span><span class="co">#&gt; 46  pls1    nipals bigPLSR_big.memory  0.0066567600  147.2806571</span></span>
-<span><span class="co">#&gt; 47  pls1    nipals                pls  0.0075556440  132.2163658</span></span>
-<span><span class="co">#&gt; 48  pls1    nipals           mixOmics  0.0209695730   48.0368106</span></span>
-<span><span class="co">#&gt; 145 pls1    simpls      bigPLSR_dense  6.3196013995    0.1560965</span></span>
-<span><span class="co">#&gt; 146 pls1    simpls bigPLSR_big.memory  3.4780965225    0.2882154</span></span>
-<span><span class="co">#&gt; 147 pls1    simpls                pls  0.3617566530    2.8113887</span></span>
-<span><span class="co">#&gt; 148 pls1    simpls           mixOmics  0.3419937920    2.6744942</span></span>
-<span><span class="co">#&gt; 149 pls1 kernelpls      bigPLSR_dense  0.0875219005   11.4002975</span></span>
-<span><span class="co">#&gt; 150 pls1 kernelpls bigPLSR_big.memory  0.0572001660   15.2469776</span></span>
-<span><span class="co">#&gt; 151 pls1 kernelpls                pls  0.3495531260    3.1086178</span></span>
-<span><span class="co">#&gt; 152 pls1 kernelpls           mixOmics  0.4555282245    2.2243872</span></span>
-<span><span class="co">#&gt; 157 pls1    nipals      bigPLSR_dense  0.0793887920   12.4715205</span></span>
-<span><span class="co">#&gt; 158 pls1    nipals bigPLSR_big.memory  6.2405680775    0.1575006</span></span>
-<span><span class="co">#&gt; 159 pls1    nipals                pls  0.2215801335    4.4212757</span></span>
-<span><span class="co">#&gt; 160 pls1    nipals           mixOmics  0.3240520485    3.0859240</span></span>
-<span><span class="co">#&gt; 161 pls1    simpls      bigPLSR_dense  6.6035757635    0.1511993</span></span>
-<span><span class="co">#&gt; 162 pls1    simpls bigPLSR_big.memory  3.6277102170    0.2762871</span></span>
-<span><span class="co">#&gt; 163 pls1    simpls                pls  0.2944476500    2.9759450</span></span>
-<span><span class="co">#&gt; 164 pls1    simpls           mixOmics  0.7795254970    1.3364046</span></span>
-<span><span class="co">#&gt; 165 pls1 kernelpls      bigPLSR_dense  0.2228726995    4.4778063</span></span>
-<span><span class="co">#&gt; 166 pls1 kernelpls bigPLSR_big.memory  0.1308061540    7.5146125</span></span>
-<span><span class="co">#&gt; 167 pls1 kernelpls                pls  0.2958856020    3.0274729</span></span>
-<span><span class="co">#&gt; 168 pls1 kernelpls           mixOmics  0.7937342930    1.2842244</span></span>
-<span><span class="co">#&gt; 173 pls1    nipals      bigPLSR_dense  0.1926474585    5.1410083</span></span>
-<span><span class="co">#&gt; 174 pls1    nipals bigPLSR_big.memory  6.2397971545    0.1605795</span></span>
-<span><span class="co">#&gt; 175 pls1    nipals                pls  0.3588060470    2.7022458</span></span>
-<span><span class="co">#&gt; 176 pls1    nipals           mixOmics  0.6335405281    1.4952876</span></span>
-<span><span class="co">#&gt; 177 pls1    simpls      bigPLSR_dense  6.2928044145    0.1585666</span></span>
-<span><span class="co">#&gt; 178 pls1    simpls bigPLSR_big.memory  3.4739361500    0.2879672</span></span>
-<span><span class="co">#&gt; 179 pls1    simpls                pls  0.5703391100    1.8750414</span></span>
-<span><span class="co">#&gt; 180 pls1    simpls           mixOmics  1.8980518270    0.5262915</span></span>
-<span><span class="co">#&gt; 181 pls1 kernelpls      bigPLSR_dense  0.6460428016    1.5505732</span></span>
-<span><span class="co">#&gt; 182 pls1 kernelpls bigPLSR_big.memory  0.3653160885    2.6907637</span></span>
-<span><span class="co">#&gt; 183 pls1 kernelpls                pls  0.5757799330    1.7536473</span></span>
-<span><span class="co">#&gt; 184 pls1 kernelpls           mixOmics  1.7895776350    0.5399431</span></span>
-<span><span class="co">#&gt; 189 pls1    nipals      bigPLSR_dense  0.5255408905    1.8317478</span></span>
-<span><span class="co">#&gt; 190 pls1    nipals bigPLSR_big.memory  6.2838405435    0.1591461</span></span>
-<span><span class="co">#&gt; 191 pls1    nipals                pls  0.7320582391    1.3418031</span></span>
-<span><span class="co">#&gt; 192 pls1    nipals           mixOmics  1.6411711855    0.6002285</span></span>
+<span><span class="co">#&gt; 1   pls1    simpls      bigPLSR_dense  0.0060451836  165.1562621</span></span>
+<span><span class="co">#&gt; 2   pls1    simpls bigPLSR_big.memory  0.0035867620  275.9417591</span></span>
+<span><span class="co">#&gt; 3   pls1    simpls                pls  0.0020867360  469.9431634</span></span>
+<span><span class="co">#&gt; 4   pls1    simpls           mixOmics  0.0044788605  223.4486896</span></span>
+<span><span class="co">#&gt; 5   pls1 kernelpls      bigPLSR_dense  0.0441235030   22.6636584</span></span>
+<span><span class="co">#&gt; 6   pls1 kernelpls bigPLSR_big.memory  0.0005215200 1733.6289782</span></span>
+<span><span class="co">#&gt; 7   pls1 kernelpls                pls  0.0021023160  475.5957998</span></span>
+<span><span class="co">#&gt; 8   pls1 kernelpls           mixOmics  0.0044129530  224.0172938</span></span>
+<span><span class="co">#&gt; 13  pls1    nipals      bigPLSR_dense  0.0007704311 1208.7122974</span></span>
+<span><span class="co">#&gt; 14  pls1    nipals bigPLSR_big.memory  0.0064723010  154.6317423</span></span>
+<span><span class="co">#&gt; 15  pls1    nipals                pls  0.0023130355  423.5614303</span></span>
+<span><span class="co">#&gt; 16  pls1    nipals           mixOmics  0.0045207831  221.5220634</span></span>
+<span><span class="co">#&gt; 17  pls1    simpls      bigPLSR_dense  0.0061238625  160.2659625</span></span>
+<span><span class="co">#&gt; 18  pls1    simpls bigPLSR_big.memory  0.0034934051  280.9346862</span></span>
+<span><span class="co">#&gt; 19  pls1    simpls                pls  0.0026201049  378.4570550</span></span>
+<span><span class="co">#&gt; 20  pls1    simpls           mixOmics  0.0081250110  122.0214629</span></span>
+<span><span class="co">#&gt; 21  pls1 kernelpls      bigPLSR_dense  0.0459685031   21.7108564</span></span>
+<span><span class="co">#&gt; 22  pls1 kernelpls bigPLSR_big.memory  0.0011338961  885.9666822</span></span>
+<span><span class="co">#&gt; 23  pls1 kernelpls                pls  0.0026236720  383.4893703</span></span>
+<span><span class="co">#&gt; 24  pls1 kernelpls           mixOmics  0.0081293570  121.1046267</span></span>
+<span><span class="co">#&gt; 29  pls1    nipals      bigPLSR_dense  0.0017690270  544.4038157</span></span>
+<span><span class="co">#&gt; 30  pls1    nipals bigPLSR_big.memory  0.0063486451  155.6316749</span></span>
+<span><span class="co">#&gt; 31  pls1    nipals                pls  0.0032869700  308.6738445</span></span>
+<span><span class="co">#&gt; 32  pls1    nipals           mixOmics  0.0082580560  121.5590611</span></span>
+<span><span class="co">#&gt; 33  pls1    simpls      bigPLSR_dense  0.0062094295  160.3209005</span></span>
+<span><span class="co">#&gt; 34  pls1    simpls bigPLSR_big.memory  0.0035923790  275.3568879</span></span>
+<span><span class="co">#&gt; 35  pls1    simpls                pls  0.0046357060  207.3664119</span></span>
+<span><span class="co">#&gt; 36  pls1    simpls           mixOmics  0.0209913850   47.6021094</span></span>
+<span><span class="co">#&gt; 37  pls1 kernelpls      bigPLSR_dense  0.0498161890   20.0737957</span></span>
+<span><span class="co">#&gt; 38  pls1 kernelpls bigPLSR_big.memory  0.0032459290  301.8471240</span></span>
+<span><span class="co">#&gt; 39  pls1 kernelpls                pls  0.0047320150  211.2860747</span></span>
+<span><span class="co">#&gt; 40  pls1 kernelpls           mixOmics  0.0209948905   47.6736952</span></span>
+<span><span class="co">#&gt; 45  pls1    nipals      bigPLSR_dense  0.0047139545  211.8381858</span></span>
+<span><span class="co">#&gt; 46  pls1    nipals bigPLSR_big.memory  0.0065105130  153.5810813</span></span>
+<span><span class="co">#&gt; 47  pls1    nipals                pls  0.0074865180  132.9719814</span></span>
+<span><span class="co">#&gt; 48  pls1    nipals           mixOmics  0.0210122335   46.8847723</span></span>
+<span><span class="co">#&gt; 145 pls1    simpls      bigPLSR_dense  6.5033901315    0.1547340</span></span>
+<span><span class="co">#&gt; 146 pls1    simpls bigPLSR_big.memory  3.5608631200    0.2812449</span></span>
+<span><span class="co">#&gt; 147 pls1    simpls                pls  0.3611949530    2.9793809</span></span>
+<span><span class="co">#&gt; 148 pls1    simpls           mixOmics  0.4746793860    2.0961402</span></span>
+<span><span class="co">#&gt; 149 pls1 kernelpls      bigPLSR_dense  0.0888563070   11.0521410</span></span>
+<span><span class="co">#&gt; 150 pls1 kernelpls bigPLSR_big.memory  0.0596174030   16.5969947</span></span>
+<span><span class="co">#&gt; 151 pls1 kernelpls                pls  0.3368680336    3.1522969</span></span>
+<span><span class="co">#&gt; 152 pls1 kernelpls           mixOmics  0.4710328870    2.2186854</span></span>
+<span><span class="co">#&gt; 157 pls1    nipals      bigPLSR_dense  0.0818347905   12.0507715</span></span>
+<span><span class="co">#&gt; 158 pls1    nipals bigPLSR_big.memory  6.2263474941    0.1599221</span></span>
+<span><span class="co">#&gt; 159 pls1    nipals                pls  0.1974032740    5.0479061</span></span>
+<span><span class="co">#&gt; 160 pls1    nipals           mixOmics  0.2946449011    3.3824261</span></span>
+<span><span class="co">#&gt; 161 pls1    simpls      bigPLSR_dense  6.1359636295    0.1626558</span></span>
+<span><span class="co">#&gt; 162 pls1    simpls bigPLSR_big.memory  3.3408962340    0.2994953</span></span>
+<span><span class="co">#&gt; 163 pls1    simpls                pls  0.2738218415    3.2636860</span></span>
+<span><span class="co">#&gt; 164 pls1    simpls           mixOmics  0.7325085420    1.4078995</span></span>
+<span><span class="co">#&gt; 165 pls1 kernelpls      bigPLSR_dense  0.2181904176    4.6082604</span></span>
+<span><span class="co">#&gt; 166 pls1 kernelpls bigPLSR_big.memory  0.1305059521    7.7058833</span></span>
+<span><span class="co">#&gt; 167 pls1 kernelpls                pls  0.3852149671    2.6743926</span></span>
+<span><span class="co">#&gt; 168 pls1 kernelpls           mixOmics  0.7455238690    1.2945480</span></span>
+<span><span class="co">#&gt; 173 pls1    nipals      bigPLSR_dense  0.1886118900    5.1953353</span></span>
+<span><span class="co">#&gt; 174 pls1    nipals bigPLSR_big.memory  6.2367988861    0.1602238</span></span>
+<span><span class="co">#&gt; 175 pls1    nipals                pls  0.3296010500    3.0281963</span></span>
+<span><span class="co">#&gt; 176 pls1    nipals           mixOmics  0.5922050660    1.7045469</span></span>
+<span><span class="co">#&gt; 177 pls1    simpls      bigPLSR_dense  6.2095294170    0.1609821</span></span>
+<span><span class="co">#&gt; 178 pls1    simpls bigPLSR_big.memory  3.4807222855    0.2865378</span></span>
+<span><span class="co">#&gt; 179 pls1    simpls                pls  0.4312646910    2.2350247</span></span>
+<span><span class="co">#&gt; 180 pls1    simpls           mixOmics  1.7723871550    0.5695185</span></span>
+<span><span class="co">#&gt; 181 pls1 kernelpls      bigPLSR_dense  0.6455497560    1.5651878</span></span>
+<span><span class="co">#&gt; 182 pls1 kernelpls bigPLSR_big.memory  0.3514678876    2.7636579</span></span>
+<span><span class="co">#&gt; 183 pls1 kernelpls                pls  0.5371060476    1.8759850</span></span>
+<span><span class="co">#&gt; 184 pls1 kernelpls           mixOmics  1.8362041675    0.5476303</span></span>
+<span><span class="co">#&gt; 189 pls1    nipals      bigPLSR_dense  0.5208903835    1.9089468</span></span>
+<span><span class="co">#&gt; 190 pls1    nipals bigPLSR_big.memory  6.2764627576    0.1592679</span></span>
+<span><span class="co">#&gt; 191 pls1    nipals                pls  0.7559157085    1.3152253</span></span>
+<span><span class="co">#&gt; 192 pls1    nipals           mixOmics  1.6296500625    0.6067950</span></span>
+<span><span class="co">#&gt; 289 pls1    simpls      bigPLSR_dense  0.0062788220  158.3886973</span></span>
+<span><span class="co">#&gt; 290 pls1    simpls bigPLSR_big.memory  0.0041523160  235.3499445</span></span>
+<span><span class="co">#&gt; 291 pls1    simpls                pls  0.0049248995  202.1917049</span></span>
+<span><span class="co">#&gt; 292 pls1    simpls           mixOmics  0.0229660476   42.7499866</span></span>
+<span><span class="co">#&gt; 293 pls1 kernelpls      bigPLSR_dense  0.0506123269   19.4606804</span></span>
+<span><span class="co">#&gt; 294 pls1 kernelpls bigPLSR_big.memory  0.0033179866  299.1089816</span></span>
+<span><span class="co">#&gt; 295 pls1 kernelpls                pls  0.0049014065  202.4541097</span></span>
+<span><span class="co">#&gt; 296 pls1 kernelpls           mixOmics  0.0221207505   45.1716313</span></span>
+<span><span class="co">#&gt; 301 pls1    nipals      bigPLSR_dense  0.0047306620  210.7978021</span></span>
+<span><span class="co">#&gt; 302 pls1    nipals bigPLSR_big.memory  0.0066085235  148.0432944</span></span>
+<span><span class="co">#&gt; 303 pls1    nipals                pls  0.0079110935  126.1707804</span></span>
+<span><span class="co">#&gt; 304 pls1    nipals           mixOmics  0.0220015431   45.5108450</span></span>
+<span><span class="co">#&gt; 337 pls1    simpls      bigPLSR_dense  6.1752819530    0.1613928</span></span>
+<span><span class="co">#&gt; 338 pls1    simpls bigPLSR_big.memory  3.3039307570    0.3007239</span></span>
+<span><span class="co">#&gt; 339 pls1    simpls                pls  0.5349956956    1.9629343</span></span>
+<span><span class="co">#&gt; 340 pls1    simpls           mixOmics  1.6342236126    0.6042950</span></span>
+<span><span class="co">#&gt; 341 pls1 kernelpls      bigPLSR_dense  0.6289640670    1.5716088</span></span>
+<span><span class="co">#&gt; 342 pls1 kernelpls bigPLSR_big.memory  0.3496842645    2.7791228</span></span>
+<span><span class="co">#&gt; 343 pls1 kernelpls                pls  0.5294607366    1.9623568</span></span>
+<span><span class="co">#&gt; 344 pls1 kernelpls           mixOmics  1.6767431134    0.5890119</span></span>
+<span><span class="co">#&gt; 349 pls1    nipals      bigPLSR_dense  0.5095970975    1.9054646</span></span>
+<span><span class="co">#&gt; 350 pls1    nipals bigPLSR_big.memory  6.2690384570    0.1591941</span></span>
+<span><span class="co">#&gt; 351 pls1    nipals                pls  0.7049397730    1.3617341</span></span>
+<span><span class="co">#&gt; 352 pls1    nipals           mixOmics  1.5486491710    0.6395732</span></span>
 <span><span class="co">#&gt;     mem_alloc_bytes     n    p q ncomp</span></span>
-<span><span class="co">#&gt; 1           1850464  1000  100 1     1</span></span>
-<span><span class="co">#&gt; 2            944384  1000  100 1     1</span></span>
-<span><span class="co">#&gt; 3           8056600  1000  100 1     1</span></span>
-<span><span class="co">#&gt; 4           8768696  1000  100 1     1</span></span>
-<span><span class="co">#&gt; 5          42579912  1000  100 1     1</span></span>
+<span><span class="co">#&gt; 1            104720  1000  100 1     1</span></span>
+<span><span class="co">#&gt; 2            895872  1000  100 1     1</span></span>
+<span><span class="co">#&gt; 3           7479024  1000  100 1     1</span></span>
+<span><span class="co">#&gt; 4           7550384  1000  100 1     1</span></span>
+<span><span class="co">#&gt; 5          42461256  1000  100 1     1</span></span>
 <span><span class="co">#&gt; 6            821328  1000  100 1     1</span></span>
-<span><span class="co">#&gt; 7           7570072  1000  100 1     1</span></span>
+<span><span class="co">#&gt; 7           7462504  1000  100 1     1</span></span>
 <span><span class="co">#&gt; 8           7550384  1000  100 1     1</span></span>
-<span><span class="co">#&gt; 13            22752  1000  100 1     1</span></span>
-<span><span class="co">#&gt; 14           835624  1000  100 1     1</span></span>
-<span><span class="co">#&gt; 15          8377136  1000  100 1     1</span></span>
+<span><span class="co">#&gt; 13            14928  1000  100 1     1</span></span>
+<span><span class="co">#&gt; 14           830224  1000  100 1     1</span></span>
+<span><span class="co">#&gt; 15          8265304  1000  100 1     1</span></span>
 <span><span class="co">#&gt; 16          7550384  1000  100 1     1</span></span>
-<span><span class="co">#&gt; 17          1723264  1000  100 1     3</span></span>
-<span><span class="co">#&gt; 18           901520  1000  100 1     3</span></span>
+<span><span class="co">#&gt; 17           107920  1000  100 1     3</span></span>
+<span><span class="co">#&gt; 18           899072  1000  100 1     3</span></span>
 <span><span class="co">#&gt; 19          7764576  1000  100 1     3</span></span>
 <span><span class="co">#&gt; 20         12407296  1000  100 1     3</span></span>
 <span><span class="co">#&gt; 21         42480456  1000  100 1     3</span></span>
@@ -331,8 +425,8 @@ packages. The dataset was generated with the helper script stored in
 <span><span class="co">#&gt; 30           865424  1000  100 1     3</span></span>
 <span><span class="co">#&gt; 31         10122568  1000  100 1     3</span></span>
 <span><span class="co">#&gt; 32         12304368  1000  100 1     3</span></span>
-<span><span class="co">#&gt; 33          1734464  1000  100 1    10</span></span>
-<span><span class="co">#&gt; 34           922096  1000  100 1    10</span></span>
+<span><span class="co">#&gt; 33           119120  1000  100 1    10</span></span>
+<span><span class="co">#&gt; 34           910272  1000  100 1    10</span></span>
 <span><span class="co">#&gt; 35          9013040  1000  100 1    10</span></span>
 <span><span class="co">#&gt; 36         28992768  1000  100 1    10</span></span>
 <span><span class="co">#&gt; 37         42547656  1000  100 1    10</span></span>
@@ -343,8 +437,8 @@ packages. The dataset was generated with the helper script stored in
 <span><span class="co">#&gt; 46           988624  1000  100 1    10</span></span>
 <span><span class="co">#&gt; 47         16876368  1000  100 1    10</span></span>
 <span><span class="co">#&gt; 48         28992768  1000  100 1    10</span></span>
-<span><span class="co">#&gt; 145       168378464 10000 1000 1     1</span></span>
-<span><span class="co">#&gt; 146        88146320 10000 1000 1     1</span></span>
+<span><span class="co">#&gt; 145         8226320 10000 1000 1     1</span></span>
+<span><span class="co">#&gt; 146        88138272 10000 1000 1     1</span></span>
 <span><span class="co">#&gt; 147       722792304 10000 1000 1     1</span></span>
 <span><span class="co">#&gt; 148       651508960 10000 1000 1     1</span></span>
 <span><span class="co">#&gt; 149          282544 10000 1000 1     1</span></span>
@@ -355,8 +449,8 @@ packages. The dataset was generated with the helper script stored in
 <span><span class="co">#&gt; 158        80282224 10000 1000 1     1</span></span>
 <span><span class="co">#&gt; 159       802652584 10000 1000 1     1</span></span>
 <span><span class="co">#&gt; 160       651508960 10000 1000 1     1</span></span>
-<span><span class="co">#&gt; 161       168410464 10000 1000 1     3</span></span>
-<span><span class="co">#&gt; 162        88194320 10000 1000 1     3</span></span>
+<span><span class="co">#&gt; 161         8258320 10000 1000 1     3</span></span>
+<span><span class="co">#&gt; 162        88170272 10000 1000 1     3</span></span>
 <span><span class="co">#&gt; 163       725626656 10000 1000 1     3</span></span>
 <span><span class="co">#&gt; 164       986912144 10000 1000 1     3</span></span>
 <span><span class="co">#&gt; 165          474544 10000 1000 1     3</span></span>
@@ -367,8 +461,8 @@ packages. The dataset was generated with the helper script stored in
 <span><span class="co">#&gt; 174        80634224 10000 1000 1     3</span></span>
 <span><span class="co">#&gt; 175       965206648 10000 1000 1     3</span></span>
 <span><span class="co">#&gt; 176       986912144 10000 1000 1     3</span></span>
-<span><span class="co">#&gt; 177       168522464 10000 1000 1    10</span></span>
-<span><span class="co">#&gt; 178        88366096 10000 1000 1    10</span></span>
+<span><span class="co">#&gt; 177         8370320 10000 1000 1    10</span></span>
+<span><span class="co">#&gt; 178        88282272 10000 1000 1    10</span></span>
 <span><span class="co">#&gt; 179       738038720 10000 1000 1    10</span></span>
 <span><span class="co">#&gt; 180      2161313744 10000 1000 1    10</span></span>
 <span><span class="co">#&gt; 181         1146544 10000 1000 1    10</span></span>
@@ -379,6 +473,30 @@ packages. The dataset was generated with the helper script stored in
 <span><span class="co">#&gt; 190        81866224 10000 1000 1    10</span></span>
 <span><span class="co">#&gt; 191      1536642048 10000 1000 1    10</span></span>
 <span><span class="co">#&gt; 192      2161313744 10000 1000 1    10</span></span>
+<span><span class="co">#&gt; 289          119120  1000  100 1    10</span></span>
+<span><span class="co">#&gt; 290          910272  1000  100 1    10</span></span>
+<span><span class="co">#&gt; 291         9013040  1000  100 1    10</span></span>
+<span><span class="co">#&gt; 292        28992768  1000  100 1    10</span></span>
+<span><span class="co">#&gt; 293        42547656  1000  100 1    10</span></span>
+<span><span class="co">#&gt; 294          907728  1000  100 1    10</span></span>
+<span><span class="co">#&gt; 295         8959992  1000  100 1    10</span></span>
+<span><span class="co">#&gt; 296        28992768  1000  100 1    10</span></span>
+<span><span class="co">#&gt; 301           29328  1000  100 1    10</span></span>
+<span><span class="co">#&gt; 302          988624  1000  100 1    10</span></span>
+<span><span class="co">#&gt; 303        16876368  1000  100 1    10</span></span>
+<span><span class="co">#&gt; 304        28992768  1000  100 1    10</span></span>
+<span><span class="co">#&gt; 337         8370320 10000 1000 1   100</span></span>
+<span><span class="co">#&gt; 338        88282272 10000 1000 1   100</span></span>
+<span><span class="co">#&gt; 339       738038720 10000 1000 1   100</span></span>
+<span><span class="co">#&gt; 340      2161313744 10000 1000 1   100</span></span>
+<span><span class="co">#&gt; 341         1146544 10000 1000 1   100</span></span>
+<span><span class="co">#&gt; 342        81058128 10000 1000 1   100</span></span>
+<span><span class="co">#&gt; 343       737488872 10000 1000 1   100</span></span>
+<span><span class="co">#&gt; 344      2161313744 10000 1000 1   100</span></span>
+<span><span class="co">#&gt; 349          274128 10000 1000 1   100</span></span>
+<span><span class="co">#&gt; 350        81866224 10000 1000 1   100</span></span>
+<span><span class="co">#&gt; 351      1536642048 10000 1000 1   100</span></span>
+<span><span class="co">#&gt; 352      2161313744 10000 1000 1   100</span></span>
 <span><span class="co">#&gt;                                         notes</span></span>
 <span><span class="co">#&gt; 1        Run via pls_fit() with dense backend</span></span>
 <span><span class="co">#&gt; 2   Run via pls_fit() with big.memory backend</span></span>
@@ -451,7 +569,31 @@ packages. The dataset was generated with the helper script stored in
 <span><span class="co">#&gt; 189      Run via pls_fit() with dense backend</span></span>
 <span><span class="co">#&gt; 190 Run via pls_fit() with big.memory backend</span></span>
 <span><span class="co">#&gt; 191                  Requires the pls package</span></span>
-<span><span class="co">#&gt; 192             Requires the mixOmics package</span></span></code></pre></div>
+<span><span class="co">#&gt; 192             Requires the mixOmics package</span></span>
+<span><span class="co">#&gt; 289      Run via pls_fit() with dense backend</span></span>
+<span><span class="co">#&gt; 290 Run via pls_fit() with big.memory backend</span></span>
+<span><span class="co">#&gt; 291                  Requires the pls package</span></span>
+<span><span class="co">#&gt; 292             Requires the mixOmics package</span></span>
+<span><span class="co">#&gt; 293      Run via pls_fit() with dense backend</span></span>
+<span><span class="co">#&gt; 294 Run via pls_fit() with big.memory backend</span></span>
+<span><span class="co">#&gt; 295                  Requires the pls package</span></span>
+<span><span class="co">#&gt; 296             Requires the mixOmics package</span></span>
+<span><span class="co">#&gt; 301      Run via pls_fit() with dense backend</span></span>
+<span><span class="co">#&gt; 302 Run via pls_fit() with big.memory backend</span></span>
+<span><span class="co">#&gt; 303                  Requires the pls package</span></span>
+<span><span class="co">#&gt; 304             Requires the mixOmics package</span></span>
+<span><span class="co">#&gt; 337      Run via pls_fit() with dense backend</span></span>
+<span><span class="co">#&gt; 338 Run via pls_fit() with big.memory backend</span></span>
+<span><span class="co">#&gt; 339                  Requires the pls package</span></span>
+<span><span class="co">#&gt; 340             Requires the mixOmics package</span></span>
+<span><span class="co">#&gt; 341      Run via pls_fit() with dense backend</span></span>
+<span><span class="co">#&gt; 342 Run via pls_fit() with big.memory backend</span></span>
+<span><span class="co">#&gt; 343                  Requires the pls package</span></span>
+<span><span class="co">#&gt; 344             Requires the mixOmics package</span></span>
+<span><span class="co">#&gt; 349      Run via pls_fit() with dense backend</span></span>
+<span><span class="co">#&gt; 350 Run via pls_fit() with big.memory backend</span></span>
+<span><span class="co">#&gt; 351                  Requires the pls package</span></span>
+<span><span class="co">#&gt; 352             Requires the mixOmics package</span></span></code></pre></div>
 <p>The table reports median execution times (in seconds), the number of
 iterations and memory use per second for a representative
 single-response scenario. The notes column indicates the additional

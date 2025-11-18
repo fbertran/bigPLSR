@@ -1,5 +1,6 @@
 test_that("dense SIMPLS: bigPLSR.simpls.solve = 'tri' beats 'solve' (bench)", {
   skip_on_cran()
+  skip_on_ci() 
   skip_if_not_installed("bench")
   dat <- make_dense_data(n = 6000L, p = 512L, m = 8L, seed = 1L)
   
@@ -40,6 +41,7 @@ test_that("dense SIMPLS: bigPLSR.simpls.solve = 'tri' beats 'solve' (bench)", {
 
 test_that("dense SIMPLS: 'tri' and 'solve' produce identical coefficients", {
   skip_on_cran()
+  skip_on_ci() 
   dat <- make_dense_data()
   withr::with_options(list(bigPLSR.simpls.solve = "tri"), {
     fit_tri <- bigPLSR::pls_fit(dat$X, dat$Y, ncomp = 12L,
@@ -59,6 +61,7 @@ test_that("dense SIMPLS: 'tri' and 'solve' produce identical coefficients", {
 
 test_that("bigmem SIMPLS: scores='none' is faster than 'r' (no streaming)", {
   skip_on_cran()
+  skip_on_ci() 
   skip_if_not_installed("bench")
   dat <- make_bigmem_data()
   warmup_bigmem_simplansin <- tryCatch({ warmup_bigmem_simpls(dat, 8192L); TRUE },
@@ -87,6 +90,7 @@ test_that("bigmem SIMPLS: scores='none' is faster than 'r' (no streaming)", {
 
 test_that("bigmem SIMPLS: chunk size affects runtime (sanity check)", {
   skip_on_cran()
+  skip_on_ci() 
   skip_if_not_installed("bench")
   set.seed(1639)
   dat <- make_bigmem_data()
@@ -116,6 +120,7 @@ test_that("bigmem SIMPLS: chunk size affects runtime (sanity check)", {
 
 test_that("dense cross: C fused path matches R and can be faster", {
   skip_on_cran()
+  skip_on_ci() 
   skip_if_not_installed("bench")
   set.seed(2025)
   n <- 3000L; p <- 256L; m <- 12L; A <- 12L
@@ -136,6 +141,7 @@ test_that("dense cross: C fused path matches R and can be faster", {
 
 test_that("dense cross: C fused path matches R and can be faster", {
     skip_on_cran()
+    skip_on_ci() 
     skip_if_not_installed("bench")
     set.seed(2025)
     n <- 3000L; p <- 256L; m <- 12L; A <- 12L

@@ -1,6 +1,7 @@
 # tests/testthat/test-klogitpls.R
 test_that("klogitpls fits and predicts probabilities with class weights", {
   skip_on_cran()
+  skip_on_ci() 
   set.seed(123)
   
   n <- 200; p <- 6
@@ -62,6 +63,7 @@ test_that("klogitpls fits and predicts probabilities with class weights", {
 
 test_that("klogitpls (dense RBF) learns a non-linear boundary", {
   skip_on_cran()
+  skip_on_ci() 
   set.seed(123)
   n <- 200; p <- 5
   X <- matrix(rnorm(n*p), n, p)

@@ -60,7 +60,7 @@ plot_pls_individuals(fit, comps = c(1, 2), groups = groups,
 ## Variable correlations and biplots
 
 ```{r variables, eval=LOCAL, cache=TRUE}
-plot_pls_variables(fit, comps = c(1, 2), main="Correlation circle")
+plot_pls_variables(fit, comps = c(1, 2), main="Variable plot")
 ```
 
 ```{r biplot, eval=LOCAL, cache=TRUE}

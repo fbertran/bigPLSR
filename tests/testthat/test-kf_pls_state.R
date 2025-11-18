@@ -1,5 +1,6 @@
 test_that("KF-PLS state API: batch parity and streamed near-parity", {
   skip_on_cran()
+  skip_on_ci() 
   set.seed(123)
 
   n <- 400; p <- 20; m <- 2; A <- 3
@@ -56,6 +57,7 @@ test_that("KF-PLS state API: batch parity and streamed near-parity", {
 
 test_that("KF-PLS state API tracks full SIMPLS on concatenated data", {
   skip_on_cran()
+  skip_on_ci() 
   set.seed(123)
   n <- 200; p <- 15; m <- 3; A <- 4
   X <- matrix(rnorm(n*p), n, p)

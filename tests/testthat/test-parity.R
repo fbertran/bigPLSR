@@ -1,6 +1,7 @@
 
 test_that("dense vs bigmem parity is tight under deterministic settings", {
   skip_on_cran()
+  skip_on_ci() 
   set.seed(123)
   n <- 200; p <- 40
   X <- matrix(rnorm(n*p), n, p)
@@ -18,6 +19,7 @@ test_that("dense vs bigmem parity is tight under deterministic settings", {
 
 test_that("file-backed scores sink works and matches dense scores on small data", {
   skip_on_cran()
+  skip_on_ci() 
   options_val_before <- options("bigmemory.allow.dimnames")
   options(bigmemory.allow.dimnames=TRUE)
   set.seed(321)

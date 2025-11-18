@@ -26,9 +26,9 @@ plot_pls_biplot(
 
 \item{scale_variables}{Scaling factor applied to variable loadings.}
 
-\item{circle}{Logical; draw a correlation circle behind loadings.}
+\item{circle}{Logical; draw a unit circle behind loadings.}
 
-\item{circle_col}{Colour of the circle guide.}
+\item{circle_col}{Colour of the unit circle guide.}
 
 \item{arrow_col}{Colour for loading arrows.}
 

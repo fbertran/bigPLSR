@@ -66,7 +66,7 @@
 
 * Added kernel PLS and wide-kernel PLS algorithms to `pls_fit()` for both dense
   and bigmemory backends.
-* Refreshed plotting helpers with correlation circles, arrow-based loadings and
+* Refreshed plotting helpers with variable plots, arrow-based loadings and
   a dedicated VIP bar plot.
 * Introduced convenience prediction wrappers, information-criteria helpers, and
   expanded cross-validation/bootstrapping utilities to support the new

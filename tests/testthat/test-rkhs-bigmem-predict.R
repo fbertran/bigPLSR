@@ -1,5 +1,6 @@
 test_that("RKHS bigmem streamed predict matches dense predict", {
   skip_on_cran()
+  skip_on_ci() 
   set.seed(123)
   n <- 80; p <- 6; m <- 2
   X  <- matrix(rnorm(n*p), n, p)

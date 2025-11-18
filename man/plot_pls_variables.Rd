@@ -19,9 +19,9 @@ plot_pls_variables(
 
 \item{comps}{Components to display (length two).}
 
-\item{circle}{Logical; draw the correlation circle.}
+\item{circle}{Logical; draw the unit circle.}
 
-\item{circle_col}{Colour of the correlation circle.}
+\item{circle_col}{Colour of the unit circle.}
 
 \item{arrow_col}{Colour of the variable arrows.}
 

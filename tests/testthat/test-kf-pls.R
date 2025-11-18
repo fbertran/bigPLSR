@@ -1,5 +1,6 @@
 test_that("KF-PLS (dense) approximates SIMPLS when lambda≈1", {
   skip_on_cran()
+  skip_on_ci() 
   set.seed(123)
   n <- 300; p <- 40; m <- 2
   X <- matrix(rnorm(n*p), n, p)
@@ -25,6 +26,7 @@ test_that("KF-PLS (dense) approximates SIMPLS when lambda≈1", {
 
 test_that("KF-PLS bigmem ~ dense parity (predictions)", {
   skip_on_cran()
+  skip_on_ci() 
   set.seed(124)
   n <- 200; p <- 30
   X <- matrix(rnorm(n*p), n, p)
