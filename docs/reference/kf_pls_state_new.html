@@ -11,7 +11,7 @@ big_plsr-compatible fit via kf_pls_state_fit()."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">bigPLSR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.7.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.7.2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -116,8 +116,7 @@ When <code>lambda &gt;= 0.999999</code> and <code>q_proc == 0</code>, the backen
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span> <span class="co"># \dontrun{</span></span></span>
-<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">n</span> <span class="op">&lt;-</span> <span class="fl">1000</span>; <span class="va">p</span> <span class="op">&lt;-</span> <span class="fl">50</span>; <span class="va">m</span> <span class="op">&lt;-</span> <span class="fl">2</span></span></span>
 <span class="r-in"><span><span class="va">X1</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="va">n</span><span class="op">/</span><span class="fl">2</span> <span class="op">*</span> <span class="va">p</span><span class="op">)</span>, <span class="va">n</span><span class="op">/</span><span class="fl">2</span>, <span class="va">p</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">X2</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="va">n</span><span class="op">/</span><span class="fl">2</span> <span class="op">*</span> <span class="va">p</span><span class="op">)</span>, <span class="va">n</span><span class="op">/</span><span class="fl">2</span>, <span class="va">p</span><span class="op">)</span></span></span>
@@ -129,8 +128,15 @@ When <code>lambda &gt;= 0.999999</code> and <code>q_proc == 0</code>, the backen
 <span class="r-in"><span><span class="fu"><a href="kf_pls_state_update.html">kf_pls_state_update</a></span><span class="op">(</span><span class="va">st</span>, <span class="va">X1</span>, <span class="va">Y1</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="kf_pls_state_update.html">kf_pls_state_update</a></span><span class="op">(</span><span class="va">st</span>, <span class="va">X2</span>, <span class="va">Y2</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="kf_pls_state_fit.html">kf_pls_state_fit</a></span><span class="op">(</span><span class="va">st</span><span class="op">)</span>          <span class="co"># returns a big_plsr-compatible list</span></span></span>
-<span class="r-in"><span><span class="va">preds</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="fu">.finalize_pls_fit</span><span class="op">(</span><span class="va">fit</span>, <span class="st">"kf_pls"</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">rbind</a></span><span class="op">(</span><span class="va">X1</span>, <span class="va">X2</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="op">}</span> <span class="co"># }</span></span></span>
+<span class="r-in"><span><span class="va">preds</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="fu">bigPLSR</span><span class="fu">:::</span><span class="fu">.finalize_pls_fit</span><span class="op">(</span><span class="va">fit</span>, <span class="st">"kf_pls"</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">rbind</a></span><span class="op">(</span><span class="va">X1</span>, <span class="va">X2</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">preds</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>             [,1]      [,2]</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1,]   4.1992830  3.288988</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [2,] -10.4765869 11.827720</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [3,]   3.5877961  6.767181</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [4,]   0.8577062  4.270630</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [5,]   4.9413407  4.763492</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [6,]  -1.7790168 -2.148865</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

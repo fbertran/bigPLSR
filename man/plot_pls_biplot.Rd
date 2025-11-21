@@ -48,6 +48,9 @@ needed.}
 
 \item{...}{Additional arguments passed to \code{\link[graphics:plot.default]{graphics::plot()}}.}
 }
+\value{
+Invisibly returns \code{NULL} after drawing the biplot.
+}
 \description{
 PLS biplot
 }

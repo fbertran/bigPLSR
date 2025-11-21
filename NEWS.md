@@ -1,3 +1,7 @@
+# bigPLSR 0.7.2
+
+* Code and documentation fixes requested by CRAN.
+
 # bigPLSR 0.7.1
 
 * New tuning option: `options(bigPLSR.stream.block_align = 8192L)`. All streamed

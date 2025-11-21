@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">bigPLSR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.7.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.7.2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -49,6 +49,10 @@
       <small>Source: <a href="https://github.com/fbertran/bigPLSR/blob/HEAD/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.7.2" id="bigplsr-072">bigPLSR 0.7.2<a class="anchor" aria-label="anchor" href="#bigplsr-072"></a></h2>
+<ul><li>Code and documentation fixes requested by CRAN.</li>
+</ul></div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.7.1" id="bigplsr-071">bigPLSR 0.7.1<a class="anchor" aria-label="anchor" href="#bigplsr-071"></a></h2>
 <ul><li>New tuning option: <code>options(bigPLSR.stream.block_align = 8192L)</code>. All streamed backends (bigmem SIMPLS, streamed scores, RKHS/klogitpls Gram passes, and bigmem predict) round their <code>chunk_size</code> <em>up</em> to a multiple of this alignment, then clamp to the available number of rows. Typical sweet spots are 4096–16384 on modern CPUs.</li>

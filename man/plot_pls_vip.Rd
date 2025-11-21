@@ -23,6 +23,9 @@ plot_pls_vip(
 
 \item{...}{Additional parameters passed to \code{\link[graphics:barplot]{graphics::barplot()}}.}
 }
+\value{
+Invisibly returns the VIP scores used to create the bar plot.
+}
 \description{
 Plot Variable Importance in Projection (VIP)
 }

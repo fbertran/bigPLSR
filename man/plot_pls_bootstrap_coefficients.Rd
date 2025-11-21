@@ -20,6 +20,9 @@ plot_pls_bootstrap_coefficients(
 
 \item{...}{Additional arguments passed to \code{\link[graphics:boxplot]{graphics::boxplot()}}.}
 }
+\value{
+Invisibly returns \code{NULL} after drawing the boxplots.
+}
 \description{
 Boxplots of bootstrap coefficient distributions
 }

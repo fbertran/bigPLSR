@@ -38,7 +38,6 @@ When \code{lambda >= 0.999999} and \code{q_proc == 0}, the backend switches to a
 \emph{exact} accumulation mode that matches concatenating all chunks (no decay).
 }
 \examples{
-\dontrun{
 set.seed(1)
 n <- 1000; p <- 50; m <- 2
 X1 <- matrix(rnorm(n/2 * p), n/2, p)
@@ -51,8 +50,8 @@ st <- kf_pls_state_new(p, m, ncomp = 4, lambda = 0.99, q_proc = 1e-6)
 kf_pls_state_update(st, X1, Y1)
 kf_pls_state_update(st, X2, Y2)
 fit <- kf_pls_state_fit(st)          # returns a big_plsr-compatible list
-preds <- predict(.finalize_pls_fit(fit, "kf_pls"), rbind(X1, X2))
-}
+preds <- predict(bigPLSR:::.finalize_pls_fit(fit, "kf_pls"), rbind(X1, X2))
+head(preds)
 }
 \seealso{
 \code{\link[=kf_pls_state_update]{kf_pls_state_update()}}, \code{\link[=kf_pls_state_fit]{kf_pls_state_fit()}}, \code{\link[=pls_fit]{pls_fit()}}

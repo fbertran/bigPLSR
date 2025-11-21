@@ -29,6 +29,9 @@ plot_pls_variables(
 
 \item{...}{Additional plotting parameters passed to \code{\link[graphics:plot.default]{graphics::plot()}}.}
 }
+\value{
+Invisibly returns \code{NULL} after drawing the plot.
+}
 \description{
 Plot variable loadings
 }

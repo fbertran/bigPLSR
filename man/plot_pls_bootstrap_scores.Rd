@@ -20,6 +20,9 @@ plot_pls_bootstrap_scores(
 
 \item{...}{Additional arguments passed to \code{\link[graphics:boxplot]{graphics::boxplot()}}.}
 }
+\value{
+Invisibly returns \code{NULL} after drawing the boxplots.
+}
 \description{
 Visualise the variability of latent scores obtained through
 \code{\link[=pls_bootstrap]{pls_bootstrap()}} when \code{return_scores = TRUE}.

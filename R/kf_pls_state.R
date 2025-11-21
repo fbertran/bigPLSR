@@ -25,7 +25,6 @@
 #' @seealso [kf_pls_state_update()], [kf_pls_state_fit()], [pls_fit()]
 #'   (use `algorithm = "kf_pls"` for the one-shot dense path).
 #' @examples
-#' \dontrun{
 #' set.seed(1)
 #' n <- 1000; p <- 50; m <- 2
 #' X1 <- matrix(rnorm(n/2 * p), n/2, p)
@@ -38,8 +37,8 @@
 #' kf_pls_state_update(st, X1, Y1)
 #' kf_pls_state_update(st, X2, Y2)
 #' fit <- kf_pls_state_fit(st)          # returns a big_plsr-compatible list
-#' preds <- predict(.finalize_pls_fit(fit, "kf_pls"), rbind(X1, X2))
-#' }
+#' preds <- predict(bigPLSR:::.finalize_pls_fit(fit, "kf_pls"), rbind(X1, X2))
+#' head(preds)
 #' @export
 kf_pls_state_new <- function(p, m, ncomp, lambda = 0.99, q_proc = 0, r_meas = 0) {
   .Call(`_bigPLSR_cpp_kf_pls_state_new`, as.integer(p), as.integer(m), as.integer(ncomp),

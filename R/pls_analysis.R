@@ -54,6 +54,7 @@ pls_vip <- function(object, comps = NULL) {
 #' @param threshold Optional threshold to highlight influential variables.
 #' @param palette Colour palette used for bars.
 #' @param ... Additional parameters passed to [graphics::barplot()].
+#' @return Invisibly returns the VIP scores used to create the bar plot.
 #' @export
 #' @examples
 #' set.seed(123)
@@ -182,6 +183,7 @@ print.summary.big_plsr <- function(x, ...) {
 #' @param group_col Optional vector of colours for the groups. Recycled as
 #'   needed.
 #' @param ... Additional plotting parameters passed to [graphics::plot()].
+#' @return Invisibly returns `NULL` after drawing the plot.
 #' @export
 #' @examples
 #' set.seed(123)
@@ -264,6 +266,7 @@ plot_pls_individuals <- function(object, comps = c(1L, 2L), labels = NULL,
 #' @param arrow_col Colour of the variable arrows.
 #' @param arrow_scale Scaling applied to variable vectors.
 #' @param ... Additional plotting parameters passed to [graphics::plot()].
+#' @return Invisibly returns `NULL` after drawing the plot.
 #' @export
 #' @examples
 #' set.seed(123)
@@ -323,6 +326,7 @@ plot_pls_variables <- function(object, comps = c(1L, 2L), circle = TRUE,
 #' @param group_col Optional vector of colours for the groups. Recycled as
 #'   needed.
 #' @param ... Additional arguments passed to [graphics::plot()].
+#' @return Invisibly returns `NULL` after drawing the biplot.
 #' @export
 #' @examples
 #' set.seed(123)
@@ -805,7 +809,7 @@ summarise_pls_bootstrap <- function(boot_result) {
 #' @param responses Optional character vector selecting response columns.
 #' @param variables Optional character vector selecting predictor variables.
 #' @param ... Additional arguments passed to [graphics::boxplot()].
-#' @importFrom graphics boxplot abline
+#' @return Invisibly returns `NULL` after drawing the boxplots.
 #' @export
 plot_pls_bootstrap_coefficients <- function(boot_result, responses = NULL,
                                             variables = NULL, ...) {
@@ -840,7 +844,7 @@ plot_pls_bootstrap_coefficients <- function(boot_result, responses = NULL,
 #' @param components Optional vector of component indices or names to include.
 #' @param observations Optional vector of observation indices or names to include.
 #' @param ... Additional arguments passed to [graphics::boxplot()].
-#' @importFrom graphics boxplot
+#' @return Invisibly returns `NULL` after drawing the boxplots.
 #' @export
 plot_pls_bootstrap_scores <- function(boot_result, components = NULL,
                                       observations = NULL, ...) {
