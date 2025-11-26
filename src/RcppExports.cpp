@@ -39,17 +39,17 @@ BEGIN_RCPP
 END_RCPP
 }
 // cpp_irls_binomial
-Rcpp::List cpp_irls_binomial(const arma::mat& T, const Rcpp::IntegerVector& ybin, Rcpp::Nullable<Rcpp::NumericVector> w_class, int maxit, double tol);
-RcppExport SEXP _bigPLSR_cpp_irls_binomial(SEXP TSEXP, SEXP ybinSEXP, SEXP w_classSEXP, SEXP maxitSEXP, SEXP tolSEXP) {
+Rcpp::List cpp_irls_binomial(const arma::mat& TT, const Rcpp::IntegerVector& ybin, Rcpp::Nullable<Rcpp::NumericVector> w_class, int maxit, double tol);
+RcppExport SEXP _bigPLSR_cpp_irls_binomial(SEXP TTSEXP, SEXP ybinSEXP, SEXP w_classSEXP, SEXP maxitSEXP, SEXP tolSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const arma::mat& >::type T(TSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type TT(TTSEXP);
     Rcpp::traits::input_parameter< const Rcpp::IntegerVector& >::type ybin(ybinSEXP);
     Rcpp::traits::input_parameter< Rcpp::Nullable<Rcpp::NumericVector> >::type w_class(w_classSEXP);
     Rcpp::traits::input_parameter< int >::type maxit(maxitSEXP);
     Rcpp::traits::input_parameter< double >::type tol(tolSEXP);
-    rcpp_result_gen = Rcpp::wrap(cpp_irls_binomial(T, ybin, w_class, maxit, tol));
+    rcpp_result_gen = Rcpp::wrap(cpp_irls_binomial(TT, ybin, w_class, maxit, tol));
     return rcpp_result_gen;
 END_RCPP
 }

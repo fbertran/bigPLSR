@@ -257,7 +257,7 @@ PKG_LIBS += $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS)
 
 ## Citation
 
-If you use **bigPLSR** in academic work, please cite this package and the SIMPLS method by de Jong (1993).
+If you use **bigPLSR** in academic work, please cite this package and the relevant PLS method used.
 
 ---
 

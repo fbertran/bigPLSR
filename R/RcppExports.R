@@ -11,7 +11,7 @@ cpp_dense_scores <- function(X_, mu_x_, W_) {
 
 #' Fast IRLS for binomial logit with class weights
 #'
-#' @param T n x A numeric matrix of latent scores (no intercept column)
+#' @param TT n x A numeric matrix of latent scores (no intercept column)
 #' @param ybin integer vector of \{0,1\} labels (length n)
 #' @param w_class optional length-2 numeric vector: weights for classes c( w0, w1 )
 #' @param maxit max IRLS iterations
@@ -20,8 +20,8 @@ cpp_dense_scores <- function(X_, mu_x_, W_) {
 #' @return list(beta = A-vector, b = scalar intercept, fitted = n-vector,
 #'              iter = integer, converged = logical)
 #'
-cpp_irls_binomial <- function(T, ybin, w_class = NULL, maxit = 50L, tol = 1e-8) {
-    .Call(`_bigPLSR_cpp_irls_binomial`, T, ybin, w_class, maxit, tol)
+cpp_irls_binomial <- function(TT, ybin, w_class = NULL, maxit = 50L, tol = 1e-8) {
+    .Call(`_bigPLSR_cpp_irls_binomial`, TT, ybin, w_class, maxit, tol)
 }
 
 #' Internal kernel and wide-kernel PLS solver

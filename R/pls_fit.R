@@ -1334,6 +1334,15 @@ pls_fit <- function(
   }
 }
 
+
+#' Finalize pls objects
+#' 
+#' @param fit Fitted object
+#' @param algorithm Name of the algorithm used to fit the object
+#' 
+#' @returns The `fit` object with normalized naming and class attributes.
+#' 
+#' @export
 .finalize_pls_fit <- function(fit, algorithm) {
   if (!is.list(fit)) return(fit)
   

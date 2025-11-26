@@ -11,7 +11,7 @@ static inline arma::vec sigmoid(const arma::vec& x) {
 
 //' Fast IRLS for binomial logit with class weights
 //'
-//' @param T n x A numeric matrix of latent scores (no intercept column)
+//' @param TT n x A numeric matrix of latent scores (no intercept column)
 //' @param ybin integer vector of \{0,1\} labels (length n)
 //' @param w_class optional length-2 numeric vector: weights for classes c( w0, w1 )
 //' @param maxit max IRLS iterations
@@ -21,13 +21,13 @@ static inline arma::vec sigmoid(const arma::vec& x) {
 //'              iter = integer, converged = logical)
 //'
 // [[Rcpp::export]]
-Rcpp::List cpp_irls_binomial(const arma::mat& T,
+Rcpp::List cpp_irls_binomial(const arma::mat& TT,
                               const Rcpp::IntegerVector& ybin,
                               Rcpp::Nullable<Rcpp::NumericVector> w_class = R_NilValue,
                               int maxit = 50,
                               double tol = 1e-8) {
-   const arma::uword n = T.n_rows;
-   const arma::uword A = T.n_cols;
+   const arma::uword n = TT.n_rows;
+   const arma::uword A = TT.n_cols;
    if ((arma::uword)ybin.size() != n) Rcpp::stop("cpp_irls_binomial: y length must match nrow(T)");
    
    arma::vec y(n);
@@ -51,7 +51,7 @@ Rcpp::List cpp_irls_binomial(const arma::mat& T,
    
    // Design matrix X = [1, T]
    arma::mat X(n, A + 1, arma::fill::ones);
-   if (A > 0) X.cols(1, A) = T;
+   if (A > 0) X.cols(1, A) = TT;
    
    // Params: theta = [b; beta]
    arma::vec theta(A + 1, arma::fill::zeros);

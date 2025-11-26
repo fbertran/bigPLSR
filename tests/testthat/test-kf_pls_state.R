@@ -90,7 +90,7 @@ test_that("KF-PLS state API tracks full SIMPLS on concatenated data", {
   # prediction parity on held-out slice of X
   Xh <- matrix(rnorm(50*p), 50, p)
   ph <- function(fit) {
-    pr <- predict(bigPLSR:::.finalize_pls_fit(fit, "kf_pls"), Xh)
+    pr <- predict(.finalize_pls_fit(fit, "kf_pls"), Xh)
     as.matrix(pr)
   }
   Yp_state <- ph(fit_state)
@@ -110,7 +110,7 @@ test_that("KF-PLS state: exact parity with lambda=1, q_proc=0", {
   cpp_kf_pls_state_update(st, X2, Y2)
   fit_state <- cpp_kf_pls_state_fit(st, tol = 1e-8)
   fit_full  <- bigPLSR::pls_fit(X, Y, ncomp=A, backend="arma", algorithm="simpls", scores="none")
-  Yp_state  <- predict(bigPLSR:::.finalize_pls_fit(fit_state, "kf_pls"), X)
+  Yp_state  <- predict(.finalize_pls_fit(fit_state, "kf_pls"), X)
   Yp_full   <- predict(fit_full, X)
   expect_lt(mean((Yp_state - Yp_full)^2), 1e-8)
 })
@@ -127,7 +127,7 @@ test_that("KF-PLS state: near-parity with forgetting (lambda=0.98)", {
   cpp_kf_pls_state_update(st, X2, Y2)
   fit_state <- cpp_kf_pls_state_fit(st, tol = 1e-8)
   fit_full  <- bigPLSR::pls_fit(X, Y, ncomp=A, backend="arma", algorithm="simpls", scores="none")
-  Yp_state  <- predict(bigPLSR:::.finalize_pls_fit(fit_state, "kf_pls"), X)
+  Yp_state  <- predict(.finalize_pls_fit(fit_state, "kf_pls"), X)
   Yp_full   <- predict(fit_full, X)
   # looser bound (empirically ~0.05–0.09 depending on RNG)
   expect_lt(mean((Yp_state - Yp_full)^2), 0.1)

@@ -4,10 +4,10 @@
 \alias{cpp_irls_binomial}
 \title{Fast IRLS for binomial logit with class weights}
 \usage{
-cpp_irls_binomial(T, ybin, w_class = NULL, maxit = 50L, tol = 1e-08)
+cpp_irls_binomial(TT, ybin, w_class = NULL, maxit = 50L, tol = 1e-08)
 }
 \arguments{
-\item{T}{n x A numeric matrix of latent scores (no intercept column)}
+\item{TT}{n x A numeric matrix of latent scores (no intercept column)}
 
 \item{ybin}{integer vector of \{0,1\} labels (length n)}
 

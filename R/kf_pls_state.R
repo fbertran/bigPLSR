@@ -37,7 +37,7 @@
 #' kf_pls_state_update(st, X1, Y1)
 #' kf_pls_state_update(st, X2, Y2)
 #' fit <- kf_pls_state_fit(st)          # returns a big_plsr-compatible list
-#' preds <- predict(bigPLSR:::.finalize_pls_fit(fit, "kf_pls"), rbind(X1, X2))
+#' preds <- predict(bigPLSR::.finalize_pls_fit(fit, "kf_pls"), rbind(X1, X2))
 #' head(preds)
 #' @export
 kf_pls_state_new <- function(p, m, ncomp, lambda = 0.99, q_proc = 0, r_meas = 0) {

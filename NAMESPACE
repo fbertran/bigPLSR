@@ -3,6 +3,7 @@
 S3method(predict,big_plsr)
 S3method(print,summary.big_plsr)
 S3method(summary,big_plsr)
+export(.finalize_pls_fit)
 export(bigPLSR_stream_kstats)
 export(kf_pls_state_fit)
 export(kf_pls_state_new)
