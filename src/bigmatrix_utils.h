@@ -15,14 +15,39 @@ inline int safe_matrix_dim(std::size_t value, const char* name) {
   return static_cast<int>(value);
 }
 
+inline SEXP bigmemory_big_matrix_fun() {
+  static SEXP fun = NULL;
+  if (fun == NULL) {
+    SEXP ns_name = PROTECT(Rf_mkString("bigmemory"));
+    SEXP ns = PROTECT(R_FindNamespace(ns_name));
+    SEXP resolved = Rf_findFun(Rf_install("big.matrix"), ns);
+    if (TYPEOF(resolved) != CLOSXP &&
+        TYPEOF(resolved) != BUILTINSXP &&
+        TYPEOF(resolved) != SPECIALSXP) {
+      UNPROTECT(2);
+      Rcpp::stop("Unable to resolve bigmemory::big.matrix");
+    }
+    fun = resolved;
+    R_PreserveObject(fun);
+    UNPROTECT(2);
+  }
+  return fun;
+}
+
 inline Rcpp::S4 allocate_big_matrix(std::size_t nrow,
                                     std::size_t ncol,
                                     const char* name) {
-  static Rcpp::Function big_matrix =
-    Rcpp::Environment::namespace_env("bigmemory")["big.matrix"];
-  return big_matrix(Rcpp::Named("nrow") = safe_matrix_dim(nrow, name),
-                    Rcpp::Named("ncol") = safe_matrix_dim(ncol, name),
-                    Rcpp::Named("type") = "double");
+  SEXP nrow_sexp = PROTECT(Rf_ScalarInteger(safe_matrix_dim(nrow, name)));
+  SEXP ncol_sexp = PROTECT(Rf_ScalarInteger(safe_matrix_dim(ncol, name)));
+  SEXP type_sexp = PROTECT(Rf_mkString("double"));
+  SEXP call = PROTECT(Rf_lang4(bigmemory_big_matrix_fun(), nrow_sexp, ncol_sexp, type_sexp));
+  SET_TAG(CDR(call), Rf_install("nrow"));
+  SET_TAG(CDDR(call), Rf_install("ncol"));
+  SET_TAG(CDR(CDDR(call)), Rf_install("type"));
+  SEXP result = PROTECT(Rf_eval(call, R_GlobalEnv));
+  Rcpp::S4 out(result);
+  UNPROTECT(5);
+  return out;
 }
 
 inline void copy_column_major(const Rcpp::S4& target,

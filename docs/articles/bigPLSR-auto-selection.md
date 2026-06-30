@@ -1,0 +1,215 @@
+# Automatic Algorithm Selection in bigPLSR
+
+We choose between **XtX (SIMPLS)**, **XX^T (wide-kernel)**, and
+**NIPALS** using $`(n,p)`$ and a RAM budget.
+
+``` r
+
+# In pls_fit(), after arg parsing:
+if (identical(algo_in, "auto")) {
+  algo_in <- .choose_algorithm_auto(backend, X, y, ncomp)
+}
+
+.mem_bytes <- function() {
+  gb <- getOption("bigPLSR.mem_budget_gb", 8)
+  as.numeric(gb) * (1024^3)
+}
+.dims_of <- function(X) {
+  if (inherits(X, "big.matrix")) c(nrow(X), ncol(X)) else c(NROW(X), NCOL(X))
+}
+
+.choose_algorithm_auto <- function(backend, X, y, ncomp) {
+  is_big_local <- inherits(X, "big.matrix") || inherits(X, "big.matrix.descriptor")
+  dims <- .dims_of(X); n <- as.integer(dims[1]); p <- as.integer(dims[2])
+  B <- .mem_bytes()
+  bytes <- 8
+  need_XtX <- bytes * as.double(p) * as.double(p)      # bytes for p x p
+  need_XXt <- bytes * as.double(n) * as.double(n)      # bytes for n x n
+  can_XtX  <- need_XtX <= M
+  can_XXt  <- need_XXt <= M
+  shape_XtX <- (p <= 4L * n)
+  shape_XXt <- (n <= 4L * p)
+  if (can_XtX && shape_XtX) {
+    algo_in <- "simpls"
+  } else if (can_XXt && shape_XXt) {
+    algo_in <- "widekernelpls"
+  } else {
+    algo_in <- "nipals"
+  }
+}
+```
+
+Users can override the memory budget:
+
+``` r
+
+options(bigPLSR.memory_budget_bytes = 8L * 1024^3)  # 8 GiB
+```
+
+## When does each win?
+
+- **XtX (SIMPLS)**: moderate $`p`$ (fits $`p^2`$ in RAM). Fast BLAS-3;
+  excellent for $`n \gg p`$.
+- **XXᵗ (wide-kernel)**: moderate $`n`$ (fits $`n^2`$). Great when
+  $`p\gg n`$ (wide problems).
+- **NIPALS / streaming**: both $`p^2`$ and $`n^2`$ exceed budget;
+  supports file-backed scores and large-scale chunked BLAS.
+
+## Sanity check
+
+``` r
+
+set.seed(1)
+n <- 1e5; p <- 200
+X <- matrix(rnorm(n*p), n, p)
+y <- X[,1]*0.5 + rnorm(n)
+bmX <- bigmemory::as.big.matrix(X)
+bmy <- bigmemory::as.big.matrix(matrix(y, n, 1))
+
+options(bigPLSR.memory_budget_bytes = 2L*1024^3)
+fit <- pls_fit(bmX, bmy, ncomp=3, backend="bigmem", scores="r")
+fit$algorithm
+```
+
+## Overview
+
+[`bigPLSR::pls_fit()`](https://fbertran.github.io/bigPLSR/reference/pls_fit.md)
+can automatically choose an algorithm based on **problem shape** and a
+user-configurable **memory budget**:
+
+- **SIMPLS (XtX route)** when forming the `p × p` cross-product fits in
+  memory.
+- **SIMPLS (XXt / kernel route)** when `XtX` does not fit but
+  `XXt (n × n)` does.
+- **NIPALS (streaming)** when neither `XtX` nor `XXt` comfortably fit.
+
+This selection only applies when `algorithm = "auto"` (the default). Any
+explicit `algorithm =` overrides the decision.
+
+### Why these choices?
+
+- SIMPLS works entirely from centered cross-products, which is fast and
+  numerically robust when the target cross-product fits (either `p×p` or
+  `n×n`).
+- Using `XtX` is efficient when `p` is moderate; using `XXt` is
+  efficient for “wide” problems (`p ≫ n`) but still bounded by `n^2`
+  memory.
+- NIPALS avoids materializing any large cross-product and can **stream**
+  from `big.memory` with fixed working memory; it is the safe fallback
+  when memory is tight.
+
+## The decision rule
+
+Let the memory budget be `B` bytes (defaults to 8 GB, configurable via
+`options(bigPLSR.mem_budget_gb = ...)`). With doubles (8 bytes), we
+estimate the size of each symmetric matrix as:
+
+- `need_XtX = 8 * p^2`
+- `need_XXt = 8 * n^2`
+
+Then:
+
+      if (can_XtX && shape_XtX) { algo_in <- "simpls"}.    # XtX
+      if (can_XXt && shape_XXt) { algo_in <- "widekernelpls"}. XXt (a.k.a. "kernel" route)
+      else                      { algorithm <- "nipals"}         # streaming
+
+## Configuring the memory budget
+
+``` r
+
+# Use 16 GB as selection budget
+options(bigPLSR.mem_budget_gb = 16)
+```
+
+This **does not** change R’s actual memory limit; it only controls the
+selection.
+
+## Reproducibility knobs
+
+For tight numerical parity in tests:
+
+``` r
+
+set.seed(1)
+if (requireNamespace("RhpcBLASctl", quietly = TRUE)) {
+  RhpcBLASctl::blas_set_num_threads(1L)
+  RhpcBLASctl::omp_set_num_threads(1L)
+}
+# otherwise, you can try environment variables:
+# Sys.setenv(OPENBLAS_NUM_THREADS = "1", OMP_NUM_THREADS = "1")
+```
+
+## Examples
+
+``` r
+
+library(bigPLSR)
+
+n <- 2e3; p <- 5e2
+X <- matrix(rnorm(n*p), n, p)
+y <- X[,1] - 0.5*X[,2] + rnorm(n)
+
+# Auto will likely pick SIMPLS (XtX) here
+fit <- pls_fit(X, y, ncomp = 10, algorithm = "auto")
+fit$algorithm  # "simpls"
+```
+
+Wide case:
+
+``` r
+
+n <- 200; p <- 4000
+X <- matrix(rnorm(n*p), n, p)
+y <- rnorm(n)
+
+# If budget is small, auto picks kernel (XXt) or NIPALS
+options(bigPLSR.mem_budget_gb = 2)  # small budget
+fit <- pls_fit(X, y, ncomp = 5, algorithm = "auto")
+fit$algorithm  # "kernelpls" or "nipals" depending on n^2 vs budget
+```
+
+Big-matrix streaming:
+
+``` r
+
+library(bigmemory)
+n <- 1e6; p <- 50
+# (example only; allocate according to your RAM)
+# bmX <- big.matrix(n, p, type = "double")
+# bmy <- big.matrix(n, 1, type = "double")
+# fit <- pls_fit(bmX, bmy, ncomp = 10, backend = "bigmem", algorithm = "auto")
+# fit$algorithm  # "simpls" or "nipals"
+```
+
+## References
+
+- de Jong, S. (1993). **SIMPLS: An alternative approach to partial least
+  squares regression**. *Chemometrics and Intelligent Laboratory
+  Systems*, 18(3), 251–263.
+- Dayal, B., & MacGregor, J. F. (1997). **Improved PLS algorithms**.
+  *Journal of Chemometrics*, 11(1), 73–85.
+- Rosipal, R., & Trejo, L. J. (2001). **Kernel Partial Least Squares
+  Regression in Reproducing Kernel Hilbert Space**. *Journal of Machine
+  Learning Research*, 2, 97–123.
+- Wold, H. (1966, 1985). **NIPALS** algorithm (original PLS
+  formulation).
+
+------------------------------------------------------------------------
+
+## Appendix: streaming Gram math
+
+For column blocks $`J`$,
+``` math
+K \approx \sum_{J} X_{[:,J]} X_{[:,J]}^\top,\quad
+(Kv) \leftarrow (Kv) + X_{[:,J]} \big(X_{[:,J]}^\top v\big).
+```
+
+For row blocks $`B`$,
+``` math
+K \approx \sum_{B} X_B X^\top,\quad
+(Kv) \leftarrow (Kv) + X_B \big(X^\top v\big)_B.
+```
+
+Center on the fly:
+$`H K H v = K v - \tfrac{1}{n}\mathbf{1}\mathbf{1}^\top K v - \tfrac{1}{n}K\mathbf{1}\mathbf{1}^\top v + \tfrac{1}{n^2}\mathbf{1}\mathbf{1}^\top K \mathbf{1}\,\mathbf{1}^\top v`$.
+Maintain the needed aggregated vectors once per pass.

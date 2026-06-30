@@ -46,7 +46,7 @@ provided.}
 \item{group_col}{Optional vector of colours for the groups. Recycled as
 needed.}
 
-\item{...}{Additional arguments passed to \code{\link[graphics:plot.default]{graphics::plot()}}.}
+\item{...}{Additional arguments passed to \code{\link[graphics:plot]{graphics::plot()}}.}
 }
 \value{
 Invisibly returns \code{NULL} after drawing the biplot.

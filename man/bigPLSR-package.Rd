@@ -39,6 +39,7 @@ Useful links:
 
 Authors:
 \itemize{
+  \item Frederic Bertrand \email{frederic.bertrand@lecnam.net} (\href{https://orcid.org/0000-0002-0837-8281}{ORCID})
   \item Myriam Maumy \email{myriam.maumy@ehesp.fr} (\href{https://orcid.org/0000-0002-4615-1512}{ORCID})
 }
 

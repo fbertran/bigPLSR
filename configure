@@ -4,10 +4,77 @@
 
 echo "==> bigPLSR: running configure"
 
+if [ -n "$R_HOME" ] && [ -x "$R_HOME/bin/R" ]; then
+  R_BIN="$R_HOME/bin/R"
+else
+  R_BIN="${R:-R}"
+fi
+
+r_config() {
+  "$R_BIN" CMD config "$1" 2>/dev/null
+}
+
 # Resolve C++ compiler from R (falls back to c++)
-CXX="${CXX:-$(R CMD config CXX17 2>/dev/null || R CMD config CXX 2>/dev/null || command -v c++)}"
-CPPFLAGS_DEFAULT="$(R CMD config CPPFLAGS 2>/dev/null)"
-CXXFLAGS_DEFAULT="$(R CMD config CXXFLAGS 2>/dev/null)"
+CXX="${CXX:-$(r_config CXX17 || r_config CXX || command -v c++)}"
+CPPFLAGS_DEFAULT="$(r_config CPPFLAGS)"
+CXXFLAGS_DEFAULT="$(r_config CXXFLAGS)"
+FLIBS_DEFAULT="$(r_config FLIBS)"
+
+clean_libs() {
+  cleaned=""
+  keep_framework_name=0
+  for flag in "$@"; do
+    if [ "$keep_framework_name" -eq 1 ]; then
+      cleaned="${cleaned} ${flag}"
+      keep_framework_name=0
+      continue
+    fi
+    case "$flag" in
+      -L*)
+        dir="${flag#-L}"
+        case "$dir" in
+          \"*\") dir="${dir#\"}"; dir="${dir%\"}" ;;
+          \'*\') dir="${dir#\'}"; dir="${dir%\'}" ;;
+        esac
+        if [ -n "$dir" ] && [ -d "$dir" ]; then
+          cleaned="${cleaned} ${flag}"
+        else
+          echo "==> bigPLSR: dropping missing library search path ${flag}" >&2
+        fi
+        ;;
+      -F*)
+        dir="${flag#-F}"
+        case "$dir" in
+          \"*\") dir="${dir#\"}"; dir="${dir%\"}" ;;
+          \'*\') dir="${dir#\'}"; dir="${dir%\'}" ;;
+        esac
+        if [ -n "$dir" ] && [ -d "$dir" ]; then
+          cleaned="${cleaned} ${flag}"
+        else
+          echo "==> bigPLSR: dropping missing framework search path ${flag}" >&2
+        fi
+        ;;
+      -framework)
+        cleaned="${cleaned} ${flag}"
+        keep_framework_name=1
+        ;;
+      -l*|-Wl,*|-pthread|-fopenmp*|*.a|*.so|*.dylib)
+        cleaned="${cleaned} ${flag}"
+        ;;
+      *)
+        echo "==> bigPLSR: dropping unexpected linker token ${flag}" >&2
+        ;;
+    esac
+  done
+  printf '%s\n' "${cleaned# }"
+}
+
+FLIBS_CLEAN="$(clean_libs $FLIBS_DEFAULT)"
+if [ -n "$FLIBS_CLEAN" ]; then
+  PKG_FLIBS=" $FLIBS_CLEAN"
+else
+  PKG_FLIBS=""
+fi
 
 # Try to compile a trivial TU that includes a CBLAS header
 cat > conftest.cpp <<'EOF'
@@ -39,6 +106,7 @@ else
   # Fallback: write a Makevars that includes the optional define if available
   cat > src/Makevars <<EOF
 PKG_CPPFLAGS = -DARMA_USE_CURRENT $CBLAS_DEFINE
+override FLIBS =$PKG_FLIBS
 PKG_LIBS = \$(LAPACK_LIBS) \$(BLAS_LIBS) \$(FLIBS)
 CXX_STD = CXX17
 EOF

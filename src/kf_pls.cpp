@@ -9,6 +9,13 @@ using arma::uword;
 
 // [[Rcpp::plugins(cpp17)]]
 
+SEXP cpp_simpls_from_cross(const arma::mat& XtX,
+                           const arma::mat& XtY,
+                           const arma::vec& x_mean,
+                           const arma::rowvec& y_mean,
+                           int ncomp,
+                           double tol);
+
 // Small helper: enforce double big.matrix
 static inline void ensure_double_matrix(const BigMatrix& mat, const char* name) {
   if (mat.matrix_type() != 8) {
@@ -59,34 +66,8 @@ Rcpp::List cpp_kf_pls_dense(Rcpp::NumericMatrix X_,
   Cxy = lambda * Cxy + Xc.t() * Yc;
   if (q_proc > 0) Cxx += q_proc * arma::eye<arma::mat>(Cxx.n_rows, Cxx.n_cols);
   
-  // Call the SIMPLS-from-cross exported symbol
-  // NOTE:
-  //   - From C++ we call the **R wrapper** `cpp_simpls_from_cross`
-  //     living in the bigPLSR namespace, not the C symbol with leading "_".
-  //   - Make argument types explicit to avoid any ambiguity.
-  
-  // Convert arma to R objects explicitly
-  Rcpp::NumericMatrix XtX(Cxx.n_rows, Cxx.n_cols);
-  Rcpp::NumericMatrix XtY(Cxy.n_rows, Cxy.n_cols);
-  std::copy(Cxx.begin(), Cxx.end(), XtX.begin());
-  std::copy(Cxy.begin(), Cxy.end(), XtY.begin());
-  
-  Rcpp::NumericVector xmean(x_means.begin(), x_means.end());
-  Rcpp::NumericVector ymean(y_means.begin(), y_means.end());
-  
-  // Lookup the R function bigPLSR::cpp_simpls_from_cross
-  Rcpp::Environment ns = Rcpp::Environment::namespace_env("bigPLSR");
-  Rcpp::Function cpp_simpls_from_cross = ns["cpp_simpls_from_cross"];
-  
-  // Call it: cpp_simpls_from_cross(XtX, XtY, x_means, y_means, ncomp, tol)
-  Rcpp::List fit = cpp_simpls_from_cross(
-    XtX,
-    XtY,
-    xmean,
-    ymean,
-    Rcpp::wrap(ncomp),
-    Rcpp::wrap(tol)
-  );
+  arma::vec x_mean_vec = x_means.t();
+  Rcpp::List fit(cpp_simpls_from_cross(Cxx, Cxy, x_mean_vec, y_means, ncomp, tol));
   // Scores are handled at the R layer if requested (dense path).
   return fit;
 }
@@ -159,37 +140,10 @@ Rcpp::List cpp_kf_pls_bigmem(SEXP X_ptr,
   }
   if (q_proc > 0) Cxx += q_proc * arma::eye<arma::mat>(p, p);
   
-  // Call the SIMPLS-from-cross exported symbol
-  // NOTE:
-  //   - From C++ we call the **R wrapper** `cpp_simpls_from_cross`
-  //     living in the bigPLSR namespace, not the C symbol with leading "_".
-  //   - Make argument types explicit to avoid any ambiguity.
-  
-  // Convert arma to R objects explicitly
-  Rcpp::NumericMatrix XtX(Cxx.n_rows, Cxx.n_cols);
-  Rcpp::NumericMatrix XtY(Cxy.n_rows, Cxy.n_cols);
-  std::copy(Cxx.begin(), Cxx.end(), XtX.begin());
-  std::copy(Cxy.begin(), Cxy.end(), XtY.begin());
-  
-  Rcpp::NumericVector xmean(x_means.begin(), x_means.end());
-  Rcpp::NumericVector ymean(y_means.begin(), y_means.end());
-  
-  // Lookup the R function bigPLSR::cpp_simpls_from_cross
-  Rcpp::Environment ns = Rcpp::Environment::namespace_env("bigPLSR");
-  Rcpp::Function cpp_simpls_from_cross = ns["cpp_simpls_from_cross"];
-
-  // Call it: cpp_simpls_from_cross(XtX, XtY, x_means, y_means, ncomp, tol)
-  Rcpp::List fit = cpp_simpls_from_cross(
-    XtX,
-    XtY,
-    xmean,
-    ymean,
-    Rcpp::wrap(ncomp),
-    Rcpp::wrap(tol)
-  );
+  arma::vec x_mean_vec = x_means.t();
+  Rcpp::List fit(cpp_simpls_from_cross(Cxx, Cxy, x_mean_vec, y_means, ncomp, tol));
   return fit;
 }
-
 
 
 

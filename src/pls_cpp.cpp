@@ -452,6 +452,8 @@ List pls_nipals_bigmemory(SEXP X_ptrSEXP,
   );
 }
 
+// Legacy compatibility export: this materializes XtX (p x p), so it is not
+// suitable for very wide predictors.
 // [[Rcpp::export]]
 List pls_streaming_bigmemory(SEXP X_ptrSEXP,
                              SEXP y_ptrSEXP,
@@ -832,11 +834,17 @@ SEXP cpp_big_pls_stream_fit_sink(SEXP X_ptrSEXP, SEXP y_ptrSEXP,
   if (y_ptr->ncol() != 1 || static_cast<std::size_t>(y_ptr->nrow()) != n)
     stop("y must be (n x 1)");
 
-  // ---- Get the model (no scores) via the package R wrapper ----
-  Environment ns = Environment::namespace_env("bigPLSR");
-  Function fit_fun = ns["cpp_big_pls_stream_fit"];  // R wrapper for _bigPLSR_cpp_big_pls_stream_fit
-  RObject fit_obj  = fit_fun(X_ptrSEXP, y_ptrSEXP, wrap(ncomp), wrap(chunk_size), wrap(tol), wrap(false));
-  List fit = as<List>(fit_obj);
+  // Reuse the native streaming fit directly to avoid routing back through R.
+  List fit = pls_streaming_bigmemory(
+    X_ptrSEXP,
+    y_ptrSEXP,
+    ncomp,
+    static_cast<int>(chunk_size),
+    true,
+    false,
+    tol,
+    false
+  );
 
   const int used_comp = as<int>(fit["ncomp"]);
   if (used_comp <= 0) return fit;
@@ -852,9 +860,19 @@ SEXP cpp_big_pls_stream_fit_sink(SEXP X_ptrSEXP, SEXP y_ptrSEXP,
     mu.set_size(p);
     for (std::size_t j = 0; j < p; ++j) mu[j] = xmu[j];
     do_center = true;
+  } else if (fit.containsElementNamed("x_center")) {
+    NumericVector xmu = fit["x_center"];
+    mu.set_size(p);
+    for (std::size_t j = 0; j < p; ++j) mu[j] = xmu[j];
+    do_center = true;
   }
   if (fit.containsElementNamed("x_scales")) {
     NumericVector xs = fit["x_scales"];
+    invs.set_size(p);
+    for (std::size_t j = 0; j < p; ++j) invs[j] = 1.0 / xs[j];
+    do_scale = true;
+  } else if (fit.containsElementNamed("x_scale")) {
+    NumericVector xs = fit["x_scale"];
     invs.set_size(p);
     for (std::size_t j = 0; j < p; ++j) invs[j] = 1.0 / xs[j];
     do_scale = true;

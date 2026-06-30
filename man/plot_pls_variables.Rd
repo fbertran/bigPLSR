@@ -27,7 +27,7 @@ plot_pls_variables(
 
 \item{arrow_scale}{Scaling applied to variable vectors.}
 
-\item{...}{Additional plotting parameters passed to \code{\link[graphics:plot.default]{graphics::plot()}}.}
+\item{...}{Additional plotting parameters passed to \code{\link[graphics:plot]{graphics::plot()}}.}
 }
 \value{
 Invisibly returns \code{NULL} after drawing the plot.

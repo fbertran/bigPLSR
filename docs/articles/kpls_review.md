@@ -1,0 +1,380 @@
+# Kernel and Streaming PLS Methods in bigPLSR
+
+## Notation
+
+Let $`X \in \mathbb{R}^{n\times p}`$ and
+$`Y \in \mathbb{R}^{n\times m}`$. We assume column-centered data unless
+stated otherwise. PLS extracts latent scores $`T=[t_1,\dots,t_a]`$ with
+loadings and weights so that covariance between $`X`$ and $`Y`$ along
+$`t_a`$ is maximized, with orthogonality constraints across components.
+
+For kernel methods, let $`\phi(\cdot)`$ be an implicit feature map and
+define the Gram matrix $`K_X = \Phi_X \Phi_X^\top`$ where
+$`(K_X)_{ij} = k(x_i, x_j)`$. The centering operator
+$`H = I_n - \frac{1}{n}\mathbf{1}\mathbf{1}^\top`$ yields a centered
+Gram $`\tilde K_X = H K_X H`$.
+
+## Pseudo-code for bigPLSR algorithms
+
+The package implements several complementary extraction schemes. The
+following pseudo-code summarises the core loops.
+
+### SIMPLS (dense/bigmem)
+
+1.  Compute centered cross-products $`C_{xx} = X^\top X`$,
+    $`C_{xy} = X^\top Y`$.
+2.  Initialise orthonormal basis $`V = []`$.
+3.  For each component $`a = 1..A`$:
+    - Deflate $`C_{xy}`$ in the subspace spanned by $`V`$.
+    - Extract $`q_a`$ as the dominant eigenvector of
+      $`C_{xy}^\top C_{xy}`$.
+    - Compute $`w_a = C_{xy} q_a`$ and normalise under the
+      $`C_{xx}`$-metric.
+    - Obtain loadings $`p_a = C_{xx} w_a`$ and regression weights
+      $`c_a = C_{xy}^\top w_a`$.
+    - Expand $`V \leftarrow [V, p_a]`$.
+4.  Form $`W = [w_a]`$, $`P = [p_a]`$, $`Q = [c_a]`$ and compute
+    regression coefficients $`B = W (P^\top W)^{-1} Q^\top`$.
+
+### NIPALS (dense/streamed)
+
+1.  Initialise $`t_a`$ from $`Y`$ (or $`X`$).
+2.  Iterate until convergence:
+    - $`w_a = X^\top t_a / (t_a^\top t_a)`$, normalise $`w_a`$.
+    - $`t_a = X w_a`$.
+    - $`c_a = Y^\top t_a / (t_a^\top t_a)`$.
+    - $`u_a = Y c_a`$ (for multi-response).
+3.  Deflate $`X \leftarrow X - t_a p_a^\top`$,
+    $`Y \leftarrow Y - t_a q_a^\top`$ and repeat for the next component.
+
+### Kernel PLS / RKHS (dense & streamed)
+
+1.  Form (or stream) the centered Gram matrix $`\tilde K_X`$.
+2.  At each iteration extract a dual weight $`\alpha_a`$ maximising
+    covariance with $`Y`$.
+3.  Obtain the score $`t_a = \tilde K_X \alpha_a`$, regress $`Y`$ on
+    $`t_a`$ to get $`q_a`$ and deflate in the $`\tilde K_X`$ metric.
+4.  Accumulate $`\alpha_a`$, $`q_a`$ and the orthonormal basis for
+    subsequent deflation steps.
+
+### Double RKHS ( `algorithm = "rkhs_xy"` )
+
+1.  Build (or approximate) Gram matrices for $`X`$ and $`Y`$.
+2.  Extract dual directions $`\alpha_a`$ and $`\beta_a`$ so that the
+    score pair $`(t_a, u_a)`$ maximises covariance under both kernels.
+3.  Use ridge-regularised projections to obtain regression weights.
+4.  Store kernel centering statistics for prediction.
+
+### Kalman-filter PLS (`algorithm = "kf_pls"`)
+
+1.  Maintain exponentially weighted means $`\mu_x, \mu_y`$.
+2.  Update cross-products $`C_{xx}, C_{xy}`$ with forgetting factor
+    $`\lambda`$ and optional process noise.
+3.  Periodically call SIMPLS on the smoothed moments to recover
+    regression coefficients consistent with the streamed state.
+
+Common kernels:
+
+``` math
+\begin{aligned}
+\text{Linear:}\quad& k(x,z) = x^\top z \\
+\text{RBF:}\quad& k(x,z) = \exp(-\gamma \|x-z\|^2) \\
+\text{Polynomial:}\quad& k(x,z) = (\gamma\,x^\top z + c_0)^{d} \\
+\text{Sigmoid:}\quad& k(x,z) = \tanh(\gamma\,x^\top z + c_0).
+\end{aligned}
+```
+
+### Centering the Gram matrix
+
+Given $`K\in\mathbb{R}^{n\times n}`$, the centered version is:
+
+``` math
+\tilde K = H K H, \quad H = I_n - \tfrac{1}{n}\mathbf{1}\mathbf{1}^\top.
+```
+
+------------------------------------------------------------------------
+
+## KLPLS / Kernel PLS (Dayal & MacGregor)
+
+We operate in the dual. Consider $`K_X`$ and $`K_{XY} = K_X Y`$. At step
+$`a`$, we extract a dual direction $`\alpha_a`$ so that the score
+$`t_a = \tilde K_X \alpha_a`$ maximizes covariance with $`Y`$, subject
+to orthogonality in the RKHS metric:
+
+``` math
+\max_{\alpha} \ \mathrm{cov}(t, Y) \quad
+\text{s.t.}\ \ t=\tilde K_X \alpha,\ \ t^\top t = 1,\ \ t^\top t_b = 0,\ b<a.
+```
+
+A SIMPLS-style recursion in the dual:
+
+1.  Compute the cross-covariance operator $`C = \tilde K_X Y`$.
+2.  Extract a direction in $`\mathbb{R}^n`$ via dominant eigenvector of
+    $`C C^\top`$ or by power iterations.
+3.  Set $`t_a = \tilde K_X \alpha_a`$, normalize $`t_a`$.
+4.  Regress $`Y`$ on $`t_a`$: $`q_a = (t_a^\top t_a)^{-1} t_a^\top Y`$.
+5.  Deflate $`Y \leftarrow Y - t_a q_a^\top`$ and orthogonalize
+    subsequent directions in the $`\tilde K_X`$-metric.
+
+Prediction uses the dual coefficients; for a new $`x_\star`$,
+$`k_\star = [k(x_\star, x_i)]_{i=1}^n`$ and
+$`t_\star = \tilde k_\star^\top \alpha`$. When $`Y`$ is multivariate,
+apply steps component-wise with a shared $`t_a`$.
+
+**In bigPLSR**  
+- Dense path: `algorithm="rkhs"` builds $`\tilde K_X`$ (or an
+approximation) and runs dual SIMPLS deflation.  
+- Big-matrix path: block-streamed Gram computations to avoid
+materializing $`n\times n`$.
+
+------------------------------------------------------------------------
+
+## Streaming Gram blocks (column- and row-chunked)
+
+We avoid forming $`\tilde K_X`$ explicitly by accumulating blocks. Write
+$`K_X = \sum_{B} X_B X^\top`$ for blocks $`X_B`$ taken by rows
+(*row-chunked/XXᵗ*) or $`K_X = X X^\top = \sum_{C} X C^\top`$ with
+*column* chunks via $`X C^\top`$ where $`C`$ are column submatrices
+(useful for tall-skinny $`X`$).
+
+**Row-chunked (XXᵗ):** 1. For blocks $`B \subset \{1,\ldots,n\}`$:
+compute $`G_B = X_B X^\top`$. 2. Accumulate $`K \leftarrow K + H G_B H`$
+on the fly when needed in matrix-vector products $`(K v)`$ without
+storing full $`K`$.
+
+**Column-chunked:** 1. Partition the feature dimension $`p`$ into blocks
+$`J`$. 2. For each block $`J`$: $`G_J = X_{[:,J]} X_{[:,J]}^\top`$. 3.
+Use $`G_J`$ to update $`K v`$ accumulators and to refresh deflation
+quantities ($`t, q`$).
+
+**Memory**  
+- Row-chunked: $`O(n \cdot \text{chunk\_rows})`$.  
+- Column-chunked: $`O(n \cdot \text{chunk\_cols})`$.  
+Pick based on layout and cache friendliness.
+
+------------------------------------------------------------------------
+
+## Kernel approximations: Nyström and Random Fourier Features
+
+**Nyström (rank $`r`$)**  
+Sample a subset $`S`$ of size $`r`$, form $`K_{SS}`$ and $`K_{NS}`$.
+Define the sketch $`Z = K_{NS} K_{SS}^{-1/2}`$, so
+$`K \approx Z Z^\top`$. Center $`Z`$ by subtracting row/column means.
+Run linear PLS on $`Z`$.
+
+**RFF (RBF kernels)**  
+Draw $`\{\omega_\ell\}_{\ell=1}^r \sim \mathcal{N}(0,2\gamma I)`$ and
+$`b_\ell\sim \mathcal{U}[0,2\pi]`$. Define features
+$`\varphi_\ell(x)=\sqrt{\tfrac{2}{r}}\cos(\omega_\ell^\top x + b_\ell)`$,
+so $`k(x,z)\approx \varphi(x)^\top \varphi(z)`$. Run linear PLS on
+$`\varphi(X)`$.
+
+------------------------------------------------------------------------
+
+## Kernel Logistic PLS (binary classification)
+
+We first compute KPLS scores $`T\in\mathbb{R}^{n\times a}`$ from $`X`$
+vs labels $`y\in\{0,1\}`$, then run logistic regression in latent space
+via IRLS:
+
+Minimize
+$`\ell(\beta, \beta_0) = -\sum_i \{ y_i\eta_i - \log(1+\exp\eta_i)\}`$
+with $`\eta = \beta_0\mathbf{1} + T \beta`$. IRLS step at iteration
+$`k`$:
+
+``` math
+W = \mathrm{diag}(p^{(k)}(1-p^{(k)})),\quad
+z = \eta^{(k)} + W^{-1}(y - p^{(k)}),\quad
+\begin{bmatrix}\beta_0\\ \beta\end{bmatrix}
+= (X_\eta^\top W X_\eta + \lambda I)^{-1} X_\eta^\top W z,
+```
+
+where $`X_\eta = [\mathbf{1}, T]`$ and $`p^{(k)} = \sigma(\eta^{(k)})`$.
+Optionally **alternate**: recompute KPLS scores with current residuals
+and re-run a few IRLS steps. Class weights $`w_c`$ can be injected by
+scaling rows of $`W`$.
+
+**In bigPLSR**  
+`algorithm="klogitpls"` computes $`T`$ (dense or streamed) then fits
+IRLS in latent space.
+
+------------------------------------------------------------------------
+
+## Sparse Kernel PLS (sketch)
+
+Promote sparsity in dual or primal weights. In dual form, constrain
+$`\alpha_a`$ by $`\ell_1`$ (or group) penalty:
+
+``` math
+\max_{\alpha}\ \mathrm{cov}(\tilde K \alpha, Y) - \lambda\|\alpha\|_1
+\quad\text{s.t.}\quad (\tilde K\alpha)^\top (\tilde K\alpha) = 1,\ t_a^\top t_b=0\ (b<a).
+```
+
+A practical approach uses *proximal gradient* or *coordinate descent* on
+a smooth surrogate of covariance, with periodic orthogonalization of the
+resulting score vectors in the $`\tilde K`$ metric. Early stop by
+explained covariance. (The current release provides the scaffolding
+API.)
+
+------------------------------------------------------------------------
+
+## PLS in RKHS for X and Y (double RKHS)
+
+Let $`K_X`$ and $`K_Y`$ be centered Grams for $`X`$ and $`Y`$ (with
+small ridge $`\lambda_X,\lambda_Y`$ for stability). The cross-covariance
+operator is $`A = K_X (K_Y + \lambda_Y I) K_X`$. Dual SIMPLS extracts
+latent directions via the dominant eigenspace of $`A`$ with
+orthogonalization under the $`K_X`$ inner product.
+
+Prediction returns dual coefficients $`\alpha`$ for $`X`$ and $`\beta`$
+for $`Y`$.
+
+**In bigPLSR**  
+`algorithm="rkhs_xy"` wires this in dense mode; a streamed variant can
+be built by block Gram accumulations on $`K_X`$ and $`K_Y`$.
+
+------------------------------------------------------------------------
+
+## Kalman-Filter PLS (KF-PLS; streaming)
+
+KF-PLS maintains a state that tracks latent parameters over incoming
+mini-batches. Let the state be $`s = \{w, p, q, b\}`$ for the current
+component, with state transition $`s_{k+1} = s_k + \epsilon_k`$ (random
+walk) and “measurement” formed from the current block cross-covariances
+($`\widehat{X^\top t}, \widehat{Y^\top t}`$). The Kalman update:
+
+``` math
+\begin{aligned}
+&\text{Predict: } \hat s_{k|k-1} = \hat s_{k-1},\ \ P_{k|k-1}=P_{k-1}+Q \\
+&\text{Innovation: } \nu_k = z_k - H_k \hat s_{k|k-1},\ \ S_k = H_k P_{k|k-1} H_k^\top + R \\
+&\text{Gain: } K_k = P_{k|k-1} H_k^\top S_k^{-1} \\
+&\text{Update: } \hat s_k = \hat s_{k|k-1} + K_k \nu_k,\ \ P_k = (I - K_k H_k) P_{k|k-1}.
+\end{aligned}
+```
+
+After convergence (or patience stop), form $`t = X w`$, normalize, and
+proceed to next component with deflation compatible with SIMPLS/NIPALS
+choice.
+
+**In bigPLSR**  
+`algorithm="kf_pls"` reuses the existing *chunked T streaming* kernel
+and updates the state per block.
+
+------------------------------------------------------------------------
+
+## API quick start
+
+``` r
+
+library(bigPLSR)
+
+# Dense RKHS PLS with Nyström of rank 500 (rbf kernel)
+fit_rkhs <- pls_fit(X, Y, ncomp = 5,
+                    backend   = "arma",
+                    algorithm = "rkhs",
+                    kernel = "rbf", gamma = 0.5,
+                    approx = "nystrom", approx_rank = 500,
+                    scores = "r")
+
+# Bigmemory, kernel logistic PLS (streamed scores + IRLS)
+fit_klog <- pls_fit(bmX, bmy, ncomp = 4,
+                    backend   = "bigmem",
+                    algorithm = "klogitpls",
+                    kernel = "rbf", gamma = 1.0,
+                    chunk_size = 16384L,
+                    scores = "r")
+
+# Sparse KPLS (dense scaffold)
+fit_sk <- pls_fit(X, Y, ncomp = 5,
+                  backend = "arma",
+                  algorithm = "sparse_kpls")
+```
+
+### Prediction in RKHS PLS
+
+Let $`X\in\mathbb{R}^{n\times p}`$ be training inputs and
+$`Y\in\mathbb{R}^{n\times m}`$ the responses. With kernel
+$`k(\cdot,\cdot)`$ and training Gram $`K`$, the **centered** Gram is
+``` math
+K_c = K - \mathbf{1}_n \bar{k}^\top - \bar{k}\,\mathbf{1}_n^\top + \bar{\bar{k}},
+\quad
+\bar{k} = \frac{1}{n}\sum_{i=1}^n K_{i\cdot},\quad
+\bar{\bar{k}} = \frac{1}{n^2}\sum_{i,j}K_{ij}.
+```
+KPLS on $`K_c`$ yields **dual coefficients**
+$`A\in\mathbb{R}^{n\times m}`$.
+
+For new inputs \$X\_\\\$, the cross-kernel \$K\_\\ \in
+\mathbb{R}^{n\_\\\times n}\$ has \$(K\_\\)\_{i,j} = k(x^\\\_i, x_j)\$.
+The **centered** cross-Gram is \$\$ K\_{\\,c} = K\_\\ -
+\mathbf{1}\_{n\_\\}\bar{k}^\top - \bar{k}\_\\\mathbf{1}\_n^\top +
+\bar{\bar{k}}, \quad \bar{k}\_\\ = \frac{1}{n}K\_\\\mathbf{1}\_n. \$\$
+Predictions follow \$\$ \widehat{Y}\_\\ = K\_{\\,c}\\A +
+\mathbf{1}\_{n\_\\}\\\mu_Y^\top, \$\$ where $`\mu_Y`$ is the vector of
+training response means.
+
+In `bigPLSR`, these are stored as: `dual_coef` ($`A`$), `k_colmeans`
+($`\bar{k}`$), `k_mean` ($`\bar{\bar{k}}`$), `y_means` ($`\mu_Y`$), and
+`X_ref` (dense training inputs). The RKHS branch of
+[`predict.big_plsr()`](https://fbertran.github.io/bigPLSR/reference/predict.big_plsr.md)
+uses the same formula.
+
+------------------------------------------------------------------------
+
+## Dependency overview (wrappers → C++ entry points)
+
+    pls_fit(algorithm="simpls", backend="arma")
+      └─ .Call("_bigPLSR_cpp_simpls_from_cross")
+
+    pls_fit(algorithm="simpls", backend="bigmem")
+      ├─ .Call("_bigPLSR_cpp_bigmem_cross")
+      ├─ .Call("_bigPLSR_cpp_simpls_from_cross")
+      └─ .Call("_bigPLSR_cpp_stream_scores_given_W")
+
+    pls_fit(algorithm="nipals", backend="arma")
+      └─ cpp_dense_plsr_nipals()
+
+    pls_fit(algorithm="nipals", backend="bigmem")
+      └─ big_plsr_stream_fit_nipals()
+
+    pls_fit(algorithm="kernelpls"/"widekernelpls")
+      └─ .kernel_pls_core()  (R)
+
+    pls_fit(algorithm="rkhs", backend="arma")
+      └─ .Call("_bigPLSR_cpp_kpls_rkhs_dense")
+
+    pls_fit(algorithm="rkhs", backend="bigmem")
+      └─ .Call("_bigPLSR_cpp_kpls_rkhs_bigmem")
+
+    pls_fit(algorithm="klogitpls", backend="arma")
+      └─ .Call("_bigPLSR_cpp_klogit_pls_dense")
+
+    pls_fit(algorithm="klogitpls", backend="bigmem")
+      └─ .Call("_bigPLSR_cpp_klogit_pls_bigmem")
+
+    pls_fit(algorithm="sparse_kpls")
+      └─ .Call("_bigPLSR_cpp_sparse_kpls_dense")
+
+    pls_fit(algorithm="rkhs_xy")
+      └─ .Call("_bigPLSR_cpp_rkhs_xy_dense")
+
+    pls_fit(algorithm="kf_pls")
+      └─ .Call("_bigPLSR_cpp_kf_pls_stream")
+
+------------------------------------------------------------------------
+
+## References
+
+- Dayal, B., & MacGregor, J.F. (1997). Improved PLS algorithms. *Journal
+  of Chemometrics*, **11**(1), 73–85,
+  <doi:10.1002/(SICI)1099-128X(199701)11:1%3C73::AID-CEM446%3E3.0.CO;2-2>.
+- Rosipal, R., & Trejo, L.J. (2001). Kernel PLS regression in RKHS.
+  *Journal of Machine Learning Research*, **2**, 97–123,
+  <doi:10.1162/153244302760200687>.
+- Tenenhaus et al., Kernel Logistic PLS.
+- Sparse Kernel Partial Least Squares Regression. In *LNCS* Proceedings.
+- Rosipal et al., RKHS PLS (JMLR)
+  [http://www.jmlr.org/papers/v2/rosipal01a.html](http://www.jmlr.org/papers/v2/rosipal01a.md).
+- Kernel PLS Regression II (double RKHS). *IEEE Transactions on Neural
+  Networks and Learning Systems*, <doi:10.1109/TNNLS.2019.2932014>.
+- KF-PLS (2024) <doi:10.1016/j.chemolab.2024.104024>

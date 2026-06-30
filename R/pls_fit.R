@@ -944,24 +944,13 @@ pls_fit <- function(
       }
     }
     
-    if (mode == "pls1") {
-      fit <- pls_streaming_bigmemory(
-        X@address, y@address,
-        as.integer(ncomp), chunk_aligned,
-        center = TRUE, scale = FALSE,
-        tol = tol,
-        return_big = identical(scores, "big")
-      )
-      fit$mode <- "pls1"
-    } else {
-      fit <- big_plsr_stream_fit_nipals(
-        X@address, y@address, as.integer(ncomp),
-        center = TRUE, scale = FALSE,
-        chunk_size = chunk_aligned,
-        return_big = identical(scores, "big")
-      )
-      fit$mode <- "pls2"
-    }
+    fit <- big_plsr_stream_fit_nipals(
+      X@address, y@address, as.integer(ncomp),
+      center = TRUE, scale = FALSE,
+      chunk_size = chunk_aligned,
+      return_big = identical(scores, "big")
+    )
+    fit$mode <- mode
     
     # post scores routing
     if (identical(scores, "none")) {

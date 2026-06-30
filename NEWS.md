@@ -1,3 +1,7 @@
+# bigPLSR 0.7.3
+* Big-memory NIPALS PLS1 now uses the same row/chunk streaming backend as PLS2,
+  avoiding the legacy `XtX` materialization path for very wide predictors.
+
 # bigPLSR 0.7.2
 
 * Code and documentation fixes requested by CRAN.
@@ -115,4 +119,3 @@ simpls and nipals.
 # bigPLSR 0.0.1 
 
 * Package creation
-
