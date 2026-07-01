@@ -1,0 +1,27 @@
+\name{filematrix_provider}
+\alias{filematrix_provider}
+\alias{is_filematrix_object}
+\alias{make_filematrix_row_provider}
+\title{Filematrix Row-Block Provider}
+\usage{
+is_filematrix_object(x)
+
+make_filematrix_row_provider(X, chunk_size = 1024L)
+}
+\arguments{
+\item{x, X}{Object to test or wrap.}
+
+\item{chunk_size}{Suggested row chunk size for downstream consumers.}
+}
+\value{
+\code{is_filematrix_object()} returns a logical scalar. The provider is a
+list with \code{nrow()}, \code{ncol()}, \code{get_rows()}, \code{get_cols()},
+\code{get_block()}, and \code{storage_type = "filematrix"}.
+}
+\description{
+\code{make_filematrix_row_provider()} creates a minimal block-access adapter for
+\code{filematrix} objects. The provider is intended for block-wise sequential
+access by streaming PCA/PLS backends. It avoids \code{bigmemory} mmap write
+semantics and is not intended to be faster than \code{bigmemory} for small
+random-access matrices.
+}

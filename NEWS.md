@@ -1,3 +1,10 @@
+# bigPLSR 0.8.0
+
+* Added an optional `filematrix` row-block provider for future streaming
+  backends. It exposes sequential row/column/block reads as dense R matrices
+  without changing existing `bigmemory` code paths.
+
+
 # bigPLSR 0.7.3
 * Big-memory NIPALS PLS1 now uses the same row/chunk streaming backend as PLS2,
   avoiding the legacy `XtX` materialization path for very wide predictors.
