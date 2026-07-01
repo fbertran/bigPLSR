@@ -3,8 +3,9 @@
 #' @encoding UTF-8
 #' 
 #' @description
-#' Dispatches to a dense (Arm/BLAS) backend for in-memory matrices
-#' or to a streaming big.matrix backend when X (or Y) is a big.matrix.
+#' Dispatches to a dense (Arm/BLAS) backend for in-memory matrices,
+#' a streaming big.matrix backend when X (or Y) is a big.matrix, or the
+#' experimental filematrix backend for block-wise file-backed NIPALS fits.
 #' Algorithm can be chosen between:
 #' "simpls" (default), "nipals", "kernelpls", "widekernelpls",
 #' "rkhs" (Rosipal & Trejo), "klogitpls", "sparse_kpls",
@@ -14,18 +15,23 @@
 #' variant for big.matrix inputs, with an optional row-chunking loop
 #' controlled by \code{chunk_cols}.
 #'
-#' @param X numeric matrix or \code{bigmemory::big.matrix}
-#' @param y numeric vector/matrix or \code{big.matrix}
+#' @param X numeric matrix, \code{bigmemory::big.matrix}, or \code{filematrix}
+#' @param y numeric vector/matrix, \code{big.matrix}, or \code{filematrix}
 #' @param ncomp number of latent components
 #' @param tol numeric tolerance used in the core solver
-#' @param backend one of \code{"auto"}, \code{"arma"}, \code{"bigmem"}
+#' @param backend one of \code{"auto"}, \code{"arma"}, \code{"bigmem"},
+#'   \code{"filematrix"}. The \code{"filematrix"} backend is experimental,
+#'   requires the optional \pkg{filematrix} package, and currently supports
+#'   \code{algorithm = "nipals"} for block-wise sequential file reads. It is
+#'   intended for shared filesystems and streaming workloads, not small
+#'   random-access workloads where \code{"bigmem"} may be faster.
 #' @param mode one of \code{"auto"}, \code{"pls1"}, \code{"pls2"}
 #' @param algorithm one of \code{"auto"}, \code{"simpls"}, \code{"nipals"},
 #'   \code{"kernelpls"}, \code{"widekernelpls"},
 #'   \code{"rkhs"}, \code{"klogitpls"}, \code{"sparse_kpls"},
 #'   \code{"rkhs_xy"}, \code{"kf_pls"}
 #' @param scores one of \code{"none"}, \code{"r"}, \code{"big"}
-#' @param chunk_size chunk size for the bigmem backend
+#' @param chunk_size row chunk size for streaming backends
 #' @param chunk_cols columns chunk size for the bigmem backend
 #' @param scores_name name for dense scores (or output big.matrix)
 #' @param scores_target one of \code{"auto"}, \code{"new"}, \code{"existing"}
@@ -59,7 +65,7 @@
 pls_fit <- function(
     X, y, ncomp,
     tol = 1e-8,
-    backend = c("auto", "arma", "bigmem"),
+    backend = c("auto", "arma", "bigmem", "filematrix"),
     mode    = c("auto","pls1","pls2"),
     algorithm = c("auto","simpls","nipals",
                   "kernelpls","widekernelpls",
@@ -99,14 +105,25 @@ pls_fit <- function(
       stop("`coef_threshold` must be a single non-negative numeric value", call. = FALSE)
     }
   }
+
+  is_big <- inherits(X, "big.matrix") || inherits(X, "big.matrix.descriptor")
+  is_filematrix <- is_filematrix_object(X)
+  .ncol_without_materializing <- function(obj) {
+    if (inherits(obj, "big.matrix") ||
+        inherits(obj, "big.matrix.descriptor") ||
+        is_filematrix_object(obj)) {
+      return(ncol(obj))
+    }
+    if (is.null(dim(obj))) 1L else ncol(obj)
+  }
   
   # sensible defaults for RKHS-XY
   kernel_x   <- getOption("bigPLSR.rkhs_xy.kernel_x",   "rbf")
-  gamma_x    <- getOption("bigPLSR.rkhs_xy.gamma_x",    1 / max(1L, ncol(as.matrix(X))))
+  gamma_x    <- getOption("bigPLSR.rkhs_xy.gamma_x",    1 / max(1L, .ncol_without_materializing(X)))
   degree_x   <- getOption("bigPLSR.rkhs_xy.degree_x",   3L)
   coef0_x    <- getOption("bigPLSR.rkhs_xy.coef0_x",    1.0)
   kernel_y   <- getOption("bigPLSR.rkhs_xy.kernel_y",   "linear")
-  gamma_y    <- getOption("bigPLSR.rkhs_xy.gamma_y",    1 / max(1L, NCOL(as.matrix(y))))
+  gamma_y    <- getOption("bigPLSR.rkhs_xy.gamma_y",    1 / max(1L, .ncol_without_materializing(y)))
   degree_y   <- getOption("bigPLSR.rkhs_xy.degree_y",   3L)
   coef0_y    <- getOption("bigPLSR.rkhs_xy.coef0_y",    1.0)
   lambda_x   <- getOption("bigPLSR.rkhs_xy.lambda_x",   1e-6)
@@ -156,7 +173,13 @@ pls_fit <- function(
     as.numeric(gb) * (1024^3)
   }
   .dims_of <- function(X) {
-    if (inherits(X, "big.matrix")) c(nrow(X), ncol(X)) else c(NROW(X), NCOL(X))
+    if (inherits(X, "big.matrix") ||
+        inherits(X, "big.matrix.descriptor") ||
+        is_filematrix_object(X)) {
+      c(nrow(X), ncol(X))
+    } else {
+      c(NROW(X), NCOL(X))
+    }
   }
   
   .choose_algorithm_auto <- function(backend, X, y, ncomp) {
@@ -179,15 +202,15 @@ pls_fit <- function(
     }
   }
   
-  # If user asked for auto, pick algorithm now; explicit user choice always wins
-  if (identical(algo_in, "auto")) {
-    algo_in <- .choose_algorithm_auto(backend, X, y, ncomp)
-  }
-  
-  is_big <- inherits(X, "big.matrix") || inherits(X, "big.matrix.descriptor")
-  y_ncol <- if (is.matrix(y)) ncol(y) else if (inherits(y, "big.matrix")) ncol(y) else 1L
+  y_ncol <- .ncol_without_materializing(y)
   if (mode == "auto")    mode    <- if (y_ncol == 1L) "pls1" else "pls2"
-  if (backend == "auto") backend <- if (is_big) "bigmem" else "arma"
+  if (backend == "auto") backend <- if (is_big) "bigmem" else if (is_filematrix) "filematrix" else "arma"
+
+  # If user asked for auto, pick algorithm now; explicit user choice always wins.
+  # filematrix currently has a single supported algorithm: streamed NIPALS.
+  if (identical(algo_in, "auto")) {
+    algo_in <- if (identical(backend, "filematrix")) "nipals" else .choose_algorithm_auto(backend, X, y, ncomp)
+  }
   
   # Helper: apply colnames + descriptor on scores
   .post_scores <- function(fit) {
@@ -1243,6 +1266,30 @@ pls_fit <- function(
     .finalize_pls_fit(.post_scores(fit), "kf_pls")
   }
 
+  run_filematrix_backend_nipals <- function() {
+    fit <- run_filematrix_nipals(
+      X, y,
+      ncomp = as.integer(ncomp),
+      mode = mode,
+      chunk_size = chunk_size,
+      scores = scores,
+      tol = tol,
+      scores_name = scores_name,
+      scores_target = scores_target,
+      scores_bm = scores_bm,
+      scores_backingfile = scores_backingfile,
+      scores_backingpath = scores_backingpath,
+      scores_descriptorfile = scores_descriptorfile
+    )
+    fit$mode <- mode
+    fit$backend <- "filematrix"
+    fit <- .finalize_pls_fit(.post_scores(fit), "nipals")
+    if (isTRUE(return_scores_descriptor) && inherits(fit$scores, "big.matrix")) {
+      fit$scores_descriptor <- bigmemory::describe(fit$scores)
+    }
+    .maybe_threshold(fit)
+  }
+
   # ---- Dispatch on algorithm -------------------------------------------------
   if (backend == "arma") {
     if (algo_in == "simpls") {
@@ -1288,6 +1335,11 @@ pls_fit <- function(
       }
       return(out)
     }
+  } else if (backend == "filematrix") {
+    if (algo_in == "nipals") {
+      return(run_filematrix_backend_nipals())
+    }
+    stop("backend='filematrix' currently supports algorithm='nipals' only.", call. = FALSE)
   } else { # bigmem
     if (algo_in == "simpls") {
       return(run_bigmem_simpls())

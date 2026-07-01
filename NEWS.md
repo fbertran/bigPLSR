@@ -4,6 +4,10 @@
   backends. It exposes sequential row/column/block reads as dense R matrices
   without changing existing `bigmemory` code paths.
 
+* Added experimental `backend = "filematrix"` support for NIPALS PLS1/PLS2.
+  The backend uses block-wise file reads and avoids memory-mapped `bigmemory`
+  access for the predictor/response inputs.
+
 
 # bigPLSR 0.7.3
 * Big-memory NIPALS PLS1 now uses the same row/chunk streaming backend as PLS2,

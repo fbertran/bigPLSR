@@ -10,7 +10,7 @@ pls_fit(
   y,
   ncomp,
   tol = 1e-08,
-  backend = c("auto", "arma", "bigmem"),
+  backend = c("auto", "arma", "bigmem", "filematrix"),
   mode = c("auto", "pls1", "pls2"),
   algorithm = c("auto", "simpls", "nipals", "kernelpls", "widekernelpls", "rkhs",
     "klogitpls", "sparse_kpls", "rkhs_xy", "kf_pls"),
@@ -36,15 +36,20 @@ pls_fit(
 )
 }
 \arguments{
-\item{X}{numeric matrix or \code{bigmemory::big.matrix}}
+\item{X}{numeric matrix, \code{bigmemory::big.matrix}, or \code{filematrix}}
 
-\item{y}{numeric vector/matrix or \code{big.matrix}}
+\item{y}{numeric vector/matrix, \code{big.matrix}, or \code{filematrix}}
 
 \item{ncomp}{number of latent components}
 
 \item{tol}{numeric tolerance used in the core solver}
 
-\item{backend}{one of \code{"auto"}, \code{"arma"}, \code{"bigmem"}}
+\item{backend}{one of \code{"auto"}, \code{"arma"}, \code{"bigmem"},
+\code{"filematrix"}. The \code{"filematrix"} backend is experimental,
+requires the optional \pkg{filematrix} package, and currently supports
+\code{algorithm = "nipals"} for block-wise sequential file reads. It is
+intended for shared filesystems and streaming workloads, not small
+random-access workloads where \code{"bigmem"} may be faster.}
 
 \item{mode}{one of \code{"auto"}, \code{"pls1"}, \code{"pls2"}}
 
@@ -55,7 +60,7 @@ pls_fit(
 
 \item{scores}{one of \code{"none"}, \code{"r"}, \code{"big"}}
 
-\item{chunk_size}{chunk size for the bigmem backend}
+\item{chunk_size}{row chunk size for streaming backends}
 
 \item{chunk_cols}{columns chunk size for the bigmem backend}
 
@@ -100,8 +105,9 @@ a list with coefficients, intercept, weights, loadings, means,
 and optionally \code{$scores}.
 }
 \description{
-Dispatches to a dense (Arm/BLAS) backend for in-memory matrices
-or to a streaming big.matrix backend when X (or Y) is a big.matrix.
+Dispatches to a dense (Arm/BLAS) backend for in-memory matrices,
+a streaming big.matrix backend when X (or Y) is a big.matrix, or the
+experimental filematrix backend for block-wise file-backed NIPALS fits.
 Algorithm can be chosen between:
 "simpls" (default), "nipals", "kernelpls", "widekernelpls",
 "rkhs" (Rosipal & Trejo), "klogitpls", "sparse_kpls",
