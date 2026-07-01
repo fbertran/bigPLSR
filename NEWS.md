@@ -6,8 +6,12 @@
 
 * Added experimental `backend = "filematrix"` support for NIPALS PLS1/PLS2.
   The backend uses block-wise file reads and avoids memory-mapped `bigmemory`
-  access for the predictor/response inputs.
+  access for the predictor/response inputs. Other PLS algorithms remain outside
+  the filematrix backend scope.
 
+* Added `inst/notes/filematrix-backend.md` documenting the filematrix backend
+  strategy, benchmark failure classification, and the decision to defer native
+  C++ filematrix integration pending R-level benchmarks.
 
 # bigPLSR 0.7.3
 * Big-memory NIPALS PLS1 now uses the same row/chunk streaming backend as PLS2,
